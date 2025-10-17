@@ -1,13 +1,10 @@
 'use client';
 
-import { Container, Title, Text, Paper, Group, Button, Card, Grid, Badge, SimpleGrid, Stack, Box } from '@mantine/core';
-import { IconLogout, IconUser, IconShieldCheck, IconBuilding, IconUsers, IconTrendingUp } from '@tabler/icons-react';
+import { Container, Title, Text, Card, Grid, Badge, SimpleGrid, Stack, Group, Paper } from '@mantine/core';
+import { IconBuilding, IconUsers, IconTrendingUp, IconShieldCheck } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
-import { notifications } from '@mantine/notifications';
-import { supabase } from '@/core/config/supabaseClient';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/core/config/supabaseClient';
 
 interface DashboardStats {
   totalHotels: number;
@@ -15,8 +12,7 @@ interface DashboardStats {
   unassignedAdmins: number;
 }
 
-function SuperAdminDashboardContent() {
-  const { profile, loading } = useAuth();
+export default function SuperAdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     totalHotels: 0,
@@ -28,18 +24,15 @@ function SuperAdminDashboardContent() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch total hotels
         const { count: hotelCount } = await supabase
           .from('hotels')
           .select('*', { count: 'exact', head: true });
 
-        // Fetch total hotel admins
         const { count: adminCount } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
           .eq('role', 'hotel_admin');
 
-        // Fetch unassigned admins
         const { count: unassignedCount } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
@@ -61,216 +54,198 @@ function SuperAdminDashboardContent() {
     fetchStats();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      notifications.show({
-        title: 'Success',
-        message: 'Logged out successfully',
-        color: 'green',
-      });
-
-      router.push('/auth/login');
-    } catch {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to logout',
-        color: 'red',
-      });
-    }
-  };
-
-  if (loading || !profile) {
-    return null;
-  }
-
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2rem 0' }}>
-        <Container size="lg">
-          <Group justify="space-between" align="center">
-            <div>
-              <Title order={1} c="white" mb="xs">
-                Super Admin Dashboard
-              </Title>
-              <Text c="white" size="lg" opacity={0.9}>
-                Welcome back, {profile.full_name}
-              </Text>
-            </div>
-            <Button
-              leftSection={<IconLogout size={18} />}
-              variant="white"
-              onClick={handleLogout}
-            >
-              Logout
-            </Button>
-          </Group>
-        </Container>
-      </div>
+    <Container size="lg">
+      <Stack gap="xl">
+        <div>
+          <Title order={2} mb="xs">
+            Dashboard
+          </Title>
+          <Text c="dimmed">Selamat datang di Super Admin Dashboard</Text>
+        </div>
 
-      <Container size="lg" py="xl">
-        {/* Statistics Cards */}
-        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg" mb="xl">
-          <Card shadow="sm" p="lg" radius="md" withBorder>
-            <Group justify="space-between" mb="xs">
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
+          <Card
+            shadow="sm"
+            padding="lg"
+            radius="md"
+            withBorder
+            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+            onClick={() => router.push('/super-admin/hotels')}
+          >
+            <Group justify="space-between" mb="md">
               <div>
-                <Text fw={500} size="sm" c="dimmed">
-                  Total Hotels
+                <Text size="sm" c="dimmed" fw={500}>
+                  Total Hotel
                 </Text>
-                <Text fw={700} size="xl" mt="xs">
+                <Text size="xl" fw={700} mt="xs">
                   {stats.totalHotels}
                 </Text>
               </div>
-              <IconBuilding size={32} stroke={1.5} opacity={0.7} />
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '12px',
+                  background: 'rgba(102, 126, 234, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <IconBuilding size={24} stroke={1.5} color="#667eea" />
+              </div>
             </Group>
-            <Button
-              variant="light"
-              fullWidth
-              mt="md"
-              onClick={() => router.push('/super-admin/hotels')}
-            >
-              Manage Hotels
-            </Button>
+            <Text size="xs" c="dimmed">
+              Klik untuk kelola hotel
+            </Text>
           </Card>
 
-          <Card shadow="sm" p="lg" radius="md" withBorder>
-            <Group justify="space-between" mb="xs">
+          <Card
+            shadow="sm"
+            padding="lg"
+            radius="md"
+            withBorder
+            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+            onClick={() => router.push('/super-admin/users')}
+          >
+            <Group justify="space-between" mb="md">
               <div>
-                <Text fw={500} size="sm" c="dimmed">
-                  Hotel Admins
+                <Text size="sm" c="dimmed" fw={500}>
+                  Hotel Admin
                 </Text>
-                <Text fw={700} size="xl" mt="xs">
+                <Text size="xl" fw={700} mt="xs">
                   {stats.totalAdmins}
                 </Text>
               </div>
-              <IconUsers size={32} stroke={1.5} opacity={0.7} />
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '12px',
+                  background: 'rgba(102, 126, 234, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <IconUsers size={24} stroke={1.5} color="#667eea" />
+              </div>
             </Group>
-            <Button
-              variant="light"
-              fullWidth
-              mt="md"
-              onClick={() => router.push('/super-admin/users')}
-            >
-              Manage Users
-            </Button>
+            <Text size="xs" c="dimmed">
+              Klik untuk kelola user
+            </Text>
           </Card>
 
-          <Card shadow="sm" p="lg" radius="md" withBorder>
-            <Group justify="space-between" mb="xs">
+          <Card
+            shadow="sm"
+            padding="lg"
+            radius="md"
+            withBorder
+            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+            onClick={() => router.push('/super-admin/users')}
+          >
+            <Group justify="space-between" mb="md">
               <div>
-                <Text fw={500} size="sm" c="dimmed">
-                  Unassigned Admins
+                <Text size="sm" c="dimmed" fw={500}>
+                  Admin Belum Ditugaskan
                 </Text>
-                <Text fw={700} size="xl" mt="xs" c="orange">
+                <Text size="xl" fw={700} mt="xs" c="orange">
                   {stats.unassignedAdmins}
                 </Text>
               </div>
-              <Badge color="orange" variant="light" p="lg">
-                <IconTrendingUp size={20} />
-              </Badge>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '12px',
+                  background: 'rgba(250, 152, 78, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <IconTrendingUp size={24} stroke={1.5} color="#fa984e" />
+              </div>
             </Group>
-            <Button
-              variant="light"
-              fullWidth
-              mt="md"
-              color="orange"
-              onClick={() => router.push('/super-admin/users')}
-            >
-              Assign Hotels
-            </Button>
+            <Text size="xs" c="dimmed">
+              Admin tanpa hotel
+            </Text>
           </Card>
         </SimpleGrid>
 
-        {/* Profile Information */}
-        <Grid gutter="lg">
-          <Grid.Col span={{ base: 12, md: 4 }}>
-            <Card shadow="sm" p="lg" radius="md" withBorder>
-              <Group justify="space-between" mb="xs">
-                <Text fw={500}>Profile Information</Text>
-                <IconUser size={20} />
+        <Grid>
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Paper shadow="sm" p="lg" radius="md" withBorder>
+              <Group mb="md">
+                <IconShieldCheck size={24} stroke={1.5} color="#667eea" />
+                <Title order={4}>Status Sistem</Title>
               </Group>
               <Text size="sm" c="dimmed" mb="md">
-                Your account details
+                Semua sistem berjalan normal
               </Text>
-              <div style={{ marginTop: '1rem' }}>
-                <Text size="sm" c="dimmed">
-                  Name
-                </Text>
-                <Text fw={500} mb="sm">
-                  {profile.full_name}
-                </Text>
-
-                <Text size="sm" c="dimmed">
-                  Email
-                </Text>
-                <Text fw={500} mb="sm">
-                  {profile.email}
-                </Text>
-
-                <Text size="sm" c="dimmed">
-                  Role
-                </Text>
-                <Badge color="violet" variant="light" mt="xs">
-                  <Group gap="xs">
-                    <IconShieldCheck size={14} />
-                    {profile.role.replace('_', ' ').toUpperCase()}
-                  </Group>
-                </Badge>
-              </div>
-            </Card>
+              <Stack gap="xs">
+                <Group justify="space-between">
+                  <Text size="sm">Database</Text>
+                  <Badge color="green" variant="light">
+                    Online
+                  </Badge>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm">Authentication</Text>
+                  <Badge color="green" variant="light">
+                    Active
+                  </Badge>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm">API Services</Text>
+                  <Badge color="green" variant="light">
+                    Running
+                  </Badge>
+                </Group>
+              </Stack>
+            </Paper>
           </Grid.Col>
 
-          <Grid.Col span={{ base: 12, md: 8 }}>
+          <Grid.Col span={{ base: 12, md: 6 }}>
             <Paper shadow="sm" p="lg" radius="md" withBorder>
-              <Title order={3} mb="md">
-                System Overview
+              <Title order={4} mb="md">
+                Quick Actions
               </Title>
-              <Text c="dimmed" mb="lg">
-                As a Super Admin, you have full access to manage all aspects of the Property Management System.
-              </Text>
-
-              <Stack gap="md">
-                <Box>
-                  <Text fw={500} mb="sm">
-                    Quick Actions
-                  </Text>
+              <Stack gap="sm">
+                <Card
+                  padding="md"
+                  radius="md"
+                  withBorder
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => router.push('/super-admin/hotels')}
+                >
                   <Group>
-                    <Button
-                      variant="default"
-                      onClick={() => router.push('/super-admin/hotels')}
-                    >
-                      Hotels Management
-                    </Button>
-                    <Button
-                      variant="default"
-                      onClick={() => router.push('/super-admin/users')}
-                    >
-                      User Management
-                    </Button>
+                    <IconBuilding size={20} stroke={1.5} />
+                    <Text size="sm" fw={500}>
+                      Tambah Hotel Baru
+                    </Text>
                   </Group>
-                </Box>
-
-                <Box>
-                  <Text fw={500} size="sm" c="dimmed">
-                    System Status: All systems operational ✓
-                  </Text>
-                </Box>
+                </Card>
+                <Card
+                  padding="md"
+                  radius="md"
+                  withBorder
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => router.push('/super-admin/users')}
+                >
+                  <Group>
+                    <IconUsers size={20} stroke={1.5} />
+                    <Text size="sm" fw={500}>
+                      Tambah User Baru
+                    </Text>
+                  </Group>
+                </Card>
               </Stack>
             </Paper>
           </Grid.Col>
         </Grid>
-      </Container>
-    </div>
-  );
-}
-
-export default function SuperAdminDashboard() {
-  return (
-    <ProtectedRoute requiredRole="super_admin">
-      <SuperAdminDashboardContent />
-    </ProtectedRoute>
+      </Stack>
+    </Container>
   );
 }
