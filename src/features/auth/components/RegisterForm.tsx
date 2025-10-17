@@ -110,9 +110,9 @@ export function RegisterForm() {
   };
 
   return (
-    <Paper 
-      radius="xl" 
-      p="xl" 
+    <Paper
+      radius="xl"
+      p="xl"
       shadow="xl"
       withBorder
       style={{
@@ -142,7 +142,7 @@ export function RegisterForm() {
         </Box>
 
         <Stack gap="xs" align="center">
-          <Title 
+          <Title
             order={2}
             style={{
               fontSize: '1.75rem',
@@ -153,8 +153,8 @@ export function RegisterForm() {
           >
             Create Account
           </Title>
-          <Text 
-            c="dimmed" 
+          <Text
+            c="dimmed"
             size="sm"
             ta="center"
             style={{
@@ -180,14 +180,19 @@ export function RegisterForm() {
               input: {
                 fontSize: '0.95rem',
                 padding: '1.5rem 1rem 1.5rem 2.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                color: '#343a40',
               },
               label: {
                 fontWeight: 500,
                 marginBottom: '0.5rem',
+                color: '#212529',
               },
             }}
             {...form.getInputProps('fullName')}
             disabled={loading}
+            suppressHydrationWarning
           />
 
           {/* Email Input */}
@@ -202,14 +207,19 @@ export function RegisterForm() {
               input: {
                 fontSize: '0.95rem',
                 padding: '1.5rem 1rem 1.5rem 2.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                color: '#343a40',
               },
               label: {
                 fontWeight: 500,
                 marginBottom: '0.5rem',
+                color: '#212529',
               },
             }}
             {...form.getInputProps('email')}
             disabled={loading}
+            suppressHydrationWarning
           />
 
           {/* Password Input */}
@@ -224,14 +234,19 @@ export function RegisterForm() {
               input: {
                 fontSize: '0.95rem',
                 padding: '1.5rem 1rem 1.5rem 2.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                color: '#343a40',
               },
               label: {
                 fontWeight: 500,
                 marginBottom: '0.5rem',
+                color: '#212529',
               },
             }}
             {...form.getInputProps('password')}
             disabled={loading}
+            suppressHydrationWarning
           />
 
           {/* Confirm Password Input */}
@@ -246,29 +261,26 @@ export function RegisterForm() {
               input: {
                 fontSize: '0.95rem',
                 padding: '1.5rem 1rem 1.5rem 2.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                color: '#343a40',
               },
               label: {
                 fontWeight: 500,
                 marginBottom: '0.5rem',
+                color: '#212529',
               },
             }}
             {...form.getInputProps('confirmPassword')}
             disabled={loading}
+            suppressHydrationWarning
           />
 
-          {/* Terms and Conditions */}
-          <Text size="xs" c="dimmed" ta="center">
-            By creating an account, you agree to our{' '}
-            <Anchor size="xs" fw={500}>Terms of Service</Anchor>
-            {' '}and{' '}
-            <Anchor size="xs" fw={500}>Privacy Policy</Anchor>
-          </Text>
-
           {/* Register Button */}
-          <Button 
-            type="submit" 
-            fullWidth 
-            loading={loading} 
+          <Button
+            type="submit"
+            fullWidth
+            loading={loading}
             size="md"
             radius="md"
             leftSection={!loading && <IconUserPlus size={18} />}
@@ -277,27 +289,29 @@ export function RegisterForm() {
               height: '48px',
               fontSize: '1rem',
               fontWeight: 600,
+              marginTop: '1rem',
             }}
+            suppressHydrationWarning
           >
             Create Account
           </Button>
 
           {/* Divider */}
-          <Divider 
-            label="Already have an account?" 
+          <Divider
+            label="Already have an account?"
             labelPosition="center"
             my="xs"
           />
 
           {/* Login Link */}
-          <Text 
-            c="dimmed" 
-            size="sm" 
+          <Text
+            c="dimmed"
+            size="sm"
             ta="center"
           >
-            <Anchor 
-              component={Link} 
-              href="/auth/login" 
+            <Anchor
+              component={Link}
+              href="/auth/login"
               fw={600}
               style={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

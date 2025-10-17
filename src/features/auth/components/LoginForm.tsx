@@ -99,9 +99,9 @@ export function LoginForm() {
   };
 
   return (
-    <Paper 
-      radius="xl" 
-      p="xl" 
+    <Paper
+      radius="xl"
+      p="xl"
       shadow="xl"
       withBorder
       style={{
@@ -111,7 +111,7 @@ export function LoginForm() {
     >
       {/* Header */}
       <Stack gap="xs" mb="xl">
-        <Title 
+        <Title
           order={2}
           style={{
             fontSize: '1.75rem',
@@ -121,8 +121,8 @@ export function LoginForm() {
         >
           Welcome Back
         </Title>
-        <Text 
-          c="dimmed" 
+        <Text
+          c="dimmed"
           size="sm"
           style={{
             fontSize: '0.95rem',
@@ -146,10 +146,14 @@ export function LoginForm() {
               input: {
                 fontSize: '0.95rem',
                 padding: '1.5rem 1rem 1.5rem 2.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                color: '#343a40',
               },
               label: {
                 fontWeight: 500,
                 marginBottom: '0.5rem',
+                color: '#212529',
               },
             }}
             {...form.getInputProps('email')}
@@ -169,36 +173,26 @@ export function LoginForm() {
               input: {
                 fontSize: '0.95rem',
                 padding: '1.5rem 1rem 1.5rem 2.5rem',
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                color: '#343a40',
               },
               label: {
                 fontWeight: 500,
                 marginBottom: '0.5rem',
+                color: '#212529',
               },
             }}
             {...form.getInputProps('password')}
             disabled={loading}
             suppressHydrationWarning
           />
-
-          {/* Forgot Password Link */}
-          <Anchor 
-            component="button" 
-            type="button" 
-            c="dimmed" 
-            size="sm"
-            ta="right"
-            style={{
-              marginTop: '-0.5rem',
-            }}
-          >
-            Forgot password?
-          </Anchor>
-
+          
           {/* Login Button */}
-          <Button 
-            type="submit" 
-            fullWidth 
-            loading={loading} 
+          <Button
+            type="submit"
+            fullWidth
+            loading={loading}
             size="md"
             radius="md"
             leftSection={!loading && <IconLogin size={18} />}
@@ -207,7 +201,7 @@ export function LoginForm() {
               height: '48px',
               fontSize: '1rem',
               fontWeight: 600,
-              marginTop: '0.5rem',
+              marginTop: '1.5rem',
             }}
             suppressHydrationWarning
           >
@@ -215,25 +209,25 @@ export function LoginForm() {
           </Button>
 
           {/* Divider */}
-          <Divider 
-            label="Or continue with" 
+          <Divider
+            label="Or continue with"
             labelPosition="center"
             my="sm"
           />
 
           {/* Register Link */}
-          <Text 
-            c="dimmed" 
-            size="sm" 
+          <Text
+            c="dimmed"
+            size="sm"
             ta="center"
             style={{
               marginTop: '0.5rem',
             }}
           >
             Don&apos;t have an account?{' '}
-            <Anchor 
-              component={Link} 
-              href="/auth/register" 
+            <Anchor
+              component={Link}
+              href="/auth/register"
               fw={600}
               style={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
