@@ -67,6 +67,11 @@ export function LoginForm() {
         throw new Error('Profile not found');
       }
 
+      if (profile.role === 'hotel_admin' && !profile.hotel_id) {
+        await supabase.auth.signOut();
+        throw new Error('Akun Anda belum diaktifkan oleh Super Admin. Mohon tunggu hingga hotel Anda ditentukan.');
+      }
+
       notifications.show({
         title: 'Success',
         message: 'Logged in successfully',
@@ -93,23 +98,22 @@ export function LoginForm() {
   };
 
   return (
-    <Paper radius="md" p="xl" withBorder>
-      <Title order={2} mb="md">
-        Welcome to RoomMaster
+    <Paper radius="md" p="xl" shadow="sm" withBorder>
+      <Title order={2} mb="xs">
+        Welcome Back
       </Title>
-      <Text c="dimmed" size="sm" mb="lg">
+      <Text c="dimmed" size="sm" mb="xl">
         Enter your credentials to access your account
       </Text>
 
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="md">
+        <Stack gap="lg">
           <TextInput
             label="Email"
             placeholder="your@email.com"
             required
             {...form.getInputProps('email')}
             disabled={loading}
-            suppressHydrationWarning
           />
 
           <PasswordInput
@@ -118,7 +122,6 @@ export function LoginForm() {
             required
             {...form.getInputProps('password')}
             disabled={loading}
-            suppressHydrationWarning
           />
 
           <Button 
@@ -126,7 +129,7 @@ export function LoginForm() {
             fullWidth 
             loading={loading} 
             size="md"
-            suppressHydrationWarning 
+            mt="md"
           >
             Login
           </Button>

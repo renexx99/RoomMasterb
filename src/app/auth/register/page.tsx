@@ -9,10 +9,10 @@ export default function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        backgroundColor: 'var(--mantine-color-gray-1)',
       }}
     >
-      <Container size="xs">
+      <Container size="xs" w="100%">
         <Center>
           <Box style={{ width: '100%', maxWidth: 420 }}>
             <RegisterForm />

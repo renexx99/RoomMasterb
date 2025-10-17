@@ -1,26 +1,19 @@
-import { Box, Container, Flex } from '@mantine/core';
+import { Box, Title, Text, Stack } from '@mantine/core';
+import { IconBuildingSkyscraper } from '@tabler/icons-react';
 import React from 'react';
 
-// Layout ini akan digunakan untuk semua halaman di bawah /auth
-// Tujuannya adalah untuk memusatkan konten di tengah layar
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AuthBranding() {
   return (
     <Box>
-      <Flex
-        align="center"
-        justify="center"
-        mih="100vh"
-        bg="gray.1"
-      >
-        <Container size="xs" w="100%">
-            {children}
-        </Container>
-      </Flex>
+      <Stack align="center" gap="lg">
+        <IconBuildingSkyscraper size={60} stroke={1.5} />
+        <Title order={1} ta="center">
+          RoomMaster
+        </Title>
+        <Text c="dimmed" size="lg" ta="center" maw={400}>
+          The All-in-One Property Management System for modern hotel chains.
+        </Text>
+      </Stack>
     </Box>
   );
 }
-

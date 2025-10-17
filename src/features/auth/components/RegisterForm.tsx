@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Select, Anchor } from '@mantine/core';
+import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Anchor } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
-import { UserRole } from '@/core/types/database';
 import Link from 'next/link';
 
 interface RegisterFormValues {
@@ -14,7 +13,6 @@ interface RegisterFormValues {
   password: string;
   confirmPassword: string;
   fullName: string;
-  role: UserRole | '';
 }
 
 export function RegisterForm() {
@@ -27,7 +25,6 @@ export function RegisterForm() {
       password: '',
       confirmPassword: '',
       fullName: '',
-      role: '',
     },
     validate: {
       email: (value) => {
@@ -48,10 +45,6 @@ export function RegisterForm() {
       fullName: (value) => {
         if (!value) return 'Full name is required';
         if (value.length < 2) return 'Full name must be at least 2 characters';
-        return null;
-      },
-      role: (value) => {
-        if (!value) return 'Please select a role';
         return null;
       },
     },
@@ -78,7 +71,7 @@ export function RegisterForm() {
         id: authData.user.id,
         email: values.email,
         full_name: values.fullName,
-        role: values.role as UserRole,
+        role: 'hotel_admin',
         hotel_id: null,
       });
 
@@ -88,7 +81,7 @@ export function RegisterForm() {
 
       notifications.show({
         title: 'Success',
-        message: 'Account created successfully! Please login.',
+        message: 'Account created successfully! Please check your email to confirm.',
         color: 'green',
       });
 
@@ -116,16 +109,16 @@ export function RegisterForm() {
   };
 
   return (
-    <Paper radius="md" p="xl" withBorder>
-      <Title order={2} mb="md">
-        Create Account
+    <Paper radius="md" p="xl" withBorder shadow="sm">
+      <Title order={2} mb="xs">
+        Create an Account
       </Title>
-      <Text c="dimmed" size="sm" mb="lg">
-        Register for a new RoomMaster account
+      <Text c="dimmed" size="sm" mb="xl">
+        Join RoomMaster to manage your properties with ease.
       </Text>
 
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="md">
+        <Stack gap="lg">
           <TextInput
             label="Full Name"
             placeholder="John Doe"
@@ -139,18 +132,6 @@ export function RegisterForm() {
             placeholder="your@email.com"
             required
             {...form.getInputProps('email')}
-            disabled={loading}
-          />
-
-          <Select
-            label="Role"
-            placeholder="Select your role"
-            required
-            data={[
-              { value: 'super_admin', label: 'Super Admin' },
-              { value: 'hotel_admin', label: 'Hotel Admin' },
-            ]}
-            {...form.getInputProps('role')}
             disabled={loading}
           />
 
@@ -170,7 +151,7 @@ export function RegisterForm() {
             disabled={loading}
           />
 
-          <Button type="submit" fullWidth loading={loading} size="md">
+          <Button type="submit" fullWidth loading={loading} size="md" mt="md">
             Register
           </Button>
 
