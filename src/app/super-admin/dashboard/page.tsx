@@ -1,7 +1,23 @@
 'use client';
 
-import { Container, Title, Text, Card, Grid, Badge, SimpleGrid, Stack, Group, Paper } from '@mantine/core';
-import { IconBuilding, IconUsers, IconTrendingUp, IconShieldCheck } from '@tabler/icons-react';
+import {
+  Container,
+  Title,
+  Text,
+  Card,
+  Grid,
+  Badge,
+  SimpleGrid,
+  Stack,
+  Group,
+  Paper,
+} from '@mantine/core';
+import {
+  IconBuilding,
+  IconUsers,
+  IconTrendingUp,
+  IconShieldCheck,
+} from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/core/config/supabaseClient';
@@ -19,7 +35,6 @@ export default function SuperAdminDashboard() {
     totalAdmins: 0,
     unassignedAdmins: 0,
   });
-  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -46,8 +61,6 @@ export default function SuperAdminDashboard() {
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
-      } finally {
-        setStatsLoading(false);
       }
     };
 
@@ -55,174 +68,161 @@ export default function SuperAdminDashboard() {
   }, []);
 
   return (
-    <Container size="lg">
+    <Container size="lg" style={{ background: '#f9fafc', borderRadius: 12, padding: '1.5rem' }}>
       <Stack gap="xl">
         <div>
-          <Title order={2} mb="xs">
+          <Title order={2} mb="xs" c="#1e293b">
             Dashboard
           </Title>
-          <Text c="dimmed">Selamat datang di Super Admin Dashboard</Text>
+          <Text c="#475569">Selamat datang di Coorporate Dashboard</Text>
         </div>
 
+        {/* Stats Cards */}
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-          <Card
-            shadow="sm"
-            padding="lg"
-            radius="md"
-            withBorder
-            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-            onClick={() => router.push('/super-admin/hotels')}
-          >
-            <Group justify="space-between" mb="md">
-              <div>
-                <Text size="sm" c="dimmed" fw={500}>
-                  Total Hotel
-                </Text>
-                <Text size="xl" fw={700} mt="xs">
-                  {stats.totalHotels}
-                </Text>
-              </div>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '12px',
-                  background: 'rgba(102, 126, 234, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <IconBuilding size={24} stroke={1.5} color="#667eea" />
-              </div>
-            </Group>
-            <Text size="xs" c="dimmed">
-              Klik untuk kelola hotel
-            </Text>
-          </Card>
-
-          <Card
-            shadow="sm"
-            padding="lg"
-            radius="md"
-            withBorder
-            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-            onClick={() => router.push('/super-admin/users')}
-          >
-            <Group justify="space-between" mb="md">
-              <div>
-                <Text size="sm" c="dimmed" fw={500}>
-                  Hotel Admin
-                </Text>
-                <Text size="xl" fw={700} mt="xs">
-                  {stats.totalAdmins}
-                </Text>
-              </div>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '12px',
-                  background: 'rgba(102, 126, 234, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <IconUsers size={24} stroke={1.5} color="#667eea" />
-              </div>
-            </Group>
-            <Text size="xs" c="dimmed">
-              Klik untuk kelola user
-            </Text>
-          </Card>
-
-          <Card
-            shadow="sm"
-            padding="lg"
-            radius="md"
-            withBorder
-            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-            onClick={() => router.push('/super-admin/users')}
-          >
-            <Group justify="space-between" mb="md">
-              <div>
-                <Text size="sm" c="dimmed" fw={500}>
-                  Admin Belum Ditugaskan
-                </Text>
-                <Text size="xl" fw={700} mt="xs" c="orange">
-                  {stats.unassignedAdmins}
-                </Text>
-              </div>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '12px',
-                  background: 'rgba(250, 152, 78, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <IconTrendingUp size={24} stroke={1.5} color="#fa984e" />
-              </div>
-            </Group>
-            <Text size="xs" c="dimmed">
-              Admin tanpa hotel
-            </Text>
-          </Card>
+          {[
+            {
+              title: 'Total Hotel',
+              value: stats.totalHotels,
+              color: '#4f46e5',
+              icon: <IconBuilding size={24} stroke={1.5} color="#4f46e5" />,
+              route: '/super-admin/hotels',
+            },
+            {
+              title: 'Hotel Admin',
+              value: stats.totalAdmins,
+              color: '#4f46e5',
+              icon: <IconUsers size={24} stroke={1.5} color="#4f46e5" />,
+              route: '/super-admin/users',
+            },
+            {
+              title: 'Admin Belum Ditugaskan',
+              value: stats.unassignedAdmins,
+              color: '#f97316',
+              icon: <IconTrendingUp size={24} stroke={1.5} color="#f97316" />,
+              route: '/super-admin/users',
+            },
+          ].map((item) => (
+            <Card
+              key={item.title}
+              padding="lg"
+              radius="lg"
+              shadow="xs"
+              style={{
+                cursor: 'pointer',
+                transition: 'all 0.25s ease',
+                background: 'white',
+                border: 'none',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+              }}
+              onClick={() => router.push(item.route)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(99,102,241,0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.05)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <Group justify="space-between" mb="md">
+                <div>
+                  <Text size="sm" c="#1e293b" fw={500}>
+                    {item.title}
+                  </Text>
+                  <Text size="xl" fw={700} mt="xs" c={item.color}>
+                    {item.value}
+                  </Text>
+                </div>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '12px',
+                    background: `${item.color}1A`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {item.icon}
+                </div>
+              </Group>
+              <Text size="xs" c="#64748b">
+                Klik untuk kelola
+              </Text>
+            </Card>
+          ))}
         </SimpleGrid>
 
+        {/* Bottom Section */}
         <Grid>
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Paper shadow="sm" p="lg" radius="md" withBorder>
+            <Paper
+              shadow="xs"
+              p="lg"
+              radius="lg"
+              style={{
+                background: 'white',
+                border: 'none',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+              }}
+            >
               <Group mb="md">
-                <IconShieldCheck size={24} stroke={1.5} color="#667eea" />
-                <Title order={4}>Status Sistem</Title>
+                <IconShieldCheck size={24} stroke={1.5} color="#4f46e5" />
+                <Title order={4} c="#1e293b">
+                  Status Sistem
+                </Title>
               </Group>
-              <Text size="sm" c="dimmed" mb="md">
+              <Text size="sm" c="#475569" mb="md">
                 Semua sistem berjalan normal
               </Text>
               <Stack gap="xs">
-                <Group justify="space-between">
-                  <Text size="sm">Database</Text>
-                  <Badge color="green" variant="light">
-                    Online
-                  </Badge>
-                </Group>
-                <Group justify="space-between">
-                  <Text size="sm">Authentication</Text>
-                  <Badge color="green" variant="light">
-                    Active
-                  </Badge>
-                </Group>
-                <Group justify="space-between">
-                  <Text size="sm">API Services</Text>
-                  <Badge color="green" variant="light">
-                    Running
-                  </Badge>
-                </Group>
+                {['Database', 'Authentication', 'API Services'].map((label) => (
+                  <Group justify="space-between" key={label}>
+                    <Text size="sm" c="#1e293b">
+                      {label}
+                    </Text>
+                    <Badge color="green" variant="light">
+                      ONLINE
+                    </Badge>
+                  </Group>
+                ))}
               </Stack>
             </Paper>
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Paper shadow="sm" p="lg" radius="md" withBorder>
-              <Title order={4} mb="md">
+            <Paper
+              shadow="xs"
+              p="lg"
+              radius="lg"
+              style={{
+                background: 'white',
+                border: 'none',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+              }}
+            >
+              <Title order={4} mb="md" c="#1e293b">
                 Quick Actions
               </Title>
               <Stack gap="sm">
                 <Card
                   padding="md"
                   radius="md"
-                  withBorder
-                  style={{ cursor: 'pointer' }}
+                  style={{
+                    cursor: 'pointer',
+                    background: '#f9fafb',
+                    border: 'none',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#eef2ff')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#f9fafb')}
                   onClick={() => router.push('/super-admin/hotels')}
                 >
                   <Group>
-                    <IconBuilding size={20} stroke={1.5} />
-                    <Text size="sm" fw={500}>
+                    <IconBuilding size={20} stroke={1.5} color="#4f46e5" />
+                    <Text size="sm" fw={500} c="#1e293b">
                       Tambah Hotel Baru
                     </Text>
                   </Group>
@@ -230,13 +230,20 @@ export default function SuperAdminDashboard() {
                 <Card
                   padding="md"
                   radius="md"
-                  withBorder
-                  style={{ cursor: 'pointer' }}
+                  style={{
+                    cursor: 'pointer',
+                    background: '#f9fafb',
+                    border: 'none',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#eef2ff')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#f9fafb')}
                   onClick={() => router.push('/super-admin/users')}
                 >
                   <Group>
-                    <IconUsers size={20} stroke={1.5} />
-                    <Text size="sm" fw={500}>
+                    <IconUsers size={20} stroke={1.5} color="#4f46e5" />
+                    <Text size="sm" fw={500} c="#1e293b">
                       Tambah User Baru
                     </Text>
                   </Group>

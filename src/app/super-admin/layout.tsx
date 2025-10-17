@@ -35,21 +35,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  {
-    label: 'Dashboard',
-    icon: IconLayoutDashboard,
-    href: '/super-admin/dashboard',
-  },
-  {
-    label: 'Manajemen Hotel',
-    icon: IconBuilding,
-    href: '/super-admin/hotels',
-  },
-  {
-    label: 'Manajemen User',
-    icon: IconUsers,
-    href: '/super-admin/users',
-  },
+  { label: 'Dashboard', icon: IconLayoutDashboard, href: '/super-admin/dashboard' },
+  { label: 'Manajemen Hotel', icon: IconBuilding, href: '/super-admin/hotels' },
+  { label: 'Manajemen User', icon: IconUsers, href: '/super-admin/users' },
 ];
 
 function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
@@ -89,16 +77,15 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
       }}
       padding="md"
       styles={{
-        main: {
-          background: '#f8f9fa',
-        },
+        main: { background: '#f5f6fa' },
       }}
     >
       {/* Header */}
       <AppShell.Header
         style={{
-          borderBottom: '1px solid #e9ecef',
+          borderBottom: '1px solid #e5e7eb',
           background: 'white',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
         }}
       >
         <Group h="100%" px="md" justify="space-between">
@@ -110,21 +97,21 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                   width: 40,
                   height: 40,
                   borderRadius: '8px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  boxShadow: '0 3px 6px rgba(99, 102, 241, 0.3)',
                 }}
               >
-                <IconBuildingSkyscraper size={24} stroke={1.5} color="white" />
+                <IconBuildingSkyscraper size={22} stroke={1.5} color="white" />
               </Box>
               <Text
                 size="xl"
-                fw={700}
+                fw={800}
                 style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: '#1e293b',
+                  letterSpacing: '-0.02em',
                 }}
               >
                 RoomMaster
@@ -140,7 +127,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     {profile?.full_name?.charAt(0) || 'A'}
                   </Avatar>
                   <Box style={{ flex: 1 }} visibleFrom="sm">
-                    <Text size="sm" fw={500}>
+                    <Text size="sm" fw={600}>
                       {profile?.full_name || 'Admin'}
                     </Text>
                     <Text size="xs" c="dimmed">
@@ -170,8 +157,9 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
       <AppShell.Navbar
         p="md"
         style={{
-          borderRight: '1px solid #e9ecef',
+          borderRight: '1px solid #e5e7eb',
           background: 'white',
+          boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
         }}
       >
         <AppShell.Section grow>
@@ -198,22 +186,22 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     padding: rem(12),
                     fontSize: rem(14),
                     fontWeight: 500,
-                    transition: 'all 0.2s ease',
+                    color: isActive ? '#4f46e5' : '#374151',
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      background: isActive
-                        ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
-                        : '#f8f9fa',
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    color: '#4f46e5',
+                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)',
                     },
-                    '&[dataActive]': {
-                      background:
-                        'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                      color: '#667eea',
-                      fontWeight: 600,
+                    "&[dataActive]": {
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                    color: '#4f46e5',
+                    fontWeight: 600,
+                    boxShadow: 'inset 0 0 0 1px rgba(99, 102, 241, 0.3)',
                     },
                   },
                   label: {
                     fontSize: rem(14),
-                    fontWeight: isActive ? 600 : 500,
                   },
                 }}
               />
@@ -232,9 +220,11 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                 padding: rem(12),
                 fontSize: rem(14),
                 fontWeight: 500,
-                color: '#fa5252',
+                color: '#ef4444',
+                transition: 'all 0.25s ease',
                 '&:hover': {
-                  background: 'rgba(250, 82, 82, 0.1)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.15)',
                 },
               },
             }}
@@ -242,7 +232,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      {/* Main Content */}
       <AppShell.Main>{children}</AppShell.Main>
     </AppShell>
   );
