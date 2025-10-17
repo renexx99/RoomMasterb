@@ -204,7 +204,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                         ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
                         : '#f8f9fa',
                     },
-                    '&[data-active]': {
+                    '&[dataActive]': {
                       background:
                         'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
                       color: '#667eea',
