@@ -114,6 +114,7 @@ export function LoginForm() {
             required
             {...form.getInputProps('email')}
             disabled={loading}
+            suppressHydrationWarning
           />
 
           <PasswordInput
@@ -122,6 +123,7 @@ export function LoginForm() {
             required
             {...form.getInputProps('password')}
             disabled={loading}
+            suppressHydrationWarning
           />
 
           <Button 
@@ -130,6 +132,7 @@ export function LoginForm() {
             loading={loading} 
             size="md"
             mt="md"
+            suppressHydrationWarning
           >
             Login
           </Button>
