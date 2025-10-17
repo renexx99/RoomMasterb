@@ -1,5 +1,4 @@
 
-
 ```
 roommaster
 ├─ docs
@@ -23,11 +22,11 @@ roommaster
 │  │  │     └─ page.tsx
 │  │  ├─ api
 │  │  ├─ auth
+│  │  │  ├─ layout.tsx
 │  │  │  ├─ login
 │  │  │  │  └─ page.tsx
 │  │  │  └─ register
 │  │  │     └─ page.tsx
-│  │  ├─ favicon.ico
 │  │  ├─ globals.css
 │  │  ├─ layout.tsx
 │  │  ├─ page.tsx
@@ -50,6 +49,7 @@ roommaster
 │  │  ├─ providers
 │  │  │  └─ AppProvider.tsx
 │  │  ├─ types
+│  │  │  └─ database.ts
 │  │  └─ utils
 │  ├─ features
 │  │  ├─ admin
@@ -61,6 +61,7 @@ roommaster
 │  │  ├─ auth
 │  │  │  ├─ components
 │  │  │  │  ├─ LoginForm.tsx
+│  │  │  │  ├─ ProtectedRoute.tsx
 │  │  │  │  └─ RegisterForm.tsx
 │  │  │  ├─ hooks
 │  │  │  │  └─ useAuth.ts
@@ -83,7 +84,11 @@ roommaster
 │  │  │  └─ services
 │  │  └─ transaction
 │  ├─ global.css
-│  └─ lib
+│  ├─ lib
+│  └─ middleware.ts
+├─ supabase
+│  └─ migrations
+│     └─ 001_create_profiles_and_hotels.sql
 └─ tsconfig.json
 
 ```
