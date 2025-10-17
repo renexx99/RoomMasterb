@@ -31,7 +31,11 @@ roommaster
 │  │  ├─ layout.tsx
 │  │  ├─ page.tsx
 │  │  └─ super-admin
-│  │     └─ dashboard
+│  │     ├─ dashboard
+│  │     │  └─ page.tsx
+│  │     ├─ hotels
+│  │     │  └─ page.tsx
+│  │     └─ users
 │  │        └─ page.tsx
 │  ├─ components
 │  │  ├─ charts
@@ -82,6 +86,7 @@ roommaster
 │  │  │  ├─ models
 │  │  │  ├─ repositories
 │  │  │  └─ services
+│  │  │     └─ index.ts
 │  │  └─ transaction
 │  ├─ global.css
 │  ├─ lib
