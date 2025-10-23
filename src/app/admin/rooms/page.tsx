@@ -52,15 +52,15 @@ export default function RoomsManagementPage() {
 
   const form = useForm({
     initialValues: {
-      room_number: '',
-      room_type_id: '',
-      status: 'available' as const,
+        room_number: '',
+        room_type_id: '',
+        status: 'available' as 'available' | 'occupied' | 'maintenance',
     },
     validate: {
-      room_number: (value) => (!value ? 'Room number is required' : null),
-      room_type_id: (value) => (!value ? 'Room type is required' : null),
+        room_number: (value) => (!value ? 'Room number is required' : null),
+        room_type_id: (value) => (!value ? 'Room type is required' : null),
     },
-  });
+    });
 
   useEffect(() => {
     if (profile?.hotel_id) {
