@@ -18,12 +18,14 @@ import {
   Badge,
   Select,
   NumberInput,
+  Center, // Pastikan NumberInput diimpor jika diperlukan di modal
 } from '@mantine/core';
-import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconPlus, IconArrowLeft } from '@tabler/icons-react'; // Tambahkan IconArrowLeft
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useRouter } from 'next/navigation'; // Tambahkan useRouter
 
 interface RoomType {
   id: string;
@@ -42,6 +44,7 @@ interface Room {
 
 export default function RoomsManagementPage() {
   const { profile } = useAuth();
+  const router = useRouter(); // Inisialisasi router
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,18 +60,20 @@ export default function RoomsManagementPage() {
         status: 'available' as 'available' | 'occupied' | 'maintenance',
     },
     validate: {
-        room_number: (value) => (!value ? 'Room number is required' : null),
-        room_type_id: (value) => (!value ? 'Room type is required' : null),
+        room_number: (value) => (!value ? 'Nomor kamar harus diisi' : null),
+        room_type_id: (value) => (!value ? 'Tipe kamar harus dipilih' : null),
     },
-    });
+  });
 
   useEffect(() => {
     if (profile?.hotel_id) {
       fetchData();
     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.hotel_id]);
 
-  const fetchData = async () => {
+  // ... (fetchData, handleSubmit, handleEdit, handleDelete, handleCloseModal tetap sama) ...
+   const fetchData = async () => {
     if (!profile?.hotel_id) return;
 
     try {
@@ -100,11 +105,12 @@ export default function RoomsManagementPage() {
       }));
 
       setRooms(roomsWithTypes);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to fetch rooms',
-        color: 'red',
+    } catch (error: any) {
+        console.error("Error fetching room data:", error);
+        notifications.show({
+            title: 'Error',
+            message: error?.message || 'Gagal mengambil data kamar.',
+            color: 'red',
       });
     } finally {
       setLoading(false);
@@ -150,11 +156,8 @@ export default function RoomsManagementPage() {
           color: 'green',
         });
       }
-
-      form.reset();
-      setModalOpened(false);
-      setEditingRoom(null);
-      fetchData();
+      handleCloseModal();
+      await fetchData(); // Use await here
     } catch (error: any) {
       notifications.show({
         title: 'Error',
@@ -164,7 +167,7 @@ export default function RoomsManagementPage() {
     }
   };
 
-  const handleEdit = (room: Room) => {
+    const handleEdit = (room: Room) => {
     setEditingRoom(room);
     form.setValues({
       room_number: room.room_number,
@@ -173,6 +176,7 @@ export default function RoomsManagementPage() {
     });
     setModalOpened(true);
   };
+
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -193,7 +197,7 @@ export default function RoomsManagementPage() {
 
       setDeleteModalOpened(false);
       setDeleteTarget(null);
-      fetchData();
+      await fetchData(); // Use await here
     } catch (error: any) {
       notifications.show({
         title: 'Error',
@@ -208,6 +212,12 @@ export default function RoomsManagementPage() {
     setEditingRoom(null);
     form.reset();
   };
+
+    const handleCloseDeleteModal = () => {
+        setDeleteModalOpened(false);
+        setDeleteTarget(null);
+    };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -231,208 +241,225 @@ export default function RoomsManagementPage() {
       case 'maintenance':
         return 'Maintenance';
       default:
-        return status;
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
   if (loading) {
     return (
-      <Container size="lg" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Center style={{ minHeight: 'calc(100vh - 140px)' }}> {/* Adjust height */}
         <Loader size="xl" />
-      </Container>
+      </Center>
     );
   }
 
   const roomTypeOptions = roomTypes.map((rt) => ({
     value: rt.id,
-    label: `${rt.name} (Rp ${rt.price_per_night.toLocaleString()}/malam)`,
+    label: `${rt.name} (Rp ${rt.price_per_night.toLocaleString('id-ID')}/malam)`, // Indonesian locale
   }));
 
   const statusOptions = [
     { value: 'available', label: 'Tersedia' },
-    { value: 'occupied', label: 'Terisi' },
+    // Hotel admin should ideally not set occupied directly, maybe only maintenance
+    // { value: 'occupied', label: 'Terisi' },
     { value: 'maintenance', label: 'Maintenance' },
   ];
 
   return (
-    <Container size="lg">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={2} c="#1e293b">
-              Manajemen Kamar
-            </Title>
-            <Text c="#475569" size="sm">
-              Kelola kamar hotel Anda
-            </Text>
-          </div>
-          <Button
-            leftSection={<IconPlus size={18} />}
-            onClick={() => {
-              setEditingRoom(null);
-              form.reset();
-              setModalOpened(true);
+     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
+        {/* Header Gradient */}
+        <div
+            style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // Green Gradient
+            padding: '2rem 0',
+            marginBottom: '2rem',
             }}
-            disabled={roomTypes.length === 0}
-          >
-            Tambah Kamar
-          </Button>
-        </Group>
+        >
+            <Container size="lg">
+            <Group justify="space-between" align="center">
+                <div>
+                <Group mb="xs">
+                    <ActionIcon
+                    variant="transparent"
+                    color="white"
+                    onClick={() => router.push('/admin/dashboard')} // Navigate back to admin dashboard
+                    aria-label="Kembali ke Dashboard Admin"
+                    >
+                    <IconArrowLeft size={20} />
+                    </ActionIcon>
+                    <Title order={1} c="white">
+                        Manajemen Kamar
+                    </Title>
+                </Group>
+                <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>
+                    Kelola kamar hotel Anda
+                </Text>
+                </div>
+                <Button
+                    leftSection={<IconPlus size={18} />}
+                    onClick={() => {
+                        setEditingRoom(null);
+                        form.reset();
+                        setModalOpened(true);
+                    }}
+                    disabled={roomTypes.length === 0}
+                    variant="white" // Button style for contrast
+                    color="teal"      // Text color matches theme
+                >
+                    Tambah Kamar
+                </Button>
+            </Group>
+            </Container>
+        </div>
 
-        {roomTypes.length === 0 ? (
-          <Paper shadow="sm" p="xl" radius="md" withBorder>
-            <Box ta="center">
-              <Text c="dimmed" mb="md">
-                Belum ada tipe kamar. Hubungi Super Admin untuk menambahkan tipe kamar terlebih dahulu.
-              </Text>
-            </Box>
-          </Paper>
-        ) : rooms.length === 0 ? (
-          <Paper shadow="sm" p="xl" radius="md" withBorder>
-            <Box ta="center">
-              <Text c="dimmed" mb="md">
-                Belum ada kamar. Klik tombol di atas untuk menambah kamar.
-              </Text>
-              <Button
-                leftSection={<IconPlus size={18} />}
-                onClick={() => {
-                  setEditingRoom(null);
-                  form.reset();
-                  setModalOpened(true);
-                }}
-              >
-                Tambah Kamar Pertama
-              </Button>
-            </Box>
-          </Paper>
-        ) : (
-          <Paper shadow="sm" p="lg" radius="md" withBorder>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>No. Kamar</Table.Th>
-                  <Table.Th>Tipe Kamar</Table.Th>
-                  <Table.Th>Harga/Malam</Table.Th>
-                  <Table.Th>Kapasitas</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Aksi</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {rooms.map((room) => (
-                  <Table.Tr key={room.id}>
-                    <Table.Td fw={600}>{room.room_number}</Table.Td>
-                    <Table.Td>{room.room_type?.name || 'N/A'}</Table.Td>
-                    <Table.Td>
-                      Rp {room.room_type?.price_per_night.toLocaleString() || '0'}
-                    </Table.Td>
-                    <Table.Td>{room.room_type?.capacity || 0} orang</Table.Td>
-                    <Table.Td>
-                      <Badge color={getStatusColor(room.status)} variant="light">
-                        {getStatusLabel(room.status)}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ActionIcon
-                          color="blue"
-                          variant="light"
-                          onClick={() => handleEdit(room)}
-                        >
-                          <IconEdit size={16} />
-                        </ActionIcon>
-                        <ActionIcon
-                          color="red"
-                          variant="light"
-                          onClick={() => {
-                            setDeleteTarget(room);
-                            setDeleteModalOpened(true);
-                          }}
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
+      <Container size="lg" pb="xl"> {/* Added bottom padding */}
+        <Stack gap="lg">
+           {/* Removed the old header Group */}
+
+          {roomTypes.length === 0 ? (
+            <Paper shadow="sm" p="xl" radius="md" withBorder>
+              <Box ta="center">
+                <Text c="dimmed" mb="md">
+                  Anda perlu Tipe Kamar untuk bisa menambahkan Kamar. Hubungi Super Admin.
+                </Text>
+              </Box>
+            </Paper>
+          ) : rooms.length === 0 ? (
+            <Paper shadow="sm" p="xl" radius="md" withBorder>
+              <Box ta="center">
+                <Text c="dimmed" mb="md">
+                  Belum ada kamar. Klik tombol 'Tambah Kamar' di atas.
+                </Text>
+                 {/* Button moved to header */}
+              </Box>
+            </Paper>
+          ) : (
+            <Paper shadow="sm" p="lg" radius="md" withBorder>
+              <Table striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>No. Kamar</Table.Th>
+                    <Table.Th>Tipe Kamar</Table.Th>
+                    <Table.Th>Harga/Malam</Table.Th>
+                    <Table.Th>Kapasitas</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Aksi</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-        )}
-      </Stack>
+                </Table.Thead>
+                <Table.Tbody>
+                  {rooms.map((room) => (
+                    <Table.Tr key={room.id}>
+                      <Table.Td fw={600}>{room.room_number}</Table.Td>
+                      <Table.Td>{room.room_type?.name || 'N/A'}</Table.Td>
+                      <Table.Td>
+                        Rp {room.room_type?.price_per_night.toLocaleString('id-ID') || '0'}
+                      </Table.Td>
+                      <Table.Td>{room.room_type?.capacity || 0} orang</Table.Td>
+                      <Table.Td>
+                        <Badge color={getStatusColor(room.status)} variant="light">
+                          {getStatusLabel(room.status)}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ActionIcon
+                            color="blue"
+                            variant="light"
+                            onClick={() => handleEdit(room)}
+                            aria-label={`Edit kamar ${room.room_number}`}
+                          >
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                          <ActionIcon
+                            color="red"
+                            variant="light"
+                            onClick={() => {
+                              setDeleteTarget(room);
+                              setDeleteModalOpened(true);
+                            }}
+                            aria-label={`Hapus kamar ${room.room_number}`}
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Paper>
+          )}
+        </Stack>
 
-      {/* Modal Add/Edit */}
-      <Modal
-        opened={modalOpened}
-        onClose={handleCloseModal}
-        title={editingRoom ? 'Edit Kamar' : 'Tambah Kamar Baru'}
-        centered
-      >
-        <form onSubmit={form.onSubmit(handleSubmit)}>
+        {/* Modal Add/Edit */}
+        <Modal
+          opened={modalOpened}
+          onClose={handleCloseModal}
+          title={editingRoom ? 'Edit Kamar' : 'Tambah Kamar Baru'}
+          centered
+        >
+          <form onSubmit={form.onSubmit(handleSubmit)}>
+            <Stack gap="md">
+              <TextInput
+                label="Nomor Kamar"
+                placeholder="Contoh: 101, 202, A-15"
+                required
+                {...form.getInputProps('room_number')}
+              />
+              <Select
+                label="Tipe Kamar"
+                placeholder="Pilih tipe kamar"
+                data={roomTypeOptions}
+                required
+                searchable
+                 nothingFoundMessage="Tipe kamar tidak ditemukan"
+                {...form.getInputProps('room_type_id')}
+              />
+              <Select
+                label="Status"
+                placeholder="Pilih status"
+                data={statusOptions}
+                required
+                {...form.getInputProps('status')}
+              />
+              <Group justify="flex-end" mt="md"> {/* Added margin-top */}
+                <Button variant="default" onClick={handleCloseModal}>
+                  Batal
+                </Button>
+                <Button type="submit">
+                  {editingRoom ? 'Update Kamar' : 'Tambah Kamar'}
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        </Modal>
+
+        {/* Delete Confirmation */}
+        <Modal
+          opened={deleteModalOpened}
+          onClose={handleCloseDeleteModal}
+          title="Hapus Kamar"
+          centered
+          size="sm"
+        >
           <Stack gap="md">
-            <TextInput
-              label="Nomor Kamar"
-              placeholder="Contoh: 101, 202, A-15"
-              required
-              {...form.getInputProps('room_number')}
-            />
-            <Select
-              label="Tipe Kamar"
-              placeholder="Pilih tipe kamar"
-              data={roomTypeOptions}
-              required
-              searchable
-              {...form.getInputProps('room_type_id')}
-            />
-            <Select
-              label="Status"
-              placeholder="Pilih status"
-              data={statusOptions}
-              required
-              {...form.getInputProps('status')}
-            />
+            <Text size="sm">
+              Apakah Anda yakin ingin menghapus kamar <strong>{deleteTarget?.room_number}</strong>? Tindakan ini tidak dapat dibatalkan.
+            </Text>
             <Group justify="flex-end">
-              <Button variant="default" onClick={handleCloseModal}>
+              <Button
+                variant="default"
+                onClick={handleCloseDeleteModal}
+              >
                 Batal
               </Button>
-              <Button type="submit">
-                {editingRoom ? 'Update Kamar' : 'Tambah Kamar'}
+              <Button color="red" onClick={handleDelete}>
+                Hapus Kamar
               </Button>
             </Group>
           </Stack>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation */}
-      <Modal
-        opened={deleteModalOpened}
-        onClose={() => {
-          setDeleteModalOpened(false);
-          setDeleteTarget(null);
-        }}
-        title="Hapus Kamar"
-        centered
-      >
-        <Stack gap="md">
-          <Text>
-            Apakah Anda yakin ingin menghapus kamar <strong>{deleteTarget?.room_number}</strong>? Tindakan ini tidak dapat dibatalkan.
-          </Text>
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              onClick={() => {
-                setDeleteModalOpened(false);
-                setDeleteTarget(null);
-              }}
-            >
-              Batal
-            </Button>
-            <Button color="red" onClick={handleDelete}>
-              Hapus Kamar
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </Container>
+        </Modal>
+      </Container>
+    </div>
   );
 }
