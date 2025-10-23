@@ -21,6 +21,7 @@ import {
   Center,
   Badge,
   Tooltip,
+  Box,
 } from '@mantine/core';
 import {
   IconEdit,
@@ -49,7 +50,7 @@ interface Room {
   room_type_id: string;
   status: 'available' | 'occupied' | 'maintenance';
   hotel_id: string;
-  room_type?: RoomType;
+  room_type?: RoomType; // Optional because we join it
 }
 
 function HotelManageContent() {
@@ -62,18 +63,19 @@ function HotelManageContent() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Room Type Modals
+  // Room Type Modals State
   const [roomTypeModalOpened, setRoomTypeModalOpened] = useState(false);
   const [roomTypeDeleteModalOpened, setRoomTypeDeleteModalOpened] = useState(false);
   const [editingRoomType, setEditingRoomType] = useState<RoomType | null>(null);
   const [deleteTargetRoomType, setDeleteTargetRoomType] = useState<RoomType | null>(null);
 
-  // Room Modals
+  // Room Modals State
   const [roomModalOpened, setRoomModalOpened] = useState(false);
   const [roomDeleteModalOpened, setRoomDeleteModalOpened] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [deleteTargetRoom, setDeleteTargetRoom] = useState<Room | null>(null);
 
+  // --- Forms Initialization ---
   const roomTypeForm = useForm({
     initialValues: {
       name: '',
@@ -84,7 +86,7 @@ function HotelManageContent() {
       name: (value) => (!value ? 'Nama tipe kamar harus diisi' : null),
       price_per_night: (value) =>
         value <= 0 ? 'Harga harus lebih besar dari 0' : null,
-      capacity: (value) => (value <= 0 ? 'Kapasitas minimal 1' : null),
+      capacity: (value) => (value <= 0 ? 'Kapasitas minimal 1 orang' : null),
     },
   });
 
@@ -100,13 +102,17 @@ function HotelManageContent() {
     },
   });
 
+  // --- Data Fetching ---
   useEffect(() => {
     if (hotelId) {
       fetchData();
     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId]);
 
   const fetchData = async () => {
+    if (!hotelId) return; // Guard clause
+
     try {
       setLoading(true);
 
@@ -119,8 +125,9 @@ function HotelManageContent() {
 
       if (hotelError) throw hotelError;
       if (hotelData) setHotelName(hotelData.name);
+      else console.warn(`Hotel with ID ${hotelId} not found.`); // Handle case where hotel might not exist
 
-      // Fetch room types
+      // Fetch room types for this hotel
       const { data: roomTypesData, error: roomTypesError } = await supabase
         .from('room_types')
         .select('*')
@@ -130,7 +137,7 @@ function HotelManageContent() {
       if (roomTypesError) throw roomTypesError;
       setRoomTypes(roomTypesData || []);
 
-      // Fetch rooms
+      // Fetch rooms for this hotel
       const { data: roomsData, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
@@ -139,17 +146,18 @@ function HotelManageContent() {
 
       if (roomsError) throw roomsError;
 
-      // Merge room type data with rooms
+      // Merge room type data into rooms data for easy display
       const roomsWithTypes = (roomsData || []).map((room) => ({
         ...room,
-        room_type: roomTypesData?.find((rt) => rt.id === room.room_type_id),
+        room_type: (roomTypesData || []).find((rt) => rt.id === room.room_type_id),
       }));
-
       setRooms(roomsWithTypes);
-    } catch (error) {
+
+    } catch (error: any) {
+      console.error("Error fetching data:", error);
       notifications.show({
-        title: 'Error',
-        message: 'Gagal mengambil data',
+        title: 'Error Pengambilan Data',
+        message: error?.message || 'Gagal mengambil data hotel, tipe kamar, atau kamar.',
         color: 'red',
       });
     } finally {
@@ -161,6 +169,7 @@ function HotelManageContent() {
   const handleRoomTypeSubmit = async (values: typeof roomTypeForm.values) => {
     try {
       if (editingRoomType) {
+        // Update existing room type
         const { error } = await supabase
           .from('room_types')
           .update({
@@ -177,8 +186,9 @@ function HotelManageContent() {
           color: 'green',
         });
       } else {
+        // Create new room type
         const { error } = await supabase.from('room_types').insert({
-          hotel_id: hotelId,
+          hotel_id: hotelId, // Ensure hotelId is included
           name: values.name,
           price_per_night: values.price_per_night,
           capacity: values.capacity,
@@ -191,14 +201,13 @@ function HotelManageContent() {
           color: 'green',
         });
       }
-      roomTypeForm.reset();
-      setRoomTypeModalOpened(false);
-      setEditingRoomType(null);
-      fetchData(); // Refresh data
+      handleCloseRoomTypeModal(); // Reset form and close modal
+      await fetchData(); // Refresh data
     } catch (error: any) {
+      console.error("Error saving room type:", error);
       notifications.show({
-        title: 'Error',
-        message: error?.message || 'Gagal menyimpan tipe kamar',
+        title: 'Error Penyimpanan',
+        message: error?.message || 'Gagal menyimpan tipe kamar.',
         color: 'red',
       });
     }
@@ -207,6 +216,26 @@ function HotelManageContent() {
   const handleRoomTypeDelete = async () => {
     if (!deleteTargetRoomType) return;
     try {
+      // Check if any rooms are using this room type
+      const { count, error: checkError } = await supabase
+        .from('rooms')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_type_id', deleteTargetRoomType.id);
+
+       if (checkError) throw checkError;
+
+      if (count !== null && count > 0) {
+        notifications.show({
+          title: 'Gagal Hapus',
+          message: `Tidak dapat menghapus tipe kamar karena masih digunakan oleh ${count} kamar. Hapus atau ubah tipe kamar tersebut terlebih dahulu.`,
+          color: 'orange',
+        });
+        setRoomTypeDeleteModalOpened(false);
+        setDeleteTargetRoomType(null);
+        return; // Stop deletion
+      }
+
+      // Proceed with deletion if no rooms are using it
       const { error } = await supabase
         .from('room_types')
         .delete()
@@ -220,26 +249,33 @@ function HotelManageContent() {
       });
       setRoomTypeDeleteModalOpened(false);
       setDeleteTargetRoomType(null);
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
     } catch (error: any) {
+      console.error("Error deleting room type:", error);
       notifications.show({
-        title: 'Error',
-        message: error?.message || 'Gagal menghapus tipe kamar',
+        title: 'Error Penghapusan',
+        message: error?.message || 'Gagal menghapus tipe kamar.',
         color: 'red',
       });
     }
   };
 
-  const handleCloseRoomTypeModal = () => {
-      setRoomTypeModalOpened(false);
-      setEditingRoomType(null);
-      roomTypeForm.reset();
-  };
+    const handleCloseRoomTypeModal = () => {
+        setRoomTypeModalOpened(false);
+        setEditingRoomType(null);
+        roomTypeForm.reset();
+    };
+
+    const handleCloseRoomTypeDeleteModal = () => {
+        setRoomTypeDeleteModalOpened(false);
+        setDeleteTargetRoomType(null);
+    }
 
   // --- Room CRUD Handlers ---
   const handleRoomSubmit = async (values: typeof roomForm.values) => {
     try {
       if (editingRoom) {
+        // Update existing room
         const { error } = await supabase
           .from('rooms')
           .update({
@@ -256,8 +292,9 @@ function HotelManageContent() {
           color: 'green',
         });
       } else {
+        // Create new room
         const { error } = await supabase.from('rooms').insert({
-          hotel_id: hotelId,
+          hotel_id: hotelId, // Ensure hotelId is included
           room_number: values.room_number,
           room_type_id: values.room_type_id,
           status: values.status,
@@ -270,14 +307,13 @@ function HotelManageContent() {
           color: 'green',
         });
       }
-      roomForm.reset();
-      setRoomModalOpened(false);
-      setEditingRoom(null);
-      fetchData(); // Refresh data
+      handleCloseRoomModal(); // Reset form and close modal
+      await fetchData(); // Refresh data
     } catch (error: any) {
+       console.error("Error saving room:", error);
       notifications.show({
-        title: 'Error',
-        message: error?.message || 'Gagal menyimpan kamar',
+        title: 'Error Penyimpanan',
+        message: error?.message || 'Gagal menyimpan kamar.',
         color: 'red',
       });
     }
@@ -286,6 +322,7 @@ function HotelManageContent() {
   const handleRoomDelete = async () => {
     if (!deleteTargetRoom) return;
     try {
+      // Add check here if needed (e.g., prevent deletion if reservation exists)
       const { error } = await supabase
         .from('rooms')
         .delete()
@@ -299,11 +336,12 @@ function HotelManageContent() {
       });
       setRoomDeleteModalOpened(false);
       setDeleteTargetRoom(null);
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
     } catch (error: any) {
+      console.error("Error deleting room:", error);
       notifications.show({
-        title: 'Error',
-        message: error?.message || 'Gagal menghapus kamar',
+        title: 'Error Penghapusan',
+        message: error?.message || 'Gagal menghapus kamar.',
         color: 'red',
       });
     }
@@ -315,6 +353,10 @@ function HotelManageContent() {
       roomForm.reset();
   };
 
+    const handleCloseRoomDeleteModal = () => {
+        setRoomDeleteModalOpened(false);
+        setDeleteTargetRoom(null);
+    }
 
   // --- Helper Functions ---
   const getStatusColor = (status: string) => {
@@ -331,14 +373,14 @@ function HotelManageContent() {
       case 'available': return 'Tersedia';
       case 'occupied': return 'Terisi';
       case 'maintenance': return 'Maintenance';
-      default: return status;
+      default: return status.charAt(0).toUpperCase() + status.slice(1); // Capitalize first letter
     }
   };
 
   // --- Loading State ---
   if (loading) {
     return (
-      <Center style={{ minHeight: '100vh' }}>
+      <Center style={{ minHeight: 'calc(100vh - 140px)' }}> {/* Adjust height based on header */}
         <Loader size="xl" />
       </Center>
     );
@@ -352,7 +394,7 @@ function HotelManageContent() {
 
   const statusOptions = [
     { value: 'available', label: 'Tersedia' },
-    { value: 'occupied', label: 'Terisi' },
+    { value: 'occupied', label: 'Terisi (hanya Super Admin yang bisa set)' }, // Note: Add logic if needed
     { value: 'maintenance', label: 'Maintenance' },
   ];
 
@@ -380,7 +422,7 @@ function HotelManageContent() {
               <IconArrowLeft size={20} />
             </ActionIcon>
             <Title order={1} c="white" style={{ flexGrow: 1 }}>
-              Kelola Kamar & Tipe - {hotelName || 'Memuat...'}
+              Kelola Kamar & Tipe - {hotelName || 'Hotel Tidak Ditemukan'}
             </Title>
           </Group>
           <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}> {/* Indentasi teks deskripsi */}
@@ -436,7 +478,7 @@ function HotelManageContent() {
                       {roomTypes.map((rt) => (
                         <Table.Tr key={rt.id}>
                           <Table.Td fw={500}>{rt.name}</Table.Td>
-                          <Table.Td>Rp {rt.price_per_night.toLocaleString()}</Table.Td>
+                          <Table.Td>Rp {rt.price_per_night.toLocaleString('id-ID')}</Table.Td> {/* Indonesian locale */}
                           <Table.Td>{rt.capacity} orang</Table.Td>
                           <Table.Td>
                             <Group gap="xs" justify="center">
@@ -486,8 +528,7 @@ function HotelManageContent() {
                     position="left"
                     withArrow
                   >
-                     {/* Tambahkan div wrapper untuk Tooltip agar bekerja pada Button disabled */}
-                    <div>
+                    <Box> {/* Wrapper Box for Tooltip */}
                       <Button
                         leftSection={<IconPlus size={18} />}
                         onClick={() => {
@@ -499,7 +540,7 @@ function HotelManageContent() {
                       >
                         Tambah Kamar
                       </Button>
-                    </div>
+                    </Box>
                   </Tooltip>
                 </Group>
 
@@ -528,7 +569,7 @@ function HotelManageContent() {
                         <Table.Tr key={room.id}>
                           <Table.Td fw={500}>{room.room_number}</Table.Td>
                           <Table.Td>{room.room_type?.name || 'N/A'}</Table.Td>
-                          <Table.Td>Rp {room.room_type?.price_per_night?.toLocaleString() || 'N/A'}</Table.Td>
+                          <Table.Td>Rp {room.room_type?.price_per_night?.toLocaleString('id-ID') || 'N/A'}</Table.Td>
                           <Table.Td>{room.room_type?.capacity || 'N/A'} orang</Table.Td>
                           <Table.Td>
                             <Badge color={getStatusColor(room.status)} variant="light" size="sm">
@@ -596,10 +637,11 @@ function HotelManageContent() {
               label="Harga per Malam (Rp)"
               placeholder="Masukkan harga"
               required
-              min={0}
-              step={50000}
+              min={1} // Harga minimal 1
+              step={1000} // Kelipatan 1000
               thousandSeparator="."
               decimalSeparator=","
+              hideControls // Sembunyikan tombol up/down jika tidak perlu
               {...roomTypeForm.getInputProps('price_per_night')}
             />
             <NumberInput
@@ -625,23 +667,20 @@ function HotelManageContent() {
       {/* Modal Delete Room Type Confirmation */}
       <Modal
         opened={roomTypeDeleteModalOpened}
-        onClose={() => setRoomTypeDeleteModalOpened(false)}
+        onClose={handleCloseRoomTypeDeleteModal}
         title="Konfirmasi Hapus Tipe Kamar"
         centered
         size="sm"
       >
         <Stack gap="md">
-          <Text>
+          <Text size="sm">
             Apakah Anda yakin ingin menghapus tipe kamar{' '}
             <strong>{deleteTargetRoomType?.name}</strong>? Tindakan ini tidak dapat dibatalkan. Menghapus tipe kamar juga dapat mempengaruhi kamar yang menggunakan tipe ini.
           </Text>
           <Group justify="flex-end">
             <Button
               variant="default"
-              onClick={() => {
-                  setRoomTypeDeleteModalOpened(false);
-                  setDeleteTargetRoomType(null);
-              }}
+              onClick={handleCloseRoomTypeDeleteModal}
             >
               Batal
             </Button>
@@ -673,7 +712,7 @@ function HotelManageContent() {
               data={roomTypeOptions}
               required
               searchable
-              nothingFoundMessage="Tipe kamar tidak ditemukan"
+              nothingFoundMessage="Tidak ada tipe kamar tersedia"
               {...roomForm.getInputProps('room_type_id')}
             />
             <Select
@@ -698,23 +737,20 @@ function HotelManageContent() {
       {/* Modal Delete Room Confirmation */}
       <Modal
         opened={roomDeleteModalOpened}
-        onClose={() => setRoomDeleteModalOpened(false)}
+        onClose={handleCloseRoomDeleteModal}
         title="Konfirmasi Hapus Kamar"
         centered
         size="sm"
       >
         <Stack gap="md">
-          <Text>
+          <Text size="sm">
             Apakah Anda yakin ingin menghapus kamar nomor{' '}
             <strong>{deleteTargetRoom?.room_number}</strong>? Tindakan ini tidak dapat dibatalkan.
           </Text>
           <Group justify="flex-end">
             <Button
               variant="default"
-              onClick={() => {
-                  setRoomDeleteModalOpened(false);
-                  setDeleteTargetRoom(null);
-              }}
+              onClick={handleCloseRoomDeleteModal}
             >
               Batal
             </Button>
@@ -724,9 +760,9 @@ function HotelManageContent() {
           </Group>
         </Stack>
       </Modal>
-    </div> // Closing div for the main layout
-  ); // Closing return statement
-} // Closing HotelManageContent function
+    </div>
+  );
+}
 
 // Default export wrapping the content with ProtectedRoute
 export default function ManageHotelPage() {
