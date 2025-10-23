@@ -15,12 +15,14 @@ import {
   Text,
   Box,
   Loader,
+  Anchor,
 } from '@mantine/core';
-import { IconEdit, IconTrash, IconPlus, IconArrowLeft } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconPlus, IconArrowLeft, IconSettings } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { Hotel } from '@/core/types/database';
 
@@ -238,10 +240,29 @@ function HotelManagementContent() {
               <Table.Tbody>
                 {hotels.map((hotel) => (
                   <Table.Tr key={hotel.id}>
-                    <Table.Td fw={500}>{hotel.name}</Table.Td>
+                    <Table.Td>
+                      <Anchor
+                        component={Link}
+                        href={`/super-admin/hotels/${hotel.id}/manage`}
+                        fw={600}
+                        c="blue"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        {hotel.name}
+                      </Anchor>
+                    </Table.Td>
                     <Table.Td>{hotel.address}</Table.Td>
                     <Table.Td>
                       <Group gap="xs">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          leftSection={<IconSettings size={14} />}
+                          component={Link}
+                          href={`/super-admin/hotels/${hotel.id}/manage`}
+                        >
+                          Kelola
+                        </Button>
                         <ActionIcon
                           color="blue"
                           variant="light"
