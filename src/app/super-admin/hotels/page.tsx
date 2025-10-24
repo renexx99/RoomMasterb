@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
 import {
   Container,
   Title,
@@ -8,7 +8,8 @@ import {
   Table,
   Group,
   Modal,
-  TextInput,
+  TextInput, // Tambahkan TextInput
+  Select,   // Tambahkan Select
   Stack,
   Paper,
   ActionIcon,
@@ -16,8 +17,9 @@ import {
   Box,
   Loader,
   Anchor,
+  Grid, // Tambahkan Grid
 } from '@mantine/core';
-import { IconEdit, IconTrash, IconPlus, IconArrowLeft, IconSettings } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconPlus, IconArrowLeft, IconSettings, IconSearch } from '@tabler/icons-react'; // Tambahkan IconSearch
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -34,6 +36,10 @@ function HotelManagementContent() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Hotel | null>(null);
+
+  // State untuk Search dan Filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('created_at_desc'); // Default sort
 
   const form = useForm({
     initialValues: {
@@ -53,10 +59,11 @@ function HotelManagementContent() {
   const fetchHotels = async () => {
     try {
       setLoading(true);
+      // Fetch data awal tidak perlu sorting di sini karena dilakukan di client-side
       const { data, error } = await supabase
         .from('hotels')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+        // .order('created_at', { ascending: false }); // Hapus order di sini jika sort client-side
 
       if (error) throw error;
       setHotels(data || []);
@@ -70,6 +77,41 @@ function HotelManagementContent() {
       setLoading(false);
     }
   };
+
+  // --- Logic Filter & Sort ---
+  const filteredAndSortedHotels = useMemo(() => {
+    let result = [...hotels];
+
+    // Filter berdasarkan searchTerm
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(
+        (hotel) =>
+          hotel.name.toLowerCase().includes(lowerSearchTerm) ||
+          hotel.address.toLowerCase().includes(lowerSearchTerm)
+      );
+    }
+
+    // Sort berdasarkan sortBy
+    switch (sortBy) {
+      case 'name_asc':
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name_desc':
+        result.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'created_at_asc':
+        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'created_at_desc':
+      default: // Default sort by newest
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+    }
+
+    return result;
+  }, [hotels, searchTerm, sortBy]);
+
 
   const handleSubmit = async (values: typeof form.values) => {
     try {
@@ -111,7 +153,7 @@ function HotelManagementContent() {
       form.reset();
       setModalOpened(false);
       setEditingHotel(null);
-      fetchHotels();
+      fetchHotels(); // Re-fetch data
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -131,7 +173,7 @@ function HotelManagementContent() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+     if (!deleteTarget) return;
 
     try {
       const { error } = await supabase
@@ -149,7 +191,7 @@ function HotelManagementContent() {
 
       setDeleteModalOpened(false);
       setDeleteTarget(null);
-      fetchHotels();
+      fetchHotels(); // Re-fetch data
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -166,7 +208,7 @@ function HotelManagementContent() {
   };
 
   if (loading) {
-    return (
+     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Loader />
       </div>
@@ -211,8 +253,37 @@ function HotelManagementContent() {
       </div>
 
       <Container size="lg" py="xl">
+        {/* --- Search and Filter Inputs --- */}
+        <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
+          <Grid align="flex-end">
+            <Grid.Col span={{ base: 12, sm: 8, md: 9 }}>
+              <TextInput
+                label="Cari Hotel"
+                placeholder="Cari berdasarkan nama atau alamat..."
+                leftSection={<IconSearch size={16} />}
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.currentTarget.value)}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 4, md: 3 }}>
+              <Select
+                label="Urutkan Berdasarkan"
+                value={sortBy}
+                onChange={(value) => setSortBy(value || 'created_at_desc')}
+                data={[
+                  { value: 'created_at_desc', label: 'Terbaru Dibuat' },
+                  { value: 'created_at_asc', label: 'Terlama Dibuat' },
+                  { value: 'name_asc', label: 'Nama (A-Z)' },
+                  { value: 'name_desc', label: 'Nama (Z-A)' },
+                ]}
+              />
+            </Grid.Col>
+          </Grid>
+        </Paper>
+
+        {/* --- Tabel Data --- */}
         <Paper shadow="sm" p="lg" radius="md" withBorder>
-          {hotels.length === 0 ? (
+          {hotels.length === 0 ? ( // Cek data asli sebelum difilter untuk pesan "belum ada hotel"
             <Box ta="center" py="xl">
               <Text c="dimmed" mb="md">
                 No hotels found. Create one to get started.
@@ -228,6 +299,12 @@ function HotelManagementContent() {
                 Create First Hotel
               </Button>
             </Box>
+          ) : filteredAndSortedHotels.length === 0 ? ( // Cek hasil filter untuk pesan "tidak ditemukan"
+             <Box ta="center" py="xl">
+              <Text c="dimmed">
+                Tidak ada hotel yang cocok dengan pencarian Anda.
+              </Text>
+            </Box>
           ) : (
             <Table striped highlightOnHover>
               <Table.Thead>
@@ -238,7 +315,8 @@ function HotelManagementContent() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {hotels.map((hotel) => (
+                {/* --- Render data yang sudah difilter dan disort --- */}
+                {filteredAndSortedHotels.map((hotel) => (
                   <Table.Tr key={hotel.id}>
                     <Table.Td>
                       <Anchor
@@ -358,7 +436,7 @@ function HotelManagementContent() {
 }
 
 export default function HotelManagementPage() {
-  return (
+   return (
     <ProtectedRoute requiredRole="super_admin">
       <HotelManagementContent />
     </ProtectedRoute>

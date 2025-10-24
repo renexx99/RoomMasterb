@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
 import { useParams, useRouter } from 'next/navigation';
 import {
   Container,
@@ -9,19 +9,21 @@ import {
   Table,
   Group,
   Modal,
-  TextInput,
+  TextInput, // Tambahkan TextInput
   Stack,
   Paper,
   ActionIcon,
   Text,
   Tabs,
   NumberInput,
-  Select,
+  Select,   // Tambahkan Select
   Loader,
   Center,
   Badge,
   Tooltip,
   Box,
+  Grid, // Tambahkan Grid
+  MultiSelect, // Tambahkan MultiSelect untuk filter
 } from '@mantine/core';
 import {
   IconEdit,
@@ -30,18 +32,21 @@ import {
   IconArrowLeft,
   IconBed,
   IconCategory,
+  IconSearch, // Tambahkan IconSearch
 } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 
+// --- Interfaces ---
 interface RoomType {
   id: string;
   name: string;
   price_per_night: number;
   capacity: number;
   hotel_id: string;
+  created_at: string; // Tambahkan created_at jika belum ada
 }
 
 interface Room {
@@ -51,6 +56,7 @@ interface Room {
   status: 'available' | 'occupied' | 'maintenance';
   hotel_id: string;
   room_type?: RoomType; // Optional because we join it
+  created_at: string; // Tambahkan created_at jika belum ada
 }
 
 function HotelManageContent() {
@@ -58,6 +64,7 @@ function HotelManageContent() {
   const router = useRouter();
   const hotelId = params.hotelId as string;
 
+  // --- State ---
   const [hotelName, setHotelName] = useState<string>('');
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -74,6 +81,16 @@ function HotelManageContent() {
   const [roomDeleteModalOpened, setRoomDeleteModalOpened] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [deleteTargetRoom, setDeleteTargetRoom] = useState<Room | null>(null);
+
+  // Filter & Sort State for Room Types
+  const [roomTypeSearchTerm, setRoomTypeSearchTerm] = useState('');
+  const [roomTypeSortBy, setRoomTypeSortBy] = useState('name_asc');
+
+  // Filter & Sort State for Rooms
+  const [roomSearchTerm, setRoomSearchTerm] = useState('');
+  const [roomSortBy, setRoomSortBy] = useState('room_number_asc');
+  const [roomFilterType, setRoomFilterType] = useState<string[]>([]); // Filter by room type IDs
+  const [roomFilterStatus, setRoomFilterStatus] = useState<string[]>([]); // Filter by status
 
   // --- Forms Initialization ---
   const roomTypeForm = useForm({
@@ -125,24 +142,24 @@ function HotelManageContent() {
 
       if (hotelError) throw hotelError;
       if (hotelData) setHotelName(hotelData.name);
-      else console.warn(`Hotel with ID ${hotelId} not found.`); // Handle case where hotel might not exist
+      else console.warn(`Hotel with ID ${hotelId} not found.`);
 
-      // Fetch room types for this hotel
+      // Fetch room types for this hotel (tanpa sort awal)
       const { data: roomTypesData, error: roomTypesError } = await supabase
         .from('room_types')
         .select('*')
-        .eq('hotel_id', hotelId)
-        .order('name', { ascending: true });
+        .eq('hotel_id', hotelId);
+        // .order('name', { ascending: true }); // Hapus sort
 
       if (roomTypesError) throw roomTypesError;
       setRoomTypes(roomTypesData || []);
 
-      // Fetch rooms for this hotel
+      // Fetch rooms for this hotel (tanpa sort awal)
       const { data: roomsData, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('hotel_id', hotelId)
-        .order('room_number', { ascending: true });
+        .eq('hotel_id', hotelId);
+        // .order('room_number', { ascending: true }); // Hapus sort
 
       if (roomsError) throw roomsError;
 
@@ -165,9 +182,102 @@ function HotelManageContent() {
     }
   };
 
+  // --- Filter & Sort Logic for Room Types ---
+  const filteredAndSortedRoomTypes = useMemo(() => {
+    let result = [...roomTypes];
+
+    // Filter by search term
+    if (roomTypeSearchTerm) {
+      const lowerSearch = roomTypeSearchTerm.toLowerCase();
+      result = result.filter(rt => rt.name.toLowerCase().includes(lowerSearch));
+    }
+
+    // Sort
+    switch (roomTypeSortBy) {
+      case 'name_desc':
+        result.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'price_asc':
+        result.sort((a, b) => a.price_per_night - b.price_per_night);
+        break;
+      case 'price_desc':
+        result.sort((a, b) => b.price_per_night - a.price_per_night);
+        break;
+      case 'capacity_asc':
+        result.sort((a, b) => a.capacity - b.capacity);
+        break;
+      case 'capacity_desc':
+        result.sort((a, b) => b.capacity - a.capacity);
+        break;
+      case 'name_asc':
+      default:
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+
+    return result;
+  }, [roomTypes, roomTypeSearchTerm, roomTypeSortBy]);
+
+  // --- Filter & Sort Logic for Rooms ---
+  const filteredAndSortedRooms = useMemo(() => {
+    let result = [...rooms];
+
+    // Filter by search term (room number)
+    if (roomSearchTerm) {
+      const lowerSearch = roomSearchTerm.toLowerCase();
+      result = result.filter(r => r.room_number.toLowerCase().includes(lowerSearch));
+    }
+
+    // Filter by room type
+    if (roomFilterType.length > 0) {
+      result = result.filter(r => roomFilterType.includes(r.room_type_id));
+    }
+
+    // Filter by status
+    if (roomFilterStatus.length > 0) {
+      result = result.filter(r => roomFilterStatus.includes(r.status));
+    }
+
+    // Sort
+    switch (roomSortBy) {
+        case 'room_number_desc':
+            result.sort((a, b) => b.room_number.localeCompare(a.room_number, undefined, { numeric: true }));
+            break;
+        case 'type_name_asc':
+            result.sort((a, b) => (a.room_type?.name || '').localeCompare(b.room_type?.name || ''));
+            break;
+        case 'type_name_desc':
+            result.sort((a, b) => (b.room_type?.name || '').localeCompare(a.room_type?.name || ''));
+            break;
+        case 'price_asc':
+            result.sort((a, b) => (a.room_type?.price_per_night || 0) - (b.room_type?.price_per_night || 0));
+            break;
+        case 'price_desc':
+            result.sort((a, b) => (b.room_type?.price_per_night || 0) - (a.room_type?.price_per_night || 0));
+            break;
+        case 'capacity_asc':
+            result.sort((a, b) => (a.room_type?.capacity || 0) - (b.room_type?.capacity || 0));
+            break;
+        case 'capacity_desc':
+            result.sort((a, b) => (b.room_type?.capacity || 0) - (a.room_type?.capacity || 0));
+            break;
+        case 'status': // Group by status potentially? For now, simple sort.
+            result.sort((a, b) => a.status.localeCompare(b.status));
+            break;
+        case 'room_number_asc':
+        default:
+            result.sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }));
+            break;
+    }
+
+    return result;
+  }, [rooms, roomSearchTerm, roomSortBy, roomFilterType, roomFilterStatus]);
+
+
   // --- Room Type CRUD Handlers ---
   const handleRoomTypeSubmit = async (values: typeof roomTypeForm.values) => {
-    try {
+    // ... (fungsi tetap sama) ...
+     try {
       if (editingRoomType) {
         // Update existing room type
         const { error } = await supabase
@@ -214,6 +324,7 @@ function HotelManageContent() {
   };
 
   const handleRoomTypeDelete = async () => {
+    // ... (fungsi tetap sama) ...
     if (!deleteTargetRoomType) return;
     try {
       // Check if any rooms are using this room type
@@ -261,18 +372,21 @@ function HotelManageContent() {
   };
 
     const handleCloseRoomTypeModal = () => {
+        // ... (fungsi tetap sama) ...
         setRoomTypeModalOpened(false);
         setEditingRoomType(null);
         roomTypeForm.reset();
     };
 
     const handleCloseRoomTypeDeleteModal = () => {
+        // ... (fungsi tetap sama) ...
         setRoomTypeDeleteModalOpened(false);
         setDeleteTargetRoomType(null);
     }
 
   // --- Room CRUD Handlers ---
   const handleRoomSubmit = async (values: typeof roomForm.values) => {
+    // ... (fungsi tetap sama) ...
     try {
       if (editingRoom) {
         // Update existing room
@@ -320,7 +434,8 @@ function HotelManageContent() {
   };
 
   const handleRoomDelete = async () => {
-    if (!deleteTargetRoom) return;
+    // ... (fungsi tetap sama) ...
+     if (!deleteTargetRoom) return;
     try {
       // Add check here if needed (e.g., prevent deletion if reservation exists)
       const { error } = await supabase
@@ -348,19 +463,22 @@ function HotelManageContent() {
   };
 
   const handleCloseRoomModal = () => {
+      // ... (fungsi tetap sama) ...
       setRoomModalOpened(false);
       setEditingRoom(null);
       roomForm.reset();
   };
 
     const handleCloseRoomDeleteModal = () => {
+        // ... (fungsi tetap sama) ...
         setRoomDeleteModalOpened(false);
         setDeleteTargetRoom(null);
     }
 
   // --- Helper Functions ---
   const getStatusColor = (status: string) => {
-    switch (status) {
+    // ... (fungsi tetap sama) ...
+     switch (status) {
       case 'available': return 'green';
       case 'occupied': return 'red';
       case 'maintenance': return 'orange';
@@ -369,6 +487,7 @@ function HotelManageContent() {
   };
 
   const getStatusLabel = (status: string) => {
+    // ... (fungsi tetap sama) ...
     switch (status) {
       case 'available': return 'Tersedia';
       case 'occupied': return 'Terisi';
@@ -379,6 +498,7 @@ function HotelManageContent() {
 
   // --- Loading State ---
   if (loading) {
+    // ... (loader tetap sama) ...
     return (
       <Center style={{ minHeight: 'calc(100vh - 140px)' }}> {/* Adjust height based on header */}
         <Loader size="xl" />
@@ -392,11 +512,25 @@ function HotelManageContent() {
     label: `${rt.name} (Rp ${rt.price_per_night.toLocaleString()}/malam, ${rt.capacity} org)`,
   }));
 
+  // Opsi untuk filter tipe kamar di tabel Kamar
+  const roomTypeFilterOptions = roomTypes.map((rt) => ({
+    value: rt.id,
+    label: rt.name,
+  }));
+
   const statusOptions = [
     { value: 'available', label: 'Tersedia' },
     { value: 'occupied', label: 'Terisi (hanya Super Admin yang bisa set)' }, // Note: Add logic if needed
     { value: 'maintenance', label: 'Maintenance' },
   ];
+
+   // Opsi untuk filter status di tabel Kamar
+   const statusFilterOptions = [
+    { value: 'available', label: 'Tersedia' },
+    { value: 'occupied', label: 'Terisi' },
+    { value: 'maintenance', label: 'Maintenance' },
+   ];
+
 
   const noRoomTypes = roomTypes.length === 0;
 
@@ -404,7 +538,8 @@ function HotelManageContent() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
       {/* Header */}
-      <div
+      {/* ... (header tetap sama) ... */}
+       <div
         style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           padding: '2rem 0',
@@ -460,9 +595,43 @@ function HotelManageContent() {
                   </Button>
                 </Group>
 
+                {/* --- Search & Sort for Room Types --- */}
+                <Paper shadow="xs" p="md" radius="sm" withBorder mb="sm">
+                  <Grid align="flex-end">
+                    <Grid.Col span={{ base: 12, sm: 8 }}>
+                      <TextInput
+                        label="Cari Tipe Kamar"
+                        placeholder="Cari berdasarkan nama..."
+                        leftSection={<IconSearch size={16} />}
+                        value={roomTypeSearchTerm}
+                        onChange={(event) => setRoomTypeSearchTerm(event.currentTarget.value)}
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 4 }}>
+                      <Select
+                        label="Urutkan"
+                        value={roomTypeSortBy}
+                        onChange={(value) => setRoomTypeSortBy(value || 'name_asc')}
+                        data={[
+                          { value: 'name_asc', label: 'Nama (A-Z)' },
+                          { value: 'name_desc', label: 'Nama (Z-A)' },
+                          { value: 'price_asc', label: 'Harga Termurah' },
+                          { value: 'price_desc', label: 'Harga Termahal' },
+                          { value: 'capacity_asc', label: 'Kapasitas Terkecil' },
+                          { value: 'capacity_desc', label: 'Kapasitas Terbesar' },
+                        ]}
+                      />
+                    </Grid.Col>
+                  </Grid>
+                </Paper>
+
                 {roomTypes.length === 0 ? (
                   <Text c="dimmed" ta="center" py="xl">
                     Belum ada tipe kamar untuk hotel ini. Silakan tambahkan tipe kamar baru.
+                  </Text>
+                ) : filteredAndSortedRoomTypes.length === 0 ? (
+                   <Text c="dimmed" ta="center" py="xl">
+                    Tidak ada tipe kamar yang cocok dengan pencarian Anda.
                   </Text>
                 ) : (
                   <Table striped highlightOnHover withTableBorder withColumnBorders>
@@ -475,10 +644,11 @@ function HotelManageContent() {
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {roomTypes.map((rt) => (
+                      {/* --- Render Filtered & Sorted Room Types --- */}
+                      {filteredAndSortedRoomTypes.map((rt) => (
                         <Table.Tr key={rt.id}>
                           <Table.Td fw={500}>{rt.name}</Table.Td>
-                          <Table.Td>Rp {rt.price_per_night.toLocaleString('id-ID')}</Table.Td> {/* Indonesian locale */}
+                          <Table.Td>Rp {rt.price_per_night.toLocaleString('id-ID')}</Table.Td>
                           <Table.Td>{rt.capacity} orang</Table.Td>
                           <Table.Td>
                             <Group gap="xs" justify="center">
@@ -544,6 +714,61 @@ function HotelManageContent() {
                   </Tooltip>
                 </Group>
 
+                {/* --- Search, Filter & Sort for Rooms --- */}
+                <Paper shadow="xs" p="md" radius="sm" withBorder mb="sm">
+                  <Grid align="flex-end" gutter="md">
+                    <Grid.Col span={{ base: 12, md: 4 }}>
+                      <TextInput
+                        label="Cari Nomor Kamar"
+                        placeholder="Cari nomor..."
+                        leftSection={<IconSearch size={16} />}
+                        value={roomSearchTerm}
+                        onChange={(event) => setRoomSearchTerm(event.currentTarget.value)}
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                      <MultiSelect
+                        label="Filter Tipe Kamar"
+                        placeholder="Semua Tipe"
+                        data={roomTypeFilterOptions}
+                        value={roomFilterType}
+                        onChange={setRoomFilterType}
+                        clearable
+                        searchable
+                        nothingFoundMessage="Tipe tidak ditemukan"
+                      />
+                    </Grid.Col>
+                     <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+                      <MultiSelect
+                        label="Filter Status"
+                        placeholder="Semua Status"
+                        data={statusFilterOptions}
+                        value={roomFilterStatus}
+                        onChange={setRoomFilterStatus}
+                        clearable
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 3 }}>
+                      <Select
+                        label="Urutkan"
+                        value={roomSortBy}
+                        onChange={(value) => setRoomSortBy(value || 'room_number_asc')}
+                        data={[
+                          { value: 'room_number_asc', label: 'No. Kamar (Asc)' },
+                          { value: 'room_number_desc', label: 'No. Kamar (Desc)' },
+                          { value: 'type_name_asc', label: 'Tipe (A-Z)' },
+                          { value: 'type_name_desc', label: 'Tipe (Z-A)' },
+                          { value: 'price_asc', label: 'Harga Termurah' },
+                          { value: 'price_desc', label: 'Harga Termahal' },
+                          { value: 'capacity_asc', label: 'Kapasitas Terkecil' },
+                          { value: 'capacity_desc', label: 'Kapasitas Terbesar' },
+                          { value: 'status', label: 'Status' },
+                        ]}
+                      />
+                    </Grid.Col>
+                  </Grid>
+                </Paper>
+
                 {noRoomTypes ? (
                   <Text c="dimmed" ta="center" py="xl">
                     Silakan tambahkan Tipe Kamar terlebih dahulu di tab sebelah sebelum menambahkan kamar.
@@ -552,6 +777,10 @@ function HotelManageContent() {
                   <Text c="dimmed" ta="center" py="xl">
                     Belum ada kamar untuk hotel ini. Silakan tambahkan kamar baru.
                   </Text>
+                ) : filteredAndSortedRooms.length === 0 ? (
+                    <Text c="dimmed" ta="center" py="xl">
+                        Tidak ada kamar yang cocok dengan filter atau pencarian Anda.
+                    </Text>
                 ) : (
                   <Table striped highlightOnHover withTableBorder withColumnBorders>
                     <Table.Thead>
@@ -565,7 +794,8 @@ function HotelManageContent() {
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {rooms.map((room) => (
+                      {/* --- Render Filtered & Sorted Rooms --- */}
+                      {filteredAndSortedRooms.map((room) => (
                         <Table.Tr key={room.id}>
                           <Table.Td fw={500}>{room.room_number}</Table.Td>
                           <Table.Td>{room.room_type?.name || 'N/A'}</Table.Td>
@@ -617,8 +847,9 @@ function HotelManageContent() {
       </Container>
 
       {/* --- Modals --- */}
+      {/* ... (semua modal tetap sama) ... */}
 
-      {/* Modal Add/Edit Room Type */}
+       {/* Modal Add/Edit Room Type */}
       <Modal
         opened={roomTypeModalOpened}
         onClose={handleCloseRoomTypeModal}
@@ -760,6 +991,7 @@ function HotelManageContent() {
           </Group>
         </Stack>
       </Modal>
+
     </div>
   );
 }
