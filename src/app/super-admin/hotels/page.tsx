@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
+import { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Title,
@@ -8,23 +8,21 @@ import {
   Table,
   Group,
   Modal,
-  TextInput, // Tambahkan TextInput
-  Select,   // Tambahkan Select
+  TextInput,
+  Select,
   Stack,
   Paper,
   ActionIcon,
   Text,
   Box,
   Loader,
-  Anchor,
-  Grid, // Tambahkan Grid
+  Grid,
 } from '@mantine/core';
-import { IconEdit, IconTrash, IconPlus, IconArrowLeft, IconSettings, IconSearch } from '@tabler/icons-react'; // Tambahkan IconSearch
+import { IconEdit, IconTrash, IconPlus, IconArrowLeft, IconSearch } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { Hotel } from '@/core/types/database';
 
@@ -37,9 +35,8 @@ function HotelManagementContent() {
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Hotel | null>(null);
 
-  // State untuk Search dan Filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('created_at_desc'); // Default sort
+  const [sortBy, setSortBy] = useState('created_at_desc');
 
   const form = useForm({
     initialValues: {
@@ -59,11 +56,9 @@ function HotelManagementContent() {
   const fetchHotels = async () => {
     try {
       setLoading(true);
-      // Fetch data awal tidak perlu sorting di sini karena dilakukan di client-side
       const { data, error } = await supabase
         .from('hotels')
         .select('*');
-        // .order('created_at', { ascending: false }); // Hapus order di sini jika sort client-side
 
       if (error) throw error;
       setHotels(data || []);
@@ -78,11 +73,9 @@ function HotelManagementContent() {
     }
   };
 
-  // --- Logic Filter & Sort ---
   const filteredAndSortedHotels = useMemo(() => {
     let result = [...hotels];
 
-    // Filter berdasarkan searchTerm
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       result = result.filter(
@@ -92,7 +85,6 @@ function HotelManagementContent() {
       );
     }
 
-    // Sort berdasarkan sortBy
     switch (sortBy) {
       case 'name_asc':
         result.sort((a, b) => a.name.localeCompare(b.name));
@@ -104,14 +96,13 @@ function HotelManagementContent() {
         result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         break;
       case 'created_at_desc':
-      default: // Default sort by newest
+      default:
         result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
     }
 
     return result;
   }, [hotels, searchTerm, sortBy]);
-
 
   const handleSubmit = async (values: typeof form.values) => {
     try {
@@ -153,7 +144,7 @@ function HotelManagementContent() {
       form.reset();
       setModalOpened(false);
       setEditingHotel(null);
-      fetchHotels(); // Re-fetch data
+      fetchHotels();
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -173,7 +164,7 @@ function HotelManagementContent() {
   };
 
   const handleDelete = async () => {
-     if (!deleteTarget) return;
+    if (!deleteTarget) return;
 
     try {
       const { error } = await supabase
@@ -191,7 +182,7 @@ function HotelManagementContent() {
 
       setDeleteModalOpened(false);
       setDeleteTarget(null);
-      fetchHotels(); // Re-fetch data
+      fetchHotels();
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -208,7 +199,7 @@ function HotelManagementContent() {
   };
 
   if (loading) {
-     return (
+    return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Loader />
       </div>
@@ -217,7 +208,6 @@ function HotelManagementContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2rem 0' }}>
         <Container size="lg">
           <Group justify="space-between" align="center">
@@ -253,7 +243,6 @@ function HotelManagementContent() {
       </div>
 
       <Container size="lg" py="xl">
-        {/* --- Search and Filter Inputs --- */}
         <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
           <Grid align="flex-end">
             <Grid.Col span={{ base: 12, sm: 8, md: 9 }}>
@@ -281,9 +270,8 @@ function HotelManagementContent() {
           </Grid>
         </Paper>
 
-        {/* --- Tabel Data --- */}
         <Paper shadow="sm" p="lg" radius="md" withBorder>
-          {hotels.length === 0 ? ( // Cek data asli sebelum difilter untuk pesan "belum ada hotel"
+          {hotels.length === 0 ? (
             <Box ta="center" py="xl">
               <Text c="dimmed" mb="md">
                 No hotels found. Create one to get started.
@@ -299,8 +287,8 @@ function HotelManagementContent() {
                 Create First Hotel
               </Button>
             </Box>
-          ) : filteredAndSortedHotels.length === 0 ? ( // Cek hasil filter untuk pesan "tidak ditemukan"
-             <Box ta="center" py="xl">
+          ) : filteredAndSortedHotels.length === 0 ? (
+            <Box ta="center" py="xl">
               <Text c="dimmed">
                 Tidak ada hotel yang cocok dengan pencarian Anda.
               </Text>
@@ -315,32 +303,12 @@ function HotelManagementContent() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {/* --- Render data yang sudah difilter dan disort --- */}
                 {filteredAndSortedHotels.map((hotel) => (
                   <Table.Tr key={hotel.id}>
-                    <Table.Td>
-                      <Anchor
-                        component={Link}
-                        href={`/super-admin/hotels/${hotel.id}/manage`}
-                        fw={600}
-                        c="blue"
-                        style={{ textDecoration: 'none' }}
-                      >
-                        {hotel.name}
-                      </Anchor>
-                    </Table.Td>
+                    <Table.Td fw={600}>{hotel.name}</Table.Td>
                     <Table.Td>{hotel.address}</Table.Td>
                     <Table.Td>
                       <Group gap="xs">
-                        <Button
-                          size="xs"
-                          variant="light"
-                          leftSection={<IconSettings size={14} />}
-                          component={Link}
-                          href={`/super-admin/hotels/${hotel.id}/manage`}
-                        >
-                          Kelola
-                        </Button>
                         <ActionIcon
                           color="blue"
                           variant="light"
@@ -368,7 +336,6 @@ function HotelManagementContent() {
         </Paper>
       </Container>
 
-      {/* Modal untuk Add/Edit Hotel */}
       <Modal
         opened={modalOpened}
         onClose={handleCloseModal}
@@ -401,7 +368,6 @@ function HotelManagementContent() {
         </form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal
         opened={deleteModalOpened}
         onClose={() => {
@@ -436,8 +402,8 @@ function HotelManagementContent() {
 }
 
 export default function HotelManagementPage() {
-   return (
-    <ProtectedRoute requiredRole="super_admin">
+  return (
+    <ProtectedRoute requiredRoleName="super_admin">
       <HotelManagementContent />
     </ProtectedRoute>
   );

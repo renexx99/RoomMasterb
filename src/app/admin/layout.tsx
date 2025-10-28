@@ -26,6 +26,7 @@ import {
   IconLogout,
   IconChevronDown,
   IconBuildingSkyscraper,
+  IconCategory,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -40,6 +41,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/admin/dashboard' },
+  { label: 'Manajemen Tipe Kamar', icon: IconCategory, href: '/admin/room-types' },
   { label: 'Manajemen Kamar', icon: IconBed, href: '/admin/rooms' },
   { label: 'Manajemen Reservasi', icon: IconCalendarEvent, href: '/admin/reservations' },
   { label: 'Manajemen Tamu', icon: IconUsersGroup, href: '/admin/guests' },
@@ -123,7 +125,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         main: { background: '#f5f6fa' },
       }}
     >
-      {/* Header */}
       <AppShell.Header
         style={{
           borderBottom: '1px solid #e5e7eb',
@@ -201,7 +202,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         </Group>
       </AppShell.Header>
 
-      {/* Sidebar */}
       <AppShell.Navbar
         p="md"
         style={{
@@ -291,7 +291,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute requiredRole="hotel_admin">
+    <ProtectedRoute requiredRoleName="hotel_admin">
       <AdminLayoutContent>{children}</AdminLayoutContent>
     </ProtectedRoute>
   );
