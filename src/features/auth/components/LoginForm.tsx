@@ -1,3 +1,4 @@
+// src/features/auth/components/LoginForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -8,11 +9,15 @@ import { notifications } from '@mantine/notifications';
 import { IconMail, IconLock, IconLogin } from '@tabler/icons-react';
 import { supabase } from '@/core/config/supabaseClient';
 import Link from 'next/link';
+import { UserRoleAssignmentWithRoleName } from '../hooks/useAuth'; // Import the interface
 
 interface LoginFormValues {
   email: string;
   password: string;
 }
+
+// Define roles that require a hotel assignment to function
+const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office']; // Add other roles as needed
 
 export function LoginForm() {
   const router = useRouter();
@@ -31,7 +36,7 @@ export function LoginForm() {
       },
       password: (value) => {
         if (!value) return 'Password is required';
-        if (value.length < 6) return 'Password must be at least 6 characters';
+        // Password length check can be less strict here as it's just login
         return null;
       },
     },
@@ -41,56 +46,103 @@ export function LoginForm() {
     setLoading(true);
 
     try {
+      // 1. Sign in the user
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
       if (authError) {
+         // Provide more specific feedback for invalid credentials
+         if (authError.message.includes("Invalid login credentials")) {
+             throw new Error("Invalid email or password.");
+         }
         throw authError;
       }
 
       if (!authData.user) {
-        throw new Error('Authentication failed');
+        throw new Error('Authentication failed. User data not found.');
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authData.user.id)
-        .maybeSingle();
+      // 2. Fetch the user's roles from the 'user_roles' table, joining with 'roles'
+      const { data: userRolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select(`
+          hotel_id,
+          role:roles (name)
+        `)
+        .eq('user_id', authData.user.id);
 
-      if (profileError) {
-        throw profileError;
+      if (rolesError) {
+        console.error("Error fetching user roles:", rolesError);
+        throw new Error('Could not retrieve user role information.');
       }
 
-      if (!profile) {
-        throw new Error('Profile not found');
+       // Map to the structure expected by useAuth/ProtectedRoute, adding role_name
+      const roles: UserRoleAssignmentWithRoleName[] = (userRolesData || []).map(ur => ({
+          id: '', // Placeholder, adjust if needed
+          user_id: authData.user.id,
+          role_id: '', // Placeholder, adjust if needed
+          created_at: '', // Placeholder, adjust if needed
+          hotel_id: ur.hotel_id,
+          role_name: (ur.role as unknown as { name: string })?.name || 'Unknown Role', // Handle potential null role join
+      }));
+
+
+      // 3. Check for role assignment and required hotel_id
+      if (!roles || roles.length === 0) {
+        await supabase.auth.signOut(); // Log out user if no roles assigned
+        throw new Error('Your account has not been assigned a role yet. Please contact the Super Admin.');
       }
 
-      if (profile.role === 'hotel_admin' && !profile.hotel_id) {
-        await supabase.auth.signOut();
-        throw new Error('Akun Anda belum diaktifkan oleh Super Admin. Mohon tunggu hingga hotel Anda ditentukan.');
-      }
+      // Find the primary role (e.g., Super Admin takes precedence)
+      const superAdminRole = roles.find(r => r.role_name === 'Super Admin');
+      const hotelSpecificRole = roles.find(r => ROLES_REQUIRING_HOTEL.includes(r.role_name || ''));
+
+       let assignedHotelId: string | null = null;
+       let effectiveRoleName: string | undefined = undefined;
+
+       if (superAdminRole) {
+           effectiveRoleName = 'Super Admin';
+           // Super Admin doesn't strictly need a hotel_id for global access
+       } else if (hotelSpecificRole) {
+           if (!hotelSpecificRole.hotel_id) {
+               await supabase.auth.signOut(); // Log out if required hotel_id is missing
+               throw new Error(`Your role (${hotelSpecificRole.role_name}) requires a hotel assignment. Please contact the Super Admin.`);
+           }
+           effectiveRoleName = hotelSpecificRole.role_name;
+           assignedHotelId = hotelSpecificRole.hotel_id;
+       } else {
+           // Handle cases with other roles if necessary, or deny login if no recognized operational role
+           await supabase.auth.signOut();
+           throw new Error('Your assigned role does not permit login to this application.');
+       }
+
 
       notifications.show({
         title: 'Success',
-        message: 'Logged in successfully',
+        message: 'Logged in successfully!',
         color: 'green',
       });
 
-      if (profile.role === 'super_admin') {
+      // 4. Redirect based on the effective role
+      if (effectiveRoleName === 'Super Admin') {
         router.push('/super-admin/dashboard');
-      } else if (profile.role === 'hotel_admin') {
+      } else if (assignedHotelId && ROLES_REQUIRING_HOTEL.includes(effectiveRoleName || '')) {
+         // Redirect hotel-specific roles to the general admin dashboard
+         // The specific hotel context will be managed within the admin section via useAuth
         router.push('/admin/dashboard');
       } else {
-        router.push('/');
+         // Fallback or handle other roles
+         console.warn("User logged in but has an unhandled role:", effectiveRoleName);
+         router.push('/'); // Redirect to a default page or show an error
       }
+
     } catch (error) {
       console.error('Login error:', error);
       notifications.show({
-        title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to login',
+        title: 'Login Failed',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred during login.',
         color: 'red',
       });
     } finally {
@@ -98,6 +150,7 @@ export function LoginForm() {
     }
   };
 
+  // --- JSX remains largely the same ---
   return (
     <Paper
       radius="xl"
@@ -187,7 +240,7 @@ export function LoginForm() {
             disabled={loading}
             suppressHydrationWarning
           />
-          
+
           {/* Login Button */}
           <Button
             type="submit"

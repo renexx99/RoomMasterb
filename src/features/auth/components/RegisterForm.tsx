@@ -1,3 +1,4 @@
+// src/features/auth/components/RegisterForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -55,52 +56,61 @@ export function RegisterForm() {
     setLoading(true);
 
     try {
+      // 1. Sign up the user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
       });
 
       if (authError) {
+        // Handle specific auth errors if needed (e.g., email already exists)
+        if (authError.message.includes("User already registered")) {
+           throw new Error("This email is already registered.");
+        }
         throw authError;
       }
 
       if (!authData.user) {
-        throw new Error('Failed to create user account');
+        throw new Error('Failed to create user account.');
       }
 
+      // 2. Create the corresponding profile in the 'profiles' table
+      //    NO role or hotel_id is assigned here by default.
       const { error: profileError } = await supabase.from('profiles').insert({
         id: authData.user.id,
         email: values.email,
         full_name: values.fullName,
-        role: 'hotel_admin',
-        hotel_id: null,
+        // 'role' column is intentionally omitted or set to null if required by schema
+        // 'hotel_id' is null by default
       });
 
       if (profileError) {
-        throw profileError;
+         // If profile creation fails, potentially try to clean up the auth user?
+         // This is complex, maybe just log the error and inform the user.
+        console.error("Profile creation failed after signup:", profileError);
+        throw new Error(`Account created, but profile setup failed. Please contact support. Error: ${profileError.message}`);
       }
 
       notifications.show({
         title: 'Success',
-        message: 'Account created successfully! Please check your email to confirm.',
+        message: 'Account created! Please check your email to confirm your address. A Super Admin needs to assign your role before you can log in.',
         color: 'green',
+        autoClose: 10000, // Longer duration for this message
       });
 
+      // Redirect to login page after successful signup
       router.push('/auth/login');
+
     } catch (error) {
       console.error('Registration error:', error);
 
       let errorMessage = 'Failed to create account';
       if (error instanceof Error) {
-        if (error.message.includes('already registered')) {
-          errorMessage = 'This email is already registered';
-        } else {
-          errorMessage = error.message;
-        }
+        errorMessage = error.message; // Use the specific error message
       }
 
       notifications.show({
-        title: 'Error',
+        title: 'Registration Error',
         message: errorMessage,
         color: 'red',
       });
@@ -109,6 +119,7 @@ export function RegisterForm() {
     }
   };
 
+  // --- JSX remains the same ---
   return (
     <Paper
       radius="xl"
