@@ -291,7 +291,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute requiredRoleName="hotel_admin">
+    <ProtectedRoute requiredRoleName="Hotel Admin">
       <AdminLayoutContent>{children}</AdminLayoutContent>
     </ProtectedRoute>
   );

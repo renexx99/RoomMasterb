@@ -403,7 +403,7 @@ function HotelManagementContent() {
 
 export default function HotelManagementPage() {
   return (
-    <ProtectedRoute requiredRoleName="super_admin">
+    <ProtectedRoute requiredRoleName="Super Admin">
       <HotelManagementContent />
     </ProtectedRoute>
   );
