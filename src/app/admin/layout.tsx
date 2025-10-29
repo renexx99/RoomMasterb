@@ -27,10 +27,11 @@ import {
   IconChevronDown,
   IconBuildingSkyscraper,
   IconCategory,
+  IconUsers, // <-- IconUsers sudah ada
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/useAuth'; // Hook useAuth
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 
 interface NavItem {
@@ -45,33 +46,42 @@ const navItems: NavItem[] = [
   { label: 'Manajemen Kamar', icon: IconBed, href: '/admin/rooms' },
   { label: 'Manajemen Reservasi', icon: IconCalendarEvent, href: '/admin/reservations' },
   { label: 'Manajemen Tamu', icon: IconUsersGroup, href: '/admin/guests' },
+  { label: 'Manajemen Staf', icon: IconUsers, href: '/admin/staff' },
 ];
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
-  const { profile } = useAuth();
+  // --- Panggil useAuth di top level ---
+  const { profile, loading: authLoading, error: authError } = useAuth(); // Ganti nama 'loading' agar tidak konflik
+  // --- End of change ---
   const [hotelName, setHotelName] = useState<string>('');
   const [loadingHotel, setLoadingHotel] = useState(true);
 
   useEffect(() => {
     const fetchHotelInfo = async () => {
-      if (!profile?.hotel_id) {
+      const assignedHotelId = profile?.roles?.find(r => r.hotel_id)?.hotel_id;
+
+      if (!assignedHotelId) {
         setLoadingHotel(false);
+        console.warn("Hotel Admin profile does not have an assigned hotel_id in roles.");
         return;
       }
 
       try {
+        setLoadingHotel(true);
         const { data, error } = await supabase
           .from('hotels')
           .select('name')
-          .eq('id', profile.hotel_id)
+          .eq('id', assignedHotelId)
           .maybeSingle();
 
         if (error) throw error;
         if (data) {
           setHotelName(data.name);
+        } else {
+           console.warn(`Hotel with ID ${assignedHotelId} not found.`);
         }
       } catch (error) {
         console.error('Error fetching hotel:', error);
@@ -80,17 +90,27 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       }
     };
 
-    fetchHotelInfo();
-  }, [profile?.hotel_id]);
+    // --- Gunakan hasil useAuth dari top level ---
+    if (profile?.roles) {
+       fetchHotelInfo();
+    } else if (!profile && !authLoading) { // Gunakan authLoading
+        setLoadingHotel(false);
+    }
+    // --- End of change ---
+
+   // --- Gunakan hasil useAuth dari top level di dependency array ---
+  }, [profile, authLoading]); // Gunakan authLoading
+  // --- End of change ---
 
   const handleLogout = async () => {
+    // ... (fungsi logout tetap sama)
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
       notifications.show({
-        title: 'Success',
-        message: 'Logged out successfully',
+        title: 'Sukses',
+        message: 'Berhasil logout',
         color: 'green',
       });
 
@@ -98,13 +118,17 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     } catch {
       notifications.show({
         title: 'Error',
-        message: 'Failed to logout',
+        message: 'Gagal logout',
         color: 'red',
       });
     }
   };
 
-  if (loadingHotel) {
+  const hotelRoleName = profile?.roles?.find(r => r.hotel_id && r.role_name !== 'Super Admin')?.role_name || 'Hotel User';
+
+  // --- Gunakan hasil useAuth dari top level ---
+  if (loadingHotel || authLoading) { // Gunakan authLoading
+  // --- End of change ---
     return (
       <Center style={{ minHeight: '100vh' }}>
         <Loader size="lg" />
@@ -112,6 +136,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // --- Sisa JSX (AppShell, Header, Navbar, Main) tetap sama ---
   return (
     <AppShell
       header={{ height: 70 }}
@@ -159,10 +184,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     letterSpacing: '-0.02em',
                   }}
                 >
-                  {hotelName || 'Hotel Admin'}
+                  {hotelName || 'Hotel Dashboard'}
                 </Text>
                 <Badge size="xs" color="green" variant="light">
-                  Hotel Administrator
+                  {hotelRoleName}
                 </Badge>
               </Box>
             </Group>
@@ -173,14 +198,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               <UnstyledButton>
                 <Group gap="xs">
                   <Avatar color="teal" radius="xl">
-                    {profile?.full_name?.charAt(0) || 'H'}
+                    {profile?.full_name?.charAt(0) || 'U'}
                   </Avatar>
                   <Box style={{ flex: 1 }} visibleFrom="sm">
                     <Text size="sm" fw={600}>
-                      {profile?.full_name || 'Admin'}
+                      {profile?.full_name || 'User'}
                     </Text>
                     <Text size="xs" c="dimmed">
-                      Hotel Admin
+                      {hotelRoleName}
                     </Text>
                   </Box>
                   <IconChevronDown size={16} stroke={1.5} />
@@ -189,7 +214,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             </Menu.Target>
 
             <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
+              <Menu.Label>Akun</Menu.Label>
               <Menu.Item
                 leftSection={<IconLogout size={16} stroke={1.5} />}
                 color="red"
@@ -285,13 +310,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute requiredRoleName="Hotel Admin">
+    <ProtectedRoute>
       <AdminLayoutContent>{children}</AdminLayoutContent>
     </ProtectedRoute>
   );
