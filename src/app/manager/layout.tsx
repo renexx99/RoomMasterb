@@ -28,8 +28,10 @@ import {
   IconChevronDown,
   IconBuildingSkyscraper,
   IconCategory,
-  IconReportAnalytics, // <-- TAMBAHKAN ICON INI
-} from '@tabler/icons-react'; // Impor icons yang relevan
+  IconReportAnalytics,
+  IconCalendarTime, // <-- TAMBAHKAN ICON INI
+  IconChecks, // <-- TAMBAHKAN ICON INI
+} from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -44,7 +46,9 @@ interface NavItem {
 // Navigasi khusus untuk Hotel Manager
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/manager/dashboard' },
-  { label: 'Laporan', icon: IconReportAnalytics, href: '/manager/reports' }, // <-- TAMBAHKAN MENU INI
+  { label: 'Laporan', icon: IconReportAnalytics, href: '/manager/reports' },
+  { label: 'Manajemen Shift', icon: IconCalendarTime, href: '/manager/shifts' }, // <-- TAMBAHKAN MENU INI
+  { label: 'Persetujuan', icon: IconChecks, href: '/manager/approvals' }, // <-- TAMBAHKAN MENU INI
   { label: 'Tipe Kamar', icon: IconCategory, href: '/manager/room-types' },
   { label: 'Manajemen Kamar', icon: IconBed, href: '/manager/rooms' },
   {
@@ -59,11 +63,10 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
-  const { profile, loading: authLoading } = useAuth(); // Ambil profile dan loading status
+  const { profile, loading: authLoading } = useAuth();
   const [hotelName, setHotelName] = useState<string>('');
   const [loadingHotel, setLoadingHotel] = useState(true);
 
-  // Cari hotel_id dari assignment peran user saat ini
   const assignedHotelId = profile?.roles?.find(
     (r) => r.hotel_id && r.role_name === 'Hotel Manager'
   )?.hotel_id;
@@ -75,7 +78,6 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
         console.warn(
           'Hotel Manager profile does not have an assigned hotel_id in roles.'
         );
-        // Mungkin tampilkan pesan error atau redirect jika tidak ada hotel
         return;
       }
 
@@ -98,15 +100,14 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
     };
 
     if (!authLoading && profile) {
-      // Hanya fetch jika auth selesai loading dan profile ada
       fetchHotelInfo();
     } else if (!authLoading && !profile) {
-      setLoadingHotel(false); // Jika tidak ada profile setelah loading, stop loading hotel
+      setLoadingHotel(false);
     }
   }, [profile, authLoading, assignedHotelId]);
 
   const handleLogout = async () => {
-    // ... (fungsi logout tetap sama seperti di admin/layout)
+    // ... (fungsi logout tetap sama)
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -129,7 +130,6 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
     profile?.roles?.find((r) => r.role_name === 'Hotel Manager')?.role_name ||
     'Hotel Manager';
 
-  // Tampilkan loader jika auth atau data hotel masih loading
   if (authLoading || loadingHotel) {
     return (
       <Center style={{ minHeight: '100vh' }}>
@@ -148,7 +148,7 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
       }}
       padding="md"
       styles={{
-        main: { background: '#f5f6fa' }, // Background senada
+        main: { background: '#f5f6fa' },
       }}
     >
       <AppShell.Header
@@ -158,7 +158,6 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
         }}
       >
-        {/* Header mirip admin/layout, ganti warna/icon jika perlu */}
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger
@@ -173,7 +172,6 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
                   width: 40,
                   height: 40,
                   borderRadius: '8px',
-                  // Gunakan gradient hijau yang sama
                   background:
                     'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   display: 'flex',
@@ -190,25 +188,21 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
               </Box>
               <Box>
                 <Text size="lg" fw={800} style={{ color: '#1e293b' }}>
-                  {hotelName || 'Manager Dashboard'} {/* Nama Hotel */}
+                  {hotelName || 'Manager Dashboard'}
                 </Text>
                 <Badge size="xs" color="blue" variant="light">
-                  {' '}
-                  {/* Badge berbeda? */}
                   {managerRoleName}
                 </Badge>
               </Box>
             </Group>
           </Group>
 
-          {/* Menu User (Avatar, Nama, Logout) - Mirip admin/layout */}
+          {/* Menu User (Avatar, Nama, Logout) */}
           <Menu shadow="md" width={200}>
             <Menu.Target>
               <UnstyledButton>
                 <Group gap="xs">
                   <Avatar color="blue" radius="xl">
-                    {' '}
-                    {/* Warna avatar berbeda? */}
                     {profile?.full_name?.charAt(0) || 'M'}
                   </Avatar>
                   <Box style={{ flex: 1 }} visibleFrom="sm">
@@ -245,11 +239,10 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
         }}
       >
-        {/* Sidebar dengan NavLink khusus Manager */}
         <AppShell.Section grow>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href); // Gunakan startsWith agar sub-route tetap aktif
             return (
               <NavLink
                 key={item.href}
@@ -262,7 +255,6 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push(item.href);
                   if (opened) toggle();
                 }}
-                // Styling NavLink (bisa disamakan dengan admin/layout atau sedikit dibedakan)
                 styles={{
                   root: {
                     borderRadius: rem(8),
@@ -270,17 +262,16 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
                     padding: rem(12),
                     fontSize: rem(14),
                     fontWeight: 500,
-                    // Warna aktif/hover bisa disesuaikan
-                    color: isActive ? '#3b82f6' : '#374151', // Contoh: Biru untuk Manager
+                    color: isActive ? '#3b82f6' : '#374151',
                     transition: 'all 0.25s ease',
                     '&:hover': {
-                      background: 'rgba(59, 130, 246, 0.12)', // Hover biru
+                      background: 'rgba(59, 130, 246, 0.12)',
                       color: '#3b82f6',
                       boxShadow: '0 2px 8px rgba(59, 130, 246, 0.15)',
                     },
                     '&[dataActive]': {
                       background:
-                        'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)', // Gradien biru
+                        'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
                       color: '#3b82f6',
                       fontWeight: 600,
                       boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.3)',
@@ -329,7 +320,6 @@ export default function ManagerLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Pastikan hanya role "Hotel Manager" yang bisa mengakses
     <ProtectedRoute requiredRoleName="Hotel Manager">
       <ManagerLayoutContent>{children}</ManagerLayoutContent>
     </ProtectedRoute>
