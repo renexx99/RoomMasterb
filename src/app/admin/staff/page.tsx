@@ -42,6 +42,11 @@ function StaffManagementContent() {
   const [sortBy, setSortBy] = useState('full_name_asc');
   // Tambahkan filter lain jika perlu (misal filter by role)
 
+  useEffect(() => {
+    console.log("Current Admin Profile:", currentAdminProfile);
+    console.log("Roles:", currentAdminProfile?.roles);
+  }, [currentAdminProfile]);
+
   const form = useForm({
     // Mirip form super-admin user, tapi tanpa hotel_id
     initialValues: {
@@ -64,7 +69,21 @@ function StaffManagementContent() {
   });
 
   const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office'];
-  const hotelId = currentAdminProfile?.roles?.find(r => r.hotel_id && ADMIN_PATH_ROLES.includes(r.role_name || ''))?.hotel_id;
+  const hotelId = useMemo(() => {
+    if (!currentAdminProfile?.roles || currentAdminProfile.roles.length === 0) {
+      console.warn("No roles found for current user");
+      return null;
+    }
+    
+    const adminRole = currentAdminProfile.roles.find(
+      r => r.hotel_id && ADMIN_PATH_ROLES.includes(r.role_name || '')
+    );
+    
+    console.log("Admin role found:", adminRole);
+    console.log("Hotel ID extracted:", adminRole?.hotel_id);
+    
+    return adminRole?.hotel_id || null;
+  }, [currentAdminProfile]);
 
   // --- Fetch Data ---
   useEffect(() => {
