@@ -17,7 +17,8 @@ interface LoginFormValues {
 }
 
 // Define roles that require a hotel assignment to function
-const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office']; // Add other roles as needed
+// Anda bisa tambahkan 'Housekeeping Supervisor' di sini jika mereka juga bisa login
+const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office']; 
 
 export function LoginForm() {
   const router = useRouter();
@@ -97,6 +98,7 @@ export function LoginForm() {
 
       // Find the primary role (e.g., Super Admin takes precedence)
       const superAdminRole = roles.find(r => r.role_name === 'Super Admin');
+      // Cari role hotel pertama yang valid
       const hotelSpecificRole = roles.find(r => ROLES_REQUIRING_HOTEL.includes(r.role_name || ''));
 
        let assignedHotelId: string | null = null;
@@ -113,9 +115,16 @@ export function LoginForm() {
            effectiveRoleName = hotelSpecificRole.role_name;
            assignedHotelId = hotelSpecificRole.hotel_id;
        } else {
-           // Handle cases with other roles if necessary, or deny login if no recognized operational role
-           await supabase.auth.signOut();
-           throw new Error('Your assigned role does not permit login to this application.');
+           // Handle roles lain seperti 'Housekeeping Supervisor' jika tidak ada di ROLES_REQUIRING_HOTEL
+           const otherHotelRole = roles.find(r => r.hotel_id && r.role_name === 'Housekeeping Supervisor');
+           if (otherHotelRole) {
+             effectiveRoleName = otherHotelRole.role_name;
+             assignedHotelId = otherHotelRole.hotel_id;
+           } else {
+             // Jika tidak ada role yang dikenali
+             await supabase.auth.signOut();
+             throw new Error('Your assigned role does not permit login to this application.');
+           }
        }
 
 
@@ -126,17 +135,32 @@ export function LoginForm() {
       });
 
       // 4. Redirect based on the effective role
+      // --- BLOK INI YANG DIPERBARUI ---
       if (effectiveRoleName === 'Super Admin') {
         router.push('/super-admin/dashboard');
-      } else if (assignedHotelId && ROLES_REQUIRING_HOTEL.includes(effectiveRoleName || '')) {
-         // Redirect hotel-specific roles to the general admin dashboard
-         // The specific hotel context will be managed within the admin section via useAuth
-        router.push('/admin/dashboard');
+      } else if (effectiveRoleName === 'Hotel Manager' && assignedHotelId) {
+        router.push('/manager/dashboard'); // <-- BARU: Arahkan ke dashboard manager
+      } else if (effectiveRoleName === 'Hotel Admin' && assignedHotelId) {
+        router.push('/admin/dashboard'); // <-- Tetap di dashboard admin
+      } else if (effectiveRoleName === 'Front Office' && assignedHotelId) {
+        // Nanti bisa diarahkan ke /fo/dashboard
+        console.warn('Front Office logged in, redirecting to /admin/dashboard as placeholder.');
+        router.push('/admin/dashboard'); // Placeholder
+      } else if (effectiveRoleName === 'Housekeeping Supervisor' && assignedHotelId) {
+         // Nanti bisa diarahkan ke /housekeeping/dashboard
+         console.warn('Housekeeping logged in, redirecting to /admin/dashboard as placeholder.');
+         router.push('/admin/dashboard'); // Placeholder
       } else {
-         // Fallback or handle other roles
-         console.warn("User logged in but has an unhandled role:", effectiveRoleName);
-         router.push('/'); // Redirect to a default page or show an error
+         // Fallback jika role tidak terduga (seharusnya sudah ditangani di step 3)
+         console.error("Login Error: User has an unhandled effective role:", effectiveRoleName);
+         await supabase.auth.signOut();
+         notifications.show({
+            title: 'Login Failed',
+            message: 'Your account role is not configured correctly. Please contact support.',
+            color: 'red',
+         });
       }
+      // --- AKHIR BLOK YANG DIPERBARUI ---
 
     } catch (error) {
       console.error('Login error:', error);
@@ -150,7 +174,7 @@ export function LoginForm() {
     }
   };
 
-  // --- JSX remains largely the same ---
+  // --- JSX (tidak ada perubahan) ---
   return (
     <Paper
       radius="xl"
