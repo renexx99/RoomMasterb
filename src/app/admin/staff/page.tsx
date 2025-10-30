@@ -63,7 +63,8 @@ function StaffManagementContent() {
     },
   });
 
-  const hotelId = currentAdminProfile?.hotel_id;
+  const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office'];
+  const hotelId = currentAdminProfile?.roles?.find(r => r.hotel_id && ADMIN_PATH_ROLES.includes(r.role_name || ''))?.hotel_id;
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -145,7 +146,12 @@ function StaffManagementContent() {
 
   // --- Handlers ---
   const handleSubmit = async (values: typeof form.values) => {
-    if (!hotelId) return;
+    console.log("handleSubmit triggered. Hotel ID from context:", hotelId);
+    console.log("Values being submitted:", values);
+    if (!hotelId) {
+      notifications.show({ title: 'Error', message: 'Hotel ID tidak ditemukan. Tidak bisa menyimpan staf.', color: 'red' });
+      return; // Hentikan jika hotelId null
+    }
     try {
       setLoading(true);
       if (editingUser) {

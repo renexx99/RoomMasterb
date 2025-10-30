@@ -61,7 +61,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchHotelInfo = async () => {
-      const assignedHotelId = profile?.roles?.find(r => r.hotel_id)?.hotel_id;
+      const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office'];
+      const assignedHotelId = profile?.roles?.find(r => r.hotel_id && ADMIN_PATH_ROLES.includes(r.role_name || ''))?.hotel_id;
 
       if (!assignedHotelId) {
         setLoadingHotel(false);
