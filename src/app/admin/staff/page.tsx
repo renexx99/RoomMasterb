@@ -117,13 +117,15 @@ function StaffManagementContent() {
       if (assignmentsError) throw assignmentsError;
 
       // 3. Format data untuk ditampilkan
-      const staff: StaffMember[] = (assignments || []).map(a => ({
-        ...(a.profile as Profile), // Ambil data profile
-        assignment: { // Simpan detail assignment & role
-          ...a,
-          role_name: (a.role as Role)?.name || 'Unknown Role',
-        } as UserRoleAssignmentWithRoleName,
-      }));
+      const staff: StaffMember[] = (assignments || [])
+        .filter(a => a.profile) // <-- TAMBAHKAN FILTER INI
+        .map(a => ({
+          ...(a.profile as Profile), // Ambil data profile
+          assignment: { // Simpan detail assignment & role
+            ...a,
+            role_name: (a.role as Role)?.name || 'Unknown Role',
+          } as UserRoleAssignmentWithRoleName,
+        }));
 
       setStaffList(staff);
 
