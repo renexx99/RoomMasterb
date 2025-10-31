@@ -26,12 +26,12 @@ import {
   IconUsersGroup,
   IconLogout,
   IconChevronDown,
-  IconCategory,
-  IconSearch, // <-- Ditambahkan
-  IconUserCheck, // <-- Ditambahkan (Logo)
-  IconLogin, // <-- Ditambahkan (Check-in/Out)
-  IconCoin, // <-- Ditambahkan (Billing)
-  IconBook2, // <-- Ditambahkan (Log)
+  // IconCategory, // Dihapus
+  IconSearch,
+  IconUserCheck,
+  IconLogin,
+  IconCoin,
+  IconBook2,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -44,7 +44,7 @@ interface NavItem {
   href: string;
 }
 
-// Navigasi khusus untuk Front Office
+// Navigasi khusus untuk Front Office (diperbarui)
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/fo/dashboard' },
   { label: 'Proses Check-in/Out', icon: IconLogin, href: '/fo/check-in' },
@@ -55,14 +55,14 @@ const navItems: NavItem[] = [
   },
   { label: 'Manajemen Tamu', icon: IconUsersGroup, href: '/fo/guests' },
   {
-    label: 'Ketersediaan Kamar',
+    label: 'Status & Ketersediaan', // <-- Nama Diubah
     icon: IconSearch,
     href: '/fo/availability',
   },
   { label: 'Billing & Folio', icon: IconCoin, href: '/fo/billing' },
   { label: 'Log Tamu', icon: IconBook2, href: '/fo/log' },
-  { label: 'Daftar Kamar (View)', icon: IconBed, href: '/fo/rooms' },
-  { label: 'Tipe Kamar (View)', icon: IconCategory, href: '/fo/room-types' },
+  // { label: 'Daftar Kamar (View)', icon: IconBed, href: '/fo/rooms' }, // <-- Dihapus
+  // { label: 'Tipe Kamar (View)', icon: IconCategory, href: '/fo/room-types' }, // <-- Dihapus
 ];
 
 function FoLayoutContent({ children }: { children: React.ReactNode }) {
