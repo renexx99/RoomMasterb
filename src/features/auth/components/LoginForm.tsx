@@ -143,9 +143,8 @@ export function LoginForm() {
       } else if (effectiveRoleName === 'Hotel Admin' && assignedHotelId) {
         router.push('/admin/dashboard'); // <-- Tetap di dashboard admin
       } else if (effectiveRoleName === 'Front Office' && assignedHotelId) {
-        // Nanti bisa diarahkan ke /fo/dashboard
-        console.warn('Front Office logged in, redirecting to /admin/dashboard as placeholder.');
-        router.push('/admin/dashboard'); // Placeholder
+        console.log('Front Office logged in, redirecting to /fo/dashboard.');
+        router.push('/fo/dashboard');
       } else if (effectiveRoleName === 'Housekeeping Supervisor' && assignedHotelId) {
          // Nanti bisa diarahkan ke /housekeeping/dashboard
          console.warn('Housekeeping logged in, redirecting to /admin/dashboard as placeholder.');

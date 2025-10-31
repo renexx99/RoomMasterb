@@ -20,6 +20,7 @@ import {
 } from '@mantine/core';
 import { DatePicker, DateTimePicker, DatesProvider } from '@mantine/dates';
 import 'dayjs/locale/id'; // Impor lokalisasi
+import '@mantine/dates/styles.css';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import {
