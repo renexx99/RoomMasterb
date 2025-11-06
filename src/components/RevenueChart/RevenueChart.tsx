@@ -1,17 +1,20 @@
+// Lokasi: src/components/RevenueChart/RevenueChart.tsx
+
 'use client';
 
 import {
   ActionIcon,
   Group,
   Paper,
-  PaperProps,
+  PaperProps, // Diganti dari Surface
   Text,
   useMantineColorScheme,
   useMantineTheme,
 } from '@mantine/core';
 import dynamic from 'next/dynamic';
 import { IconDotsVertical } from '@tabler/icons-react';
-import { Surface } from '@/components';
+
+// --- Hapus impor Surface ---
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -21,6 +24,7 @@ const RevenueChart = ({ ...others }: RevenueChartProps) => {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
 
+  // Data dummy untuk grafik
   const series = [
     {
       name: 'series1',
@@ -85,10 +89,18 @@ const RevenueChart = ({ ...others }: RevenueChartProps) => {
   };
 
   return (
-    <Surface component={Paper} {...others}>
+    // --- Mengganti Surface dengan Paper ---
+    <Paper
+      p="md"
+      shadow="md"
+      radius="md"
+      withBorder
+      style={{ height: '100%' }}
+      {...others}
+    >
       <Group justify="space-between" mb="md">
         <Text size="lg" fw={600}>
-          Total revenue
+          Total Pemasukan (Contoh)
         </Text>
         <ActionIcon variant="subtle">
           <IconDotsVertical size={16} />
@@ -102,7 +114,7 @@ const RevenueChart = ({ ...others }: RevenueChartProps) => {
         height={350}
         width={'100%'}
       />
-    </Surface>
+    </Paper>
   );
 };
 

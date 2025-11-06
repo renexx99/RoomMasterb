@@ -1,3 +1,5 @@
+// Lokasi: src/app/admin/dashboard/page.tsx
+
 'use client';
 
 import {
@@ -12,75 +14,116 @@ import {
   Badge,
   Loader,
   Center,
-  Grid, // <--- [BARU] Ditambahkan untuk layout
+  Grid,
+  Table, // <-- [BARU] Impor Tabel
+  ThemeIcon, // <-- [BARU] Impor Ikon
 } from '@mantine/core';
 import {
   IconBed,
   IconCalendarCheck,
   IconUsers,
   IconClock,
+  IconFileInvoice, // <-- [BARU] Ikon untuk reservasi
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { Reservation, Guest } from '@/core/types/database'; // <-- [BARU] Impor tipe data Anda
 
-// [BARU] Impor komponen-komponen yang baru saja kamu salin
+// --- [BARU] Impor Komponen Template yang Sudah Diperbaiki ---
 import SalesChart from '@/components/SalesChart/SalesChart';
 import RevenueChart from '@/components/RevenueChart/RevenueChart';
-import OrdersTable from '@/components/OrdersTable/OrdersTable';
+// --- Hapus Impor OrdersTable ---
 
-// [BARU] Data Dummy untuk Uji Coba (diambil dari template)
-// Nanti kamu bisa ganti ini dengan data dari Supabase
-const salesData = [
-  { name: 'Sen', Sales: 4000 },
-  { name: 'Sel', Sales: 3000 },
-  { name: 'Rab', Sales: 2000 },
-  { name: 'Kam', Sales: 2780 },
-  { name: 'Jum', Sales: 1890 },
-  { name: 'Sab', Sales: 2390 },
-  { name: 'Min', Sales: 3490 },
-];
+// --- [BARU] Tipe data untuk tabel reservasi ---
+interface SimpleReservation extends Reservation {
+  guest: Pick<Guest, 'full_name'>;
+}
 
-const revenueData = [
-  { name: 'Jan', Mobile: 300, Desktop: 500 },
-  { name: 'Feb', Mobile: 400, Desktop: 550 },
-  { name: 'Mar', Mobile: 350, Desktop: 600 },
-  { name: 'Apr', Mobile: 500, Desktop: 650 },
-  { name: 'Mei', Mobile: 450, Desktop: 700 },
-  { name: 'Jun', Mobile: 550, Desktop: 800 },
-];
+// --- [BARU] Komponen Tabel Reservasi ---
+function RecentReservationsTable({ hotelId }: { hotelId: string }) {
+  const [reservations, setReservations] = useState<SimpleReservation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const ordersData = [
-  {
-    orderId: 'ORD-001',
-    customerName: 'John Doe',
-    status: 'Completed',
-    total: 150.0,
-    date: '2024-10-27',
-  },
-  {
-    orderId: 'ORD-002',
-    customerName: 'Jane Smith',
-    status: 'Pending',
-    total: 75.5,
-    date: '2024-10-28',
-  },
-  {
-    orderId: 'ORD-003',
-    customerName: 'Mike Johnson',
-    status: 'Processing',
-    total: 220.0,
-    date: '2024-10-28',
-  },
-  {
-    orderId: 'ORD-004',
-    customerName: 'Emily Davis',
-    status: 'Completed',
-    total: 80.0,
-    date: '2024-10-29',
-  },
-];
-// [BARU] Akhir dari Data Dummy
+  useEffect(() => {
+    const fetchReservations = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('reservations')
+        .select(`*, guest:guests(full_name)`)
+        .eq('hotel_id', hotelId)
+        .order('created_at', { ascending: false }) // Ambil yang terbaru
+        .limit(5); // Batasi 5 saja
+
+      if (data) {
+        setReservations(data as SimpleReservation[]);
+      }
+      setLoading(false);
+    };
+
+    fetchReservations();
+  }, [hotelId]);
+
+  if (loading) {
+    return (
+      <Center h={200}>
+        <Loader />
+      </Center>
+    );
+  }
+
+  if (reservations.length === 0) {
+    return (
+      <Text c="dimmed" ta="center" p="md">
+        Belum ada reservasi terbaru.
+      </Text>
+    );
+  }
+
+  const rows = reservations.map((row) => (
+    <Table.Tr key={row.id}>
+      <Table.Td>
+        <Text fw={500}>{row.guest?.full_name || 'N/A'}</Text>
+      </Table.Td>
+      <Table.Td>
+        {new Date(row.check_in_date + 'T00:00:00').toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+        })}
+      </Table.Td>
+      <Table.Td>
+        <Badge
+          color={
+            row.payment_status === 'paid'
+              ? 'green'
+              : row.payment_status === 'pending'
+                ? 'orange'
+                : 'red'
+          }
+          variant="light"
+        >
+          {row.payment_status}
+        </Badge>
+      </Table.Td>
+      <Table.Td>Rp {row.total_price.toLocaleString('id-ID')}</Table.Td>
+    </Table.Tr>
+  ));
+
+  return (
+    <Table verticalSpacing="sm" striped highlightOnHover>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Tamu</Table.Th>
+          <Table.Th>Check-in</Table.Th>
+          <Table.Th>Status Bayar</Table.Th>
+          <Table.Th>Total</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>{rows}</Table.Tbody>
+    </Table>
+  );
+}
+// --- Akhir Komponen Baru ---
 
 interface DashboardStats {
   availableRooms: number;
@@ -91,7 +134,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth(); // Ganti nama loading
   const [stats, setStats] = useState<DashboardStats>({
     availableRooms: 0,
     todayCheckIns: 0,
@@ -99,21 +142,43 @@ export default function AdminDashboard() {
     totalGuests: 0,
     hotelName: '',
   });
-  const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true); // Loading terpisah untuk stats
+
+  // --- [DIREVISI] Ambil hotelId dari profile.roles ---
+  const [hotelId, setHotelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (profile && !authLoading) {
+      const adminRole = profile.roles?.find(
+        (r) =>
+          r.hotel_id &&
+          (r.role_name === 'Hotel Admin' || r.role_name === 'Hotel Manager')
+      );
+      if (adminRole?.hotel_id) {
+        setHotelId(adminRole.hotel_id);
+      } else {
+        console.warn('Admin profile does not have a valid hotel_id in roles.');
+        setLoadingStats(false);
+      }
+    }
+  }, [profile, authLoading]);
+  // --- Akhir Revisi ---
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
-      if (!profile?.hotel_id) {
-        setLoading(false);
+      if (!hotelId) {
+        // Jangan fetch jika tidak ada hotelId
+        setLoadingStats(false);
         return;
       }
 
+      setLoadingStats(true); // Mulai loading stats
       try {
         // Fetch hotel name
         const { data: hotelData, error: hotelError } = await supabase
           .from('hotels')
           .select('name')
-          .eq('id', profile.hotel_id)
+          .eq('id', hotelId)
           .single();
 
         if (hotelError) throw hotelError;
@@ -122,8 +187,8 @@ export default function AdminDashboard() {
         const { count: availableRoomsCount, error: roomsError } = await supabase
           .from('rooms')
           .select('*', { count: 'exact', head: true })
-          .eq('hotel_id', profile.hotel_id)
-          .eq('status', 'Available');
+          .eq('hotel_id', hotelId)
+          .eq('status', 'available'); // Sesuaikan dengan status Anda
 
         if (roomsError) throw roomsError;
 
@@ -133,19 +198,21 @@ export default function AdminDashboard() {
           await supabase
             .from('reservations')
             .select('*', { count: 'exact', head: true })
-            .eq('hotel_id', profile.hotel_id)
+            .eq('hotel_id', hotelId)
             .eq('check_in_date', today)
-            .eq('status', 'Checked-In'); // Asumsi ada status 'Checked-In'
+            .neq('payment_status', 'cancelled'); // Bukan yang batal
 
         if (checkInError) throw checkInError;
 
-        // Fetch active reservations
+        // Fetch active reservations (in-house)
         const { count: activeReservationsCount, error: activeResError } =
           await supabase
             .from('reservations')
             .select('*', { count: 'exact', head: true })
-            .eq('hotel_id', profile.hotel_id)
-            .eq('status', 'Active'); // Asumsi ada status 'Active'
+            .eq('hotel_id', hotelId)
+            .lte('check_in_date', today)
+            .gte('check_out_date', today)
+            .neq('payment_status', 'cancelled');
 
         if (activeResError) throw activeResError;
 
@@ -153,7 +220,7 @@ export default function AdminDashboard() {
         const { count: totalGuestsCount, error: guestsError } = await supabase
           .from('guests')
           .select('*', { count: 'exact', head: true })
-          .eq('hotel_id', profile.hotel_id);
+          .eq('hotel_id', hotelId);
 
         if (guestsError) throw guestsError;
 
@@ -167,14 +234,13 @@ export default function AdminDashboard() {
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       } finally {
-        setLoading(false);
+        setLoadingStats(false);
       }
     };
 
     fetchDashboardStats();
-  }, [profile]);
+  }, [hotelId]); // Trigger effect saat hotelId didapatkan
 
-  // Ini adalah data untuk 4 kartu statistikmu, yang diambil dari 'stats'
   const dashboardItems = [
     {
       title: 'Kamar Tersedia',
@@ -189,7 +255,7 @@ export default function AdminDashboard() {
       color: '#3b82f6',
     },
     {
-      title: 'Reservasi Aktif',
+      title: 'Tamu In-House', // Diganti dari 'Reservasi Aktif'
       value: stats.activeReservations.toString(),
       icon: <IconClock size={24} color="#f97316" />,
       color: '#f97316',
@@ -202,26 +268,34 @@ export default function AdminDashboard() {
     },
   ];
 
-  if (loading) {
+  // Tampilkan loader utama jika auth atau stats masih loading
+  if (authLoading || loadingStats) {
     return (
       <Center style={{ height: '100vh' }}>
         <Loader />
       </Center>
     );
   }
+  
+  const adminRoleName = profile?.roles?.find(r => r.hotel_id && r.role_name === 'Hotel Admin')?.role_name || 'Hotel Admin';
 
   return (
     <Container fluid p="lg">
       <Stack gap="lg">
-        {/* --- KODEMU YANG SUDAH ADA (DIMULAI) --- */}
         <Title order={2} fw={600}>
           Dashboard Admin
         </Title>
 
-        {/* 4 Kartu Statistik (Menggunakan data 'stats' dari Supabase) */}
+        {/* 4 Kartu Statistik */}
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
           {dashboardItems.map((item) => (
-            <Card key={item.title} shadow="sm" padding="lg" radius="md" withBorder>
+            <Card
+              key={item.title}
+              shadow="sm"
+              padding="lg"
+              radius="md"
+              withBorder
+            >
               <Group justify="space-between" align="flex-start">
                 <div>
                   <Text c="dimmed" size="sm" fw={500}>
@@ -231,19 +305,9 @@ export default function AdminDashboard() {
                     {item.value}
                   </Text>
                 </div>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    background: `${item.color}1A`, // Transparansi 10% dari warna
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <ThemeIcon color={item.color} variant="light" size={48} radius="md">
                   {item.icon}
-                </div>
+                </ThemeIcon>
               </Group>
             </Card>
           ))}
@@ -275,53 +339,40 @@ export default function AdminDashboard() {
                 variant="filled"
                 style={{ color: '#10b981' }}
               >
-                Hotel Administrator
+                {adminRoleName}
               </Badge>
             </Group>
           </Stack>
         </Paper>
-        {/* --- KODEMU YANG SUDAH ADA (BERAKHIR) --- */}
 
-        {/* --- [BARU] KOMPONEN DARI TEMPLATE (DIMULAI) --- */}
-        
-        {/* --- [BARU] KOMPONEN DARI TEMPLATE (DIMULAI) --- */}
-        
-        {/* 1. Grafik (Menggunakan data dummy) */}
+        {/* --- KOMPONEN DARI TEMPLATE (DIMULAI) --- */}
+
+        {/* 1. Grafik (Menggunakan data dummy dari komponennya) */}
         <Grid>
-          {/* Grafik Penjualan */}
           <Grid.Col span={{ base: 12, md: 7 }}>
-            {/* [PERBAIKAN] Komponen SalesChart sudah merupakan 'Card' sendiri.
-              Kita bisa langsung memberikan props seperti 'withBorder' dan 'radius' padanya.
-              Catatan: Judul "Sales Overview" sekarang akan datang dari file
-              /components/SalesChart/SalesChart.tsx (bisa kamu edit nanti).
-            */}
             <SalesChart withBorder radius="md" />
           </Grid.Col>
 
-          {/* Grafik Pendapatan */}
           <Grid.Col span={{ base: 12, md: 5 }}>
-            {/* [PERBAIKAN] Sama seperti SalesChart, RevenueChart adalah 'Card' sendiri.
-              Catatan: Judul "Revenue by Device" akan datang dari file
-              /components/RevenueChart/RevenueChart.tsx (bisa kamu edit nanti).
-            */}
             <RevenueChart withBorder radius="md" />
           </Grid.Col>
         </Grid>
 
-        {/* 2. Tabel (Menggunakan data dummy) */}
+        {/* 2. Tabel (Menggunakan data REAL dari project Anda) */}
         <Title order={3} mt="lg" mb="sm">
-          Reservasi Terbaru (Contoh)
+          5 Reservasi Terbaru
         </Title>
         <Card withBorder radius="md" p={0}>
-          <OrdersTable data={ordersData} />
-          {/* TODO: Ganti 'ordersData' dengan 5-10 data reservasi
-            terbaru dari tabel 'reservations' di Supabase.
-            Komponen OrdersTable mungkin perlu diedit kolomnya
-            agar sesuai dengan data reservasi.
-          */}
+          {hotelId ? (
+            <RecentReservationsTable hotelId={hotelId} />
+          ) : (
+            <Text c="dimmed" ta="center" p="md">
+              Hotel tidak terdeteksi.
+            </Text>
+          )}
         </Card>
-        
-        {/* --- [BARU] KOMPONEN DARI TEMPLATE (BERAKHIR) --- */}
+
+        {/* --- KOMPONEN DARI TEMPLATE (BERAKHIR) --- */}
       </Stack>
     </Container>
   );

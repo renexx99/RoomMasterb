@@ -181,7 +181,7 @@ const OrdersTable = ({ data, loading, error }: OrdersTableProps) => {
       }
       recordsPerPage={pageSize}
       page={page}
-      onPageChange={(p) => setPage(p)}
+      onPageChange={(p: React.SetStateAction<number>) => setPage(p)}
       recordsPerPageOptions={PAGE_SIZES}
       onRecordsPerPageChange={setPageSize}
       sortStatus={sortStatus}

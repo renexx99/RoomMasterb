@@ -1,10 +1,12 @@
+// Lokasi: src/components/SalesChart/SalesChart.tsx
+
 'use client';
 
 import {
   ActionIcon,
   Group,
   Paper,
-  PaperProps,
+  PaperProps, // Diganti dari Surface
   Text,
   useMantineColorScheme,
   useMantineTheme,
@@ -12,22 +14,30 @@ import {
 import dynamic from 'next/dynamic';
 import { DataTable } from 'mantine-datatable';
 import { IconDotsVertical } from '@tabler/icons-react';
-import { ErrorAlert, Surface } from '@/components';
-import { useFetchData } from '@/hooks';
+import ErrorAlert from '@/components/ErrorAlert'; // Impor diperbaiki
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 type SalesChartProps = PaperProps;
 
+// --- DATA DUMMY LOKAL (Menggantikan useFetchData) ---
+const salesData = [
+  { source: 'Direct', revenue: '268', value: '+4.2%' },
+  { source: 'Referral', revenue: '192', value: '-1.2%' },
+  { source: 'Social', revenue: '98', value: '+2.1%' },
+  { source: 'Email', revenue: '120', value: '+3.5%' },
+];
+// --- Akhir Data Dummy ---
+
 const SalesChart = ({ ...others }: SalesChartProps) => {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
-  const series = [44, 55, 41, 17, 15];
-  const {
-    data: salesData,
-    error: salesError,
-    loading: salesLoading,
-  } = useFetchData('/mocks/Sales.json');
+  const series = [44, 55, 41, 17, 15]; // Data dummy untuk grafiknya
+
+  // --- HAPUS useFetchData, ganti dengan data dummy ---
+  const salesError = null;
+  const salesLoading = false;
+  // --- Akhir Perubahan ---
 
   const options: any = {
     chart: { type: 'donut', fontFamily: 'Open Sans, sans-serif' },
@@ -89,10 +99,18 @@ const SalesChart = ({ ...others }: SalesChartProps) => {
   };
 
   return (
-    <Surface component={Paper} {...others}>
+    // --- Mengganti Surface dengan Paper ---
+    <Paper
+      p="md"
+      shadow="md"
+      radius="md"
+      withBorder
+      style={{ height: '100%' }}
+      {...others}
+    >
       <Group justify="space-between" mb="md">
         <Text size="lg" fw={600}>
-          Weekly sales
+          Penjualan Mingguan (Contoh)
         </Text>
         <ActionIcon variant="subtle">
           <IconDotsVertical size={16} />
@@ -119,12 +137,12 @@ const SalesChart = ({ ...others }: SalesChartProps) => {
             { accessor: 'revenue' },
             { accessor: 'value' },
           ]}
-          records={salesData.slice(0, 4)}
+          records={salesData.slice(0, 4)} // Menggunakan salesData dummy
           height={200}
           fetching={salesLoading}
         />
       )}
-    </Surface>
+    </Paper>
   );
 };
 
