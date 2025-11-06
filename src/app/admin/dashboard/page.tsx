@@ -15,32 +15,31 @@ import {
   Loader,
   Center,
   Grid,
-  Table, // <-- [BARU] Impor Tabel
-  ThemeIcon, // <-- [BARU] Impor Ikon
+  Table, // <-- Impor Tabel
+  ThemeIcon, // <-- Impor Ikon
 } from '@mantine/core';
 import {
   IconBed,
   IconCalendarCheck,
   IconUsers,
   IconClock,
-  IconFileInvoice, // <-- [BARU] Ikon untuk reservasi
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { Reservation, Guest } from '@/core/types/database'; // <-- [BARU] Impor tipe data Anda
+import { Reservation, Guest } from '@/core/types/database'; // <-- Impor tipe data Anda
 
-// --- [BARU] Impor Komponen Template yang Sudah Diperbaiki ---
+// --- Impor Komponen Template yang Sudah Diperbaiki ---
 import SalesChart from '@/components/SalesChart/SalesChart';
 import RevenueChart from '@/components/RevenueChart/RevenueChart';
 // --- Hapus Impor OrdersTable ---
 
-// --- [BARU] Tipe data untuk tabel reservasi ---
+// --- Tipe data untuk tabel reservasi ---
 interface SimpleReservation extends Reservation {
   guest: Pick<Guest, 'full_name'>;
 }
 
-// --- [BARU] Komponen Tabel Reservasi ---
+// --- Komponen Tabel Reservasi (Menggantikan OrdersTable) ---
 function RecentReservationsTable({ hotelId }: { hotelId: string }) {
   const [reservations, setReservations] = useState<SimpleReservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,11 +56,15 @@ function RecentReservationsTable({ hotelId }: { hotelId: string }) {
 
       if (data) {
         setReservations(data as SimpleReservation[]);
+      } else {
+        console.error('Error fetching recent reservations:', error);
       }
       setLoading(false);
     };
 
-    fetchReservations();
+    if (hotelId) {
+      fetchReservations();
+    }
   }, [hotelId]);
 
   if (loading) {
@@ -144,25 +147,25 @@ export default function AdminDashboard() {
   });
   const [loadingStats, setLoadingStats] = useState(true); // Loading terpisah untuk stats
 
-  // --- [DIREVISI] Ambil hotelId dari profile.roles ---
+  // Ambil hotelId dari profile.roles
   const [hotelId, setHotelId] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile && !authLoading) {
-      const adminRole = profile.roles?.find(
-        (r) =>
-          r.hotel_id &&
-          (r.role_name === 'Hotel Admin' || r.role_name === 'Hotel Manager')
-      );
-      if (adminRole?.hotel_id) {
-        setHotelId(adminRole.hotel_id);
+      // Cari peran yang memiliki hotel_id (Admin, Manager, atau FO)
+      const hotelRole = profile.roles?.find((r) => r.hotel_id);
+      
+      if (hotelRole?.hotel_id) {
+        setHotelId(hotelRole.hotel_id);
       } else {
-        console.warn('Admin profile does not have a valid hotel_id in roles.');
+        console.warn('Profile does not have a valid hotel_id in roles.');
         setLoadingStats(false);
       }
+    } else if (!profile && !authLoading) {
+        // Jika tidak ada profile setelah loading selesai
+        setLoadingStats(false);
     }
   }, [profile, authLoading]);
-  // --- Akhir Revisi ---
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -188,7 +191,7 @@ export default function AdminDashboard() {
           .from('rooms')
           .select('*', { count: 'exact', head: true })
           .eq('hotel_id', hotelId)
-          .eq('status', 'available'); // Sesuaikan dengan status Anda
+          .eq('status', 'available'); // Status dari skema Anda
 
         if (roomsError) throw roomsError;
 
@@ -246,38 +249,39 @@ export default function AdminDashboard() {
       title: 'Kamar Tersedia',
       value: stats.availableRooms.toString(),
       icon: <IconBed size={24} color="#10b981" />,
-      color: '#10b981',
+      color: 'green', // Warna ThemeIcon
     },
     {
       title: 'Check-in Hari Ini',
       value: stats.todayCheckIns.toString(),
       icon: <IconCalendarCheck size={24} color="#3b82f6" />,
-      color: '#3b82f6',
+      color: 'blue',
     },
     {
       title: 'Tamu In-House', // Diganti dari 'Reservasi Aktif'
       value: stats.activeReservations.toString(),
       icon: <IconClock size={24} color="#f97316" />,
-      color: '#f97316',
+      color: 'orange',
     },
     {
       title: 'Total Tamu Terdaftar',
       value: stats.totalGuests.toString(),
       icon: <IconUsers size={24} color="#8b5cf6" />,
-      color: '#8b5cf6',
+      color: 'violet',
     },
   ];
 
   // Tampilkan loader utama jika auth atau stats masih loading
   if (authLoading || loadingStats) {
     return (
-      <Center style={{ height: '100vh' }}>
-        <Loader />
+      <Center style={{ height: 'calc(100vh - 140px)' }}>
+        <Loader size="xl" />
       </Center>
     );
   }
   
-  const adminRoleName = profile?.roles?.find(r => r.hotel_id && r.role_name === 'Hotel Admin')?.role_name || 'Hotel Admin';
+  // Dapatkan nama peran yang relevan
+  const adminRoleName = profile?.roles?.find(r => r.hotel_id)?.role_name || 'Hotel User';
 
   return (
     <Container fluid p="lg">
@@ -301,10 +305,11 @@ export default function AdminDashboard() {
                   <Text c="dimmed" size="sm" fw={500}>
                     {item.title}
                   </Text>
-                  <Text size="xl" fw={700} c={item.color}>
+                  <Text size="xl" fw={700} c={item.color}> {/* Teks tetap berwarna */}
                     {item.value}
                   </Text>
                 </div>
+                {/* Menggunakan ThemeIcon untuk background ikon */}
                 <ThemeIcon color={item.color} variant="light" size={48} radius="md">
                   {item.icon}
                 </ThemeIcon>
@@ -371,8 +376,6 @@ export default function AdminDashboard() {
             </Text>
           )}
         </Card>
-
-        {/* --- KOMPONEN DARI TEMPLATE (BERAKHIR) --- */}
       </Stack>
     </Container>
   );

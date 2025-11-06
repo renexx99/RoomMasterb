@@ -14,9 +14,7 @@ import {
 import dynamic from 'next/dynamic';
 import { IconDotsVertical } from '@tabler/icons-react';
 
-// --- Hapus impor Surface ---
-
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false }); // Anda perlu install 'react-apexcharts' dan 'apexcharts'
 
 type RevenueChartProps = PaperProps;
 

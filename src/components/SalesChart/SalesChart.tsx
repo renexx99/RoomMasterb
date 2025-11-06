@@ -12,15 +12,16 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import dynamic from 'next/dynamic';
-import { DataTable } from 'mantine-datatable';
+import { DataTable } from 'mantine-datatable'; // Anda perlu install 'mantine-datatable'
 import { IconDotsVertical } from '@tabler/icons-react';
 import ErrorAlert from '@/components/ErrorAlert'; // Impor diperbaiki
 
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false }); // Anda perlu install 'react-apexcharts' dan 'apexcharts'
 
 type SalesChartProps = PaperProps;
 
 // --- DATA DUMMY LOKAL (Menggantikan useFetchData) ---
+// Ini untuk tabel kecil di bawah grafik donat
 const salesData = [
   { source: 'Direct', revenue: '268', value: '+4.2%' },
   { source: 'Referral', revenue: '192', value: '-1.2%' },
@@ -34,10 +35,8 @@ const SalesChart = ({ ...others }: SalesChartProps) => {
   const { colorScheme } = useMantineColorScheme();
   const series = [44, 55, 41, 17, 15]; // Data dummy untuk grafiknya
 
-  // --- HAPUS useFetchData, ganti dengan data dummy ---
   const salesError = null;
   const salesLoading = false;
-  // --- Akhir Perubahan ---
 
   const options: any = {
     chart: { type: 'donut', fontFamily: 'Open Sans, sans-serif' },
@@ -126,12 +125,14 @@ const SalesChart = ({ ...others }: SalesChartProps) => {
       />
       {salesError ? (
         <ErrorAlert
-          title="Error loading sales data"
-          message={salesError.toString()}
+          title="Error loading sales data" message={undefined}          // message={salesError.toString()}
         />
       ) : (
         <DataTable
           highlightOnHover
+          // --- [PERBAIKAN] Tambahkan idAccessor di sini ---
+          idAccessor="source"
+          // ---
           columns={[
             { accessor: 'source' },
             { accessor: 'revenue' },
