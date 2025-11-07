@@ -40,11 +40,16 @@ const navItems: NavItem[] = [
   { label: 'Manajemen User', icon: IconUsers, href: '/super-admin/users' },
 ];
 
+const NAVBAR_WIDTH_COLLAPSED = rem(80);
+const NAVBAR_WIDTH_EXPANDED = rem(280);
+
 function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
   const { profile } = useAuth();
+
+  const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -71,16 +76,19 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
     <AppShell
       header={{ height: 70 }}
       navbar={{
-        width: 280,
+        width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
       padding="md"
       styles={{
-        main: { background: '#f5f6fa' },
+        main: {
+          background: '#f5f6fa',
+          transition: 'padding-left 0.25s ease',
+        },
       }}
     >
-      {/* Header */}
+      {/* Header (Tidak Berubah) */}
       <AppShell.Header
         style={{
           borderBottom: '1px solid #e5e7eb',
@@ -106,16 +114,39 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               >
                 <IconBuildingSkyscraper size={22} stroke={1.5} color="white" />
               </Box>
-              <Text
-                size="xl"
-                fw={800}
-                style={{
-                  color: '#1e293b',
-                  letterSpacing: '-0.02em',
-                }}
+              <Box style={{
+                  opacity: isNavbarExpanded ? 1 : 0,
+                  width: isNavbarExpanded ? 'auto' : 0,
+                  overflow: 'hidden',
+                  transition: 'opacity 0.2s ease, width 0.2s ease',
+                  display: opened ? 'block' : 'initial'
+              }}
+               visibleFrom="sm" 
               >
-                RoomMaster
-              </Text>
+                <Text
+                  size="xl"
+                  fw={800}
+                  style={{
+                    color: '#1e293b',
+                    letterSpacing: '-0.02em',
+                    whiteSpace: 'nowrap', 
+                  }}
+                >
+                  RoomMaster
+                </Text>
+              </Box>
+              <Box hiddenFrom="sm">
+                 <Text
+                  size="xl"
+                  fw={800}
+                  style={{
+                    color: '#1e293b',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  RoomMaster
+                </Text>
+              </Box>
             </Group>
           </Group>
 
@@ -156,10 +187,13 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <AppShell.Navbar
         p="md"
+        onMouseEnter={() => setIsNavbarExpanded(true)}
+        onMouseLeave={() => setIsNavbarExpanded(false)}
         style={{
           borderRight: '1px solid #e5e7eb',
           background: 'white',
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
+          transition: 'width 0.25s ease-in-out',
         }}
       >
         <AppShell.Section grow>
@@ -171,7 +205,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               <NavLink
                 key={item.href}
                 href={item.href}
-                label={item.label}
+                label={isNavbarExpanded ? item.label : undefined}
                 leftSection={<Icon size={20} stroke={1.5} />}
                 active={isActive}
                 onClick={(e) => {
@@ -179,7 +213,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push(item.href);
                   if (opened) toggle();
                 }}
-                styles={{
+                styles={(theme) => ({
                   root: {
                     borderRadius: rem(8),
                     marginBottom: rem(4),
@@ -188,22 +222,40 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     fontWeight: 500,
                     color: isActive ? '#4f46e5' : '#374151',
                     transition: 'all 0.25s ease',
-                    '&:hover': {
-                    background: 'rgba(99, 102, 241, 0.12)',
-                    color: '#4f46e5',
-                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)',
+
+                    // --- [PERBAIKAN] ---
+                    // Menggunakan sintaks media query CSS standar
+                    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                      display: opened ? 'flex' : 'none',
                     },
-                    "&[dataActive]": {
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                    color: '#4f46e5',
-                    fontWeight: 600,
-                    boxShadow: 'inset 0 0 0 1px rgba(99, 102, 241, 0.3)',
+                    // --- [AKHIR PERBAIKAN] ---
+                    
+                    justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
+
+                    '&:hover': {
+                      background: 'rgba(99, 102, 241, 0.12)',
+                      color: '#4f46e5',
+                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)',
+                    },
+                    '&[dataActive]': {
+                      background:
+                        'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                      color: '#4f46e5',
+                      fontWeight: 600,
+                      boxShadow: 'inset 0 0 0 1px rgba(99, 102, 241, 0.3)',
                     },
                   },
                   label: {
                     fontSize: rem(14),
+                    display: isNavbarExpanded ? 'block' : 'none',
+                    opacity: isNavbarExpanded ? 1 : 0,
+                    transition: 'opacity 0.2s ease',
                   },
-                }}
+                  leftSection: {
+                    marginRight: isNavbarExpanded ? theme.spacing.md : 0,
+                    transition: 'margin-right 0.25s ease',
+                  },
+                })}
               />
             );
           })}
@@ -211,10 +263,10 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         <AppShell.Section>
           <NavLink
-            label="Logout"
+            label={isNavbarExpanded ? 'Logout' : undefined}
             leftSection={<IconLogout size={20} stroke={1.5} />}
             onClick={handleLogout}
-            styles={{
+            styles={(theme) => ({
               root: {
                 borderRadius: rem(8),
                 padding: rem(12),
@@ -222,12 +274,31 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                 fontWeight: 500,
                 color: '#ef4444',
                 transition: 'all 0.25s ease',
+
+                // --- [PERBAIKAN] ---
+                [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                  display: opened ? 'flex' : 'none',
+                },
+                // --- [AKHIR PERBAIKAN] ---
+                
+                justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
+
                 '&:hover': {
                   background: 'rgba(239, 68, 68, 0.08)',
                   boxShadow: '0 2px 6px rgba(239, 68, 68, 0.15)',
                 },
               },
-            }}
+              label: {
+                fontSize: rem(14),
+                display: isNavbarExpanded ? 'block' : 'none',
+                opacity: isNavbarExpanded ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+              },
+              leftSection: {
+                marginRight: isNavbarExpanded ? theme.spacing.md : 0,
+                transition: 'margin-right 0.25s ease',
+              },
+            })}
           />
         </AppShell.Section>
       </AppShell.Navbar>
@@ -243,7 +314,7 @@ export default function SuperAdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute requiredRole="super_admin">
+    <ProtectedRoute requiredRoleName="Super Admin">
       <SuperAdminLayoutContent>{children}</SuperAdminLayoutContent>
     </ProtectedRoute>
   );

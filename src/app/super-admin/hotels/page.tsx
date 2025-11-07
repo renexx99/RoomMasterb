@@ -208,7 +208,10 @@ function HotelManagementContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2rem 0' }}>
+      {/* --- [MODIFIKASI] --- */}
+      {/* Padding diubah dari '2rem 0' menjadi '1.25rem 0' agar lebih ramping */}
+      <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '1.25rem 0' }}>
+      {/* --- [AKHIR MODIFIKASI] --- */}
         <Container size="lg">
           <Group justify="space-between" align="center">
             <div>
@@ -220,11 +223,14 @@ function HotelManagementContent() {
                 >
                   <IconArrowLeft size={20} />
                 </ActionIcon>
-                <Title order={1} c="white">
+                {/* --- [MODIFIKASI] --- */}
+                {/* Title order diubah dari 1 menjadi 2 */}
+                <Title order={2} c="white">
                   Hotel Management
                 </Title>
+                {/* --- [AKHIR MODIFIKASI] --- */}
               </Group>
-              <Text c="white" opacity={0.9}>
+              <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>
                 Manage all hotels in the system
               </Text>
             </div>
@@ -336,6 +342,7 @@ function HotelManagementContent() {
         </Paper>
       </Container>
 
+      {/* --- Modals (Tidak Berubah) --- */}
       <Modal
         opened={modalOpened}
         onClose={handleCloseModal}

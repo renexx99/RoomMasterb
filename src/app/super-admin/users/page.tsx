@@ -19,7 +19,7 @@ import {
   Badge,
   Select,
   Grid,
-  SegmentedControl, // Pastikan ini diimpor
+  SegmentedControl,
 } from '@mantine/core';
 import { IconEdit, IconTrash, IconPlus, IconArrowLeft, IconCheck, IconSearch } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
@@ -36,7 +36,7 @@ interface UserWithHotel extends Profile {
 function UserManagementContent() {
   const router = useRouter();
   const [users, setUsers] = useState<UserWithHotel[]>([]);
-  const [hotels, setHotels] = useState<Hotel[]>([]); // Masih dibutuhkan untuk modal Assign
+  const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal State
@@ -52,7 +52,6 @@ function UserManagementContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at_desc');
   const [filterStatus, setFilterStatus] = useState<'all' | 'assigned' | 'unassigned'>('all');
-  // Hapus state filterHotel
 
   const form = useForm({
     initialValues: {
@@ -83,7 +82,6 @@ function UserManagementContent() {
     try {
       setLoading(true);
 
-      // Fetch all hotels (tetap diperlukan untuk modal assign)
       const { data: hotelsData, error: hotelsError } = await supabase
         .from('hotels')
         .select('*')
@@ -92,7 +90,6 @@ function UserManagementContent() {
       if (hotelsError) throw hotelsError;
       setHotels(hotelsData || []);
 
-      // Fetch all hotel admins
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*')
@@ -100,7 +97,6 @@ function UserManagementContent() {
 
       if (usersError) throw usersError;
 
-      // Merge hotel data with user data
       const usersWithHotels = (usersData || []).map((user) => ({
         ...user,
         hotel: hotelsData?.find((h) => h.id === user.hotel_id),
@@ -118,11 +114,9 @@ function UserManagementContent() {
     }
   };
 
-   // --- Logic Filter & Sort (Diperbarui) ---
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
 
-    // Filter by search term (name, email, or hotel name)
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       result = result.filter(
@@ -133,16 +127,12 @@ function UserManagementContent() {
       );
     }
 
-    // Filter by assignment status
     if (filterStatus === 'assigned') {
       result = result.filter((user) => !!user.hotel_id);
     } else if (filterStatus === 'unassigned') {
       result = result.filter((user) => !user.hotel_id);
     }
 
-    // Hapus filter by specific hotel
-
-    // Sort
     switch (sortBy) {
       case 'name_asc':
         result.sort((a, b) => a.full_name.localeCompare(b.full_name));
@@ -157,7 +147,6 @@ function UserManagementContent() {
         result.sort((a, b) => b.email.localeCompare(a.email));
         break;
       case 'hotel_asc':
-        // Pastikan unassigned (null hotel) diurutkan terakhir saat ascending
         result.sort((a, b) => {
              if (!a.hotel?.name) return 1;
              if (!b.hotel?.name) return -1;
@@ -165,14 +154,13 @@ function UserManagementContent() {
         });
         break;
       case 'hotel_desc':
-         // Pastikan unassigned (null hotel) diurutkan terakhir saat descending
         result.sort((a, b) => {
              if (!a.hotel?.name) return 1;
              if (!b.hotel?.name) return -1;
              return b.hotel.name.localeCompare(a.hotel.name);
         });
         break;
-      case 'status': // Sort by assigned first, then unassigned
+      case 'status':
          result.sort((a, b) => (a.hotel_id ? -1 : 1) - (b.hotel_id ? -1 : 1));
          break;
       case 'created_at_asc':
@@ -185,11 +173,10 @@ function UserManagementContent() {
     }
 
     return result;
-  }, [users, searchTerm, sortBy, filterStatus]); // Hapus filterHotel dari dependency
+  }, [users, searchTerm, sortBy, filterStatus]);
 
 
   const handleSubmit = async (values: typeof form.values) => {
-    // ... (fungsi tetap sama) ...
      try {
       if (editingUser) {
         const { error: updateError } = await supabase
@@ -239,14 +226,12 @@ function UserManagementContent() {
   };
 
   const handleEdit = (user: UserWithHotel) => {
-    // ... (fungsi tetap sama) ...
     setEditingUser(user);
     form.setValues({ email: user.email, full_name: user.full_name, password: '' });
     setModalOpened(true);
   };
 
   const handleDelete = async () => {
-    // ... (fungsi tetap sama) ...
      if (!deleteTarget) return;
     try {
       const { error: profileError } = await supabase.from('profiles').delete().eq('id', deleteTarget.id);
@@ -261,7 +246,6 @@ function UserManagementContent() {
   };
 
   const handleAssignHotel = async () => {
-    // ... (fungsi tetap sama) ...
      if (!assigningUser || !selectedHotelId) return;
     try {
       const { error } = await supabase.from('profiles').update({ hotel_id: selectedHotelId }).eq('id', assigningUser.id);
@@ -290,7 +274,6 @@ function UserManagementContent() {
     );
   }
 
-  // Opsi untuk Select assign hotel di modal (tetap diperlukan)
   const hotelAssignOptions = hotels.map((h) => ({
     value: h.id,
     label: h.name,
@@ -299,8 +282,10 @@ function UserManagementContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-       <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2rem 0' }}>
+      {/* --- [MODIFIKASI] --- */}
+      {/* Padding diubah dari '2rem 0' menjadi '1.25rem 0' */}
+       <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '1.25rem 0' }}>
+       {/* --- [AKHIR MODIFIKASI] --- */}
         <Container size="lg">
           <Group justify="space-between" align="center">
             <div>
@@ -308,9 +293,17 @@ function UserManagementContent() {
                 <ActionIcon variant="transparent" color="white" onClick={() => router.push('/super-admin/dashboard')}>
                   <IconArrowLeft size={20} />
                 </ActionIcon>
-                <Title order={1} c="white">User Management</Title>
+                {/* --- [MODIFIKASI] --- */}
+                {/* Title order diubah dari 1 menjadi 2 */}
+                <Title order={2} c="white">User Management</Title>
+                {/* --- [AKHIR MODIFIKASI] --- */}
               </Group>
-              <Text c="white" opacity={0.9}>Manage hotel admins and assignments</Text>
+              {/* --- [MODIFIKASI] --- */}
+              {/* Tambahkan pl agar align dengan title */}
+              <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>
+                Manage hotel admins and assignments
+              </Text>
+              {/* --- [AKHIR MODIFIKASI] --- */}
             </div>
             <Button leftSection={<IconPlus size={18} />} onClick={() => { setEditingUser(null); form.reset(); setModalOpened(true); }}>
               Add User
@@ -320,22 +313,20 @@ function UserManagementContent() {
       </div>
 
       <Container size="lg" py="xl">
-        {/* --- Filter & Search Inputs (Diperbarui) --- */}
+        {/* --- Filter & Search Inputs --- */}
         <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
           <Grid align="flex-end" gutter="md">
-            {/* Search Input - Lebarkan */}
             <Grid.Col span={{ base: 12, md: 6 }}>
               <TextInput
                 label="Cari User"
-                placeholder="Cari nama, email, atau hotel..." // Update placeholder
+                placeholder="Cari nama, email, atau hotel..."
                 leftSection={<IconSearch size={16} />}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.currentTarget.value)}
               />
             </Grid.Col>
-            {/* Status Filter - Lebarkan */}
             <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                 <Stack gap={5}> {/* Wrap with Stack for label spacing */}
+                 <Stack gap={5}>
                      <Text size="sm" fw={500}>Status Assignment</Text>
                      <SegmentedControl
                         value={filterStatus}
@@ -349,8 +340,6 @@ function UserManagementContent() {
                     />
                  </Stack>
             </Grid.Col>
-            {/* Filter Hotel Dihapus */}
-            {/* Sort Select */}
             <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
               <Select
                 label="Urutkan Berdasarkan"
@@ -410,10 +399,8 @@ function UserManagementContent() {
                         </Badge>
                       ) : ( <Badge color="orange" variant="light"> Unassigned </Badge> )}
                     </Table.Td>
-                    {/* --- Kolom Actions Diperbarui --- */}
                     <Table.Td>
-                      <Group gap="xs" justify="flex-start" wrap="nowrap"> {/* justify="flex-start" */}
-                        {/* Tombol Edit dan Delete di Kiri */}
+                      <Group gap="xs" justify="flex-start" wrap="nowrap">
                         <ActionIcon color="blue" variant="light" onClick={() => handleEdit(user)}>
                           <IconEdit size={16} />
                         </ActionIcon>
@@ -421,10 +408,8 @@ function UserManagementContent() {
                           <IconTrash size={16} />
                         </ActionIcon>
 
-                        {/* Spacer untuk mendorong tombol Assign/Re-assign ke kanan */}
                         <Box style={{ flexGrow: 1 }} />
 
-                        {/* Tombol Assign/Re-assign di Kanan */}
                         {!user.hotel_id && (
                           <Button size="xs" variant="light" onClick={() => { setAssigningUser(user); setSelectedHotelId(null); setAssignModalOpened(true); }}>
                             Assign
@@ -446,7 +431,6 @@ function UserManagementContent() {
       </Container>
 
       {/* --- Modals (Tetap Sama) --- */}
-      {/* Modal Add/Edit User */}
        <Modal opened={modalOpened} onClose={handleCloseModal} title={editingUser ? 'Edit User' : 'Add New User'} centered >
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
@@ -461,7 +445,6 @@ function UserManagementContent() {
         </form>
       </Modal>
 
-      {/* Modal Assign Hotel */}
       <Modal opened={assignModalOpened} onClose={() => { setAssignModalOpened(false); setAssigningUser(null); setSelectedHotelId(null); }} title={assigningUser?.hotel_id ? "Re-assign Hotel" : "Assign Hotel"} centered >
         <Stack gap="md">
           <Text size="sm" c="dimmed"> {assigningUser?.hotel_id ? "Change hotel assignment for" : "Assign a hotel to"} <strong>{assigningUser?.full_name}</strong> </Text>
@@ -486,7 +469,6 @@ function UserManagementContent() {
         </Stack>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal opened={deleteModalOpened} onClose={() => { setDeleteModalOpened(false); setDeleteTarget(null); }} title="Delete User" centered >
         <Stack gap="md">
           <Text> Are you sure you want to delete <strong>{deleteTarget?.full_name}</strong>? This action cannot be undone. </Text>
@@ -503,7 +485,7 @@ function UserManagementContent() {
 
 export default function UserManagementPage() {
   return (
-    <ProtectedRoute requiredRole="super_admin">
+    <ProtectedRoute requiredRoleName="Super Admin">
       <UserManagementContent />
     </ProtectedRoute>
   );

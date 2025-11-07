@@ -1,7 +1,7 @@
 [
-  { "id": 1, "source": "Twitterlist", "revenue": "$42.51", "value": 98.1 },
-  { "id": 2, "source": "Realmix", "revenue": "$15.40", "value": 63.0 },
-  { "id": 3, "source": "Quinu", "revenue": "$59.96", "value": 57.4 },
-  { "id": 4, "source": "Chatterpoint", "revenue": "$71.47", "value": 13.9 },
-  { "id": 5, "source": "Wordtune", "revenue": "$58.41", "value": 14.1 }
+  { "id": 1, "source": "Amaris Hotel", "revenue": "$42.51", "value": 98.1 },
+  { "id": 2, "source": "Hotel Santika", "revenue": "$15.40", "value": 63.0 },
+  { "id": 3, "source": "Kampi Hotel", "revenue": "$59.96", "value": 57.4 },
+  { "id": 4, "source": "The Anvaya", "revenue": "$71.47", "value": 13.9 },
+  { "id": 5, "source": "Hotel Santika Premiere", "revenue": "$58.41", "value": 14.1 }
 ]
