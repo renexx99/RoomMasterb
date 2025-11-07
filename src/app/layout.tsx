@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 // Import Mantine styles
+import '@fullcalendar/core/main.css';
+import '@fullcalendar/resource-timeline/main.css';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 

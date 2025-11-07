@@ -9,13 +9,6 @@ import dayGridPlugin from '@fullcalendar/daygrid'; // Dependensi
 import timeGridPlugin from '@fullcalendar/timegrid'; // Dependensi
 import { Center, Loader, Paper, Text } from '@mantine/core';
 
-// --- [PERBAIKAN] ---
-// Impor CSS utama FullCalendar (v6)
-import '@fullcalendar/core/main.css';
-// Impor CSS untuk plugin timeline (WAJIB untuk resourceTimeline view)
-import '@fullcalendar/resource-timeline/main.css';
-// --- [AKHIR PERBAIKAN] ---
-
 // Tipe data sederhana untuk mock
 interface RoomResource {
   id: string;
