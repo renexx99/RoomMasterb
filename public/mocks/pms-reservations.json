@@ -1,0 +1,26 @@
+[
+  {
+    "id": "res-1",
+    "resourceId": "101",
+    "title": "John Doe",
+    "start": "2024-05-10",
+    "end": "2024-05-12",
+    "backgroundColor": "blue"
+  },
+  {
+    "id": "res-2",
+    "resourceId": "102",
+    "title": "Jane Smith",
+    "start": "2024-05-11",
+    "end": "2024-05-14",
+    "backgroundColor": "green"
+  },
+  {
+    "id": "res-3",
+    "resourceId": "101",
+    "title": "Robert Brown",
+    "start": "2024-05-13",
+    "end": "2024-05-16",
+    "backgroundColor": "orange"
+  }
+]

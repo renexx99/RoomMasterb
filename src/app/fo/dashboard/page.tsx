@@ -1,55 +1,56 @@
-// src/app/fo/dashboard/page.tsx
 'use client';
 
 import {
   Container,
   Title,
   Text,
-  Card,
-  SimpleGrid,
   Stack,
-  Group,
   Paper,
-  Badge,
-  Loader,
-  Center,
+  SimpleGrid,
+  Loader, // Ditambahkan
+  Center, // Ditambahkan
+  Badge, // Ditambahkan
+  Group, // Ditambahkan
 } from '@mantine/core';
-import {
-  IconBed,
-  IconCalendarCheck,
-  IconUsers,
-  IconCalendarEvent,
-  IconLogin, // Kedatangan
-  IconLogout, // Keberangkatan
-} from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { notifications } from '@mantine/notifications';
+import StatsCard from '@/components/Dashboard/StatsCard';
+import OrdersTable from '@/components/Dashboard/OrdersTable';
+import Surface from '@/components/Dashboard/Surface';
+import { useFetchData } from '@/hooks/useFetchData';
+import { useEffect, useState } from 'react'; // Ditambahkan
+import { supabase } from '@/core/config/supabaseClient'; // Ditambahkan
+import { notifications } from '@mantine/notifications'; // Ditambahkan
 
-// Interface untuk stats dashboard FO
+// Interface untuk stats FO
 interface FoDashboardStats {
+  todayCheckIns: number;
+  todayCheckOuts: number;
   availableRooms: number;
-  todayCheckIns: number; // Jumlah Kedatangan
-  todayCheckOuts: number; // Jumlah Keberangkatan
-  guestsInHouse: number; // Tamu In-House
+  dirtyRooms: number;
   hotelName: string;
 }
 
-export default function FoDashboard() {
+export default function FrontOfficeDashboard() {
   const { profile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<FoDashboardStats>({
-    availableRooms: 0,
     todayCheckIns: 0,
     todayCheckOuts: 0,
-    guestsInHouse: 0,
+    availableRooms: 0,
+    dirtyRooms: 0,
     hotelName: '',
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // Cari hotel_id dari assignment peran 'Front Office'
+  // Ambil data dummy untuk tabel
+  const {
+    data: ordersData,
+    loading: ordersLoading,
+    error: ordersError,
+  } = useFetchData('/mocks/Orders.json');
+
+  // Cari hotel_id dari assignment peran user (asumsi FO juga punya 1 hotel)
   const assignedHotelId = profile?.roles?.find(
-    (r) => r.hotel_id && r.role_name === 'Front Office'
+    (r) => r.hotel_id && r.role_name === 'Front Office',
   )?.hotel_id;
 
   useEffect(() => {
@@ -70,14 +71,21 @@ export default function FoDashboard() {
           .eq('id', assignedHotelId)
           .maybeSingle();
 
-        // 2. Hitung Kamar Tersedia
+        // 2. Hitung Kamar Tersedia (available)
         const { count: availableCount } = await supabase
           .from('rooms')
           .select('*', { count: 'exact', head: true })
           .eq('hotel_id', assignedHotelId)
           .eq('status', 'available');
 
-        // 3. Hitung Kedatangan (Check-in Hari Ini)
+        // 3. Hitung Kamar Kotor (dirty)
+        const { count: dirtyCount } = await supabase
+          .from('rooms')
+          .select('*', { count: 'exact', head: true })
+          .eq('hotel_id', assignedHotelId)
+          .eq('status', 'dirty');
+
+        // 4. Hitung Check-in Hari Ini
         const { count: checkInsCount } = await supabase
           .from('reservations')
           .select('*', { count: 'exact', head: true })
@@ -85,7 +93,7 @@ export default function FoDashboard() {
           .eq('check_in_date', today)
           .neq('payment_status', 'cancelled');
 
-        // 4. Hitung Keberangkatan (Check-out Hari Ini)
+        // 5. Hitung Check-out Hari Ini
         const { count: checkOutsCount } = await supabase
           .from('reservations')
           .select('*', { count: 'exact', head: true })
@@ -93,20 +101,11 @@ export default function FoDashboard() {
           .eq('check_out_date', today)
           .neq('payment_status', 'cancelled');
 
-        // 5. Hitung Tamu In-House (Aktif hari ini)
-        const { count: guestsInHouseCount } = await supabase
-          .from('reservations')
-          .select('*', { count: 'exact', head: true })
-          .eq('hotel_id', assignedHotelId)
-          .lte('check_in_date', today)
-          .gte('check_out_date', today)
-          .neq('payment_status', 'cancelled');
-
         setStats({
-          availableRooms: availableCount || 0,
           todayCheckIns: checkInsCount || 0,
           todayCheckOuts: checkOutsCount || 0,
-          guestsInHouse: guestsInHouseCount || 0,
+          availableRooms: availableCount || 0,
+          dirtyRooms: dirtyCount || 0,
           hotelName: hotelData?.name || '',
         });
       } catch (error) {
@@ -128,6 +127,7 @@ export default function FoDashboard() {
     }
   }, [authLoading, assignedHotelId]);
 
+  // Tampilkan loader
   if (authLoading || loadingStats) {
     return (
       <Center style={{ minHeight: 'calc(100vh - 140px)' }}>
@@ -136,6 +136,7 @@ export default function FoDashboard() {
     );
   }
 
+  // Handle jika FO tidak punya hotel assignment
   if (!assignedHotelId) {
     return (
       <Container size="lg">
@@ -145,8 +146,7 @@ export default function FoDashboard() {
               Assignment Hotel Tidak Ditemukan
             </Title>
             <Text c="dimmed" ta="center">
-              Anda belum ditugaskan ke hotel manapun. Silakan hubungi
-              Administrator.
+              Anda belum ditugaskan ke hotel manapun. Silakan hubungi Super Admin.
             </Text>
           </Stack>
         </Paper>
@@ -154,9 +154,32 @@ export default function FoDashboard() {
     );
   }
 
-  const foRoleName =
-    profile?.roles?.find((r) => r.role_name === 'Front Office')?.role_name ||
-    'Front Office';
+  // Ubah data 'stats' agar sesuai dengan props 'StatsCard'
+  const foStats = [
+    {
+      title: 'Total Kedatangan',
+      value: stats.todayCheckIns.toString(),
+      diff: 0,
+      period: 'today',
+    },
+    {
+      title: 'Total Keberangkatan',
+      value: stats.todayCheckOuts.toString(),
+      diff: 0,
+      period: 'today',
+    },
+    {
+      title: 'Kamar Tersedia',
+      value: stats.availableRooms.toString(),
+      diff: 0,
+    },
+    {
+      title: 'Kamar Kotor (Dirty)',
+      value: stats.dirtyRooms.toString(),
+      diff: 0,
+    },
+    // Kita bisa tambahkan 'Kamar Bersih' jika di-fetch
+  ];
 
   return (
     <Container
@@ -170,110 +193,35 @@ export default function FoDashboard() {
             <Title order={2} c="#1e293b">
               Front Office Dashboard
             </Title>
-            <Badge size="lg" color="teal" variant="light">
+            <Badge size="lg" color="green" variant="light">
               {stats.hotelName}
             </Badge>
           </Group>
-          <Text c="#475569">Ringkasan operasional Anda hari ini.</Text>
+          <Text c="#475569">Ringkasan operasional harian hotel.</Text>
         </div>
 
-        {/* Kartu Statistik */}
+        {/* Baris Atas: Stats (Menggunakan StatsCard baru) */}
+        {/* Menggunakan 4 kolom agar pas */}
         <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
-          {[
-            {
-              title: 'Kedatangan Hari Ini',
-              value: stats.todayCheckIns,
-              color: '#06b6d4', // Cyan
-              icon: <IconLogin size={24} stroke={1.5} color="#06b6d4" />,
-            },
-            {
-              title: 'Keberangkatan Hari Ini',
-              value: stats.todayCheckOuts,
-              color: '#f59e0b', // Orange
-              icon: <IconLogout size={24} stroke={1.5} color="#f59e0b" />,
-            },
-            {
-              title: 'Tamu In-House',
-              value: stats.guestsInHouse,
-              color: '#8b5cf6', // Violet
-              icon: <IconUsers size={24} stroke={1.5} color="#8b5cf6" />,
-            },
-            {
-              title: 'Kamar Tersedia',
-              value: stats.availableRooms,
-              color: '#10b981', // Green
-              icon: <IconBed size={24} stroke={1.5} color="#10b981" />,
-            },
-          ].map((item) => (
-            <Card
-              key={item.title}
-              padding="lg"
-              radius="lg"
-              shadow="xs"
-              style={{
-                background: 'white',
-                border: 'none',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
-              }}
-            >
-              <Group justify="space-between" mb="md">
-                <div>
-                  <Text size="sm" c="#1e293b" fw={500}>
-                    {item.title}
-                  </Text>
-                  <Text size="xl" fw={700} mt="xs" c={item.color}>
-                    {item.value}
-                  </Text>
-                </div>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    background: `${item.color}1A`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {item.icon}
-                </div>
-              </Group>
-            </Card>
+          {foStats.map((stat) => (
+            <StatsCard key={stat.title} data={stat} />
           ))}
         </SimpleGrid>
 
-        {/* Pesan Selamat Datang */}
-        <Paper
-          shadow="xs"
-          p="xl"
-          radius="lg"
-          style={{
-            background:
-              'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)', // Gradien Teal
-            color: 'white',
-          }}
-        >
-          <Stack gap="md">
-            <Title order={3} c="white">
-              Selamat Datang, {profile?.full_name}!
-            </Title>
-            <Text size="lg" c="white" opacity={0.95}>
-              Anda bertugas di <strong>{stats.hotelName}</strong>. Gunakan menu
-              navigasi untuk mengelola reservasi dan tamu.
-            </Text>
-            <Group mt="md">
-              <Badge
-                size="lg"
-                color="white"
-                variant="filled"
-                style={{ color: '#0d9488' }}
-              >
-                {foRoleName}
-              </Badge>
-            </Group>
-          </Stack>
-        </Paper>
+        {/* Baris Bawah: Tabel Penuh */}
+        {/* PERBAIKAN: Props 'withBorder' dan 'p' dihapus 
+          karena sudah ada di dalam style default Surface.
+        */}
+        <Surface>
+          <Title order={4} mb="md">
+            Daftar Tamu Check-in Hari Ini (Data Mock)
+          </Title>
+          <OrdersTable
+            data={ordersData}
+            loading={ordersLoading}
+            error={ordersError ? ordersError.toString() : null}
+          />
+        </Surface>
       </Stack>
     </Container>
   );
