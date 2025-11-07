@@ -53,6 +53,8 @@ import {
   PaymentStatus,
 } from '@/core/types/database';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'; // Import ProtectedRoute
+// --- Impor Tambahan ---
+import ReservationTapeChart from '@/components/ReservationChart/ReservationTapeChart';
 
 // --- Interfaces (Sama seperti admin/reservations) ---
 interface ReservationDetails extends Reservation {
@@ -570,9 +572,21 @@ function ReservationsManagementContent() {
         <Container size="lg" pb="xl">
           {/* ... (Seluruh isi JSX <Stack> ... </Stack> sama persis seperti admin/reservations) ... */}
           <Stack gap="lg">
-            {/* --- Filter & Search Inputs --- */}
+            
+            {/* --- [PENAMBAHAN] TAPE CHART --- */}
+            <Title order={2} mb="xs">
+              Visual Tape Chart
+            </Title>
+            <ReservationTapeChart />
+            {/* --- AKHIR PENAMBAHAN --- */}
+
+
+            {/* --- [ASLI] Filter & Search Inputs --- */}
             {reservations.length > 0 && (
-              <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
+              <Paper shadow="xs" p="md" radius="md" withBorder mb="lg" mt="xl">
+                <Title order={3} mb="md">
+                  Filter Tabel Reservasi
+                </Title>
                 <Grid align="flex-end" gutter="md">
                   <Grid.Col span={{ base: 12, md: 4 }}>
                     <TextInput
@@ -628,7 +642,7 @@ function ReservationsManagementContent() {
               </Paper>
             )}
 
-            {/* --- Table --- */}
+            {/* --- [ASLI] Table --- */}
             {reservations.length === 0 && !loading ? (
               <Paper shadow="sm" p="xl" radius="md" withBorder>
                 <Box ta="center">
@@ -741,7 +755,7 @@ function ReservationsManagementContent() {
           </Stack>
         </Container>
 
-        {/* --- Modals (Warna disesuaikan) --- */}
+        {/* --- [ASLI] Modals (Warna disesuaikan) --- */}
         <Modal
           opened={modalOpened}
           onClose={handleCloseModal}
@@ -876,7 +890,7 @@ function ReservationsManagementContent() {
           </form>
         </Modal>
 
-        {/* Modal Delete Confirmation */}
+        {/* [ASLI] Modal Delete Confirmation */}
         <Modal
           opened={deleteModalOpened}
           onClose={handleCloseDeleteModal}

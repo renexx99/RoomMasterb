@@ -1,4 +1,3 @@
-// src/app/fo/availability/page.tsx
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -26,6 +25,8 @@ import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+// --- Impor Tambahan ---
+import ReservationTapeChart from '@/components/ReservationChart/ReservationTapeChart';
 
 // Interface
 interface RoomType {
@@ -63,8 +64,6 @@ function AvailabilityContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('room_number_asc');
   const [filterType, setFilterType] = useState<string[]>([]);
-  
-  // *** PERUBAHAN KUNCI: Default filter status adalah 'available' ***
   const [filterStatus, setFilterStatus] = useState<string[]>(['available']);
 
   useEffect(() => {
@@ -284,9 +283,21 @@ function AvailabilityContent() {
 
       <Container size="lg" pb="xl">
         <Stack gap="lg">
-          {/* --- Filter & Search Inputs --- */}
+          
+          {/* --- [PENAMBAHAN] TAPE CHART --- */}
+          <Title order={2} mb="xs">
+            Visual Tape Chart
+          </Title>
+          <ReservationTapeChart />
+          {/* --- AKHIR PENAMBAHAN --- */}
+
+
+          {/* --- [ASLI] Filter & Search Inputs --- */}
           {roomTypes.length > 0 && rooms.length > 0 && (
-            <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
+            <Paper shadow="xs" p="md" radius="md" withBorder mb="lg" mt="xl">
+              <Title order={3} mb="md">
+                Filter Tabel Kamar
+              </Title>
               <Grid align="flex-end" gutter="md">
                 <Grid.Col span={{ base: 12, md: 4 }}>
                   <TextInput
@@ -341,7 +352,7 @@ function AvailabilityContent() {
             </Paper>
           )}
 
-          {/* --- Table (READ ONLY) --- */}
+          {/* --- [ASLI] Table (READ ONLY) --- */}
           {roomTypes.length === 0 ? (
             <Paper shadow="sm" p="xl" radius="md" withBorder>
               <Box ta="center">
