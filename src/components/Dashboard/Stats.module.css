@@ -1,0 +1,16 @@
+.title {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.value {
+  font-size: rem(24px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.diff {
+  font-size: var(--mantine-font-size-sm);
+  display: flex;
+  align-items: center;
+}
