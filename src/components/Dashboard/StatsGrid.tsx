@@ -2,7 +2,7 @@ import { PaperProps, SimpleGrid, Skeleton } from '@mantine/core';
 import StatsCard from './StatsCard'; // <-- Jalur diperbaiki
 import classes from './StatsGrid.module.css';
 import { ReactNode } from 'react';
-import { ErrorAlert } from '@/components/ErrorAlert'; // <-- Jalur diperbaiki
+import ErrorAlert from '@/components/ErrorAlert'; // <-- Jalur diperbaiki
 
 type StatsGridProps = {
   data?: { title: string; value: string; diff: number; period?: string }[];
