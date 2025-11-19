@@ -5,31 +5,17 @@ import { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import resourceTimelinePlugin from '@fullcalendar/resource-timeline';
 import interactionPlugin from '@fullcalendar/interaction';
-import dayGridPlugin from '@fullcalendar/daygrid'; // Dependensi
-import timeGridPlugin from '@fullcalendar/timegrid'; // Dependensi
-import { Center, Loader, Paper, Text } from '@mantine/core';
+import { Paper, Title, Loader, Center, Text } from '@mantine/core';
 
-// Tipe data sederhana untuk mock
 interface RoomResource {
   id: string;
-  title: string; // "title" digunakan oleh FullCalendar untuk resource
+  title: string;
+  type?: string;
 }
 
-interface ReservationEvent {
-  id: string;
-  resourceId: string; // Menghubungkan ke RoomResource.id
-  title: string; // Nama tamu
-  start: string; // Tgl Check-in
-  end: string; // Tgl Check-out
-}
-
-/**
- * Komponen ReservationTapeChart
- * Menampilkan timeline reservasi berbasis sumber daya (kamar).
- */
-export function ReservationTapeChart() {
-  const [resources, setResources] = useState<RoomResource[]>([]);
-  const [events, setEvents] = useState<ReservationEvent[]>([]);
+const ReservationTapeChart = () => {
+  const [roomData, setRoomData] = useState<RoomResource[]>([]);
+  const [eventData, setEventData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,24 +25,23 @@ export function ReservationTapeChart() {
         setLoading(true);
         setError(null);
 
-        const [roomsRes, reservationsRes] = await Promise.all([
+        const [roomRes, eventRes] = await Promise.all([
           fetch('/mocks/pms-rooms.json'),
           fetch('/mocks/pms-reservations.json'),
         ]);
 
-        if (!roomsRes.ok || !reservationsRes.ok) {
-          throw new Error('Gagal mengambil data mock');
+        if (!roomRes.ok || !eventRes.ok) {
+          throw new Error('Gagal memuat data mock');
         }
 
-        const roomsData: RoomResource[] = await roomsRes.json();
-        const reservationsData: ReservationEvent[] =
-          await reservationsRes.json();
+        const rooms = await roomRes.json();
+        const events = await eventRes.json();
 
-        setResources(roomsData);
-        setEvents(reservationsData);
+        setRoomData(rooms);
+        setEventData(events);
       } catch (err: any) {
-        console.error('Error fetching mock data:', err);
-        setError(err.message || 'Terjadi kesalahan saat memuat chart');
+        console.error('Error fetching timeline data:', err);
+        setError(err.message || 'Terjadi kesalahan');
       } finally {
         setLoading(false);
       }
@@ -67,57 +52,68 @@ export function ReservationTapeChart() {
 
   if (loading) {
     return (
-      <Center style={{ minHeight: 400 }}>
-        <Loader />
-      </Center>
+      <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Center style={{ minHeight: 200 }}>
+          <Loader />
+        </Center>
+      </Paper>
     );
   }
 
   if (error) {
     return (
-      <Center style={{ minHeight: 400 }}>
-        <Text color="red">Error: {error}</Text>
-      </Center>
+      <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Center style={{ minHeight: 200 }}>
+          <Text c="red">Error: {error}</Text>
+        </Center>
+      </Paper>
     );
   }
 
   return (
-    <Paper shadow="sm" radius="md" p="md" withBorder>
-      {/* Catatan Lisensi:
-        'resourceTimeline' adalah fitur premium. 
-        FullCalendar menyediakan lisensi GPL untuk proyek open-source.
-        Jika proyek Anda bukan open-source, Anda memerlukan lisensi komersial.
-      */}
+    // --- [MODIFIKASI] ---
+    // Bungkus dengan Paper agar konsisten
+    <Paper shadow="sm" p="md" radius="md" withBorder>
+      <Title order={3} mb="md">
+        Visual Tape Chart
+      </Title>
       <FullCalendar
         schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
-        plugins={[
-          resourceTimelinePlugin,
-          interactionPlugin,
-          dayGridPlugin,
-          timeGridPlugin,
-        ]}
-        initialView="resourceTimelineWeek"
-        
-        // Sembunyikan header bawaan seperti yang diminta
-        headerToolbar={false}
-        
-        // Tampilkan 'Kamar' di header area sumber daya
+        plugins={[resourceTimelinePlugin, interactionPlugin]}
+        events={eventData}
+        resources={roomData}
+        headerToolbar={{
+          left: 'prev,next today',
+          center: 'title',
+          right: 'resourceTimelineTenDay,resourceTimelineMonth',
+        }}
+        initialView="resourceTimelineTenDay"
+        views={{
+          resourceTimelineTenDay: {
+            type: 'resourceTimeline',
+            duration: { days: 10 },
+            buttonText: '10 Hari',
+          },
+          resourceTimelineMonth: {
+            type: 'resourceTimeline',
+            duration: { months: 1 },
+            buttonText: 'Bulan',
+          },
+        }}
         resourceAreaHeaderContent="Kamar"
-        
-        // Muat data resources (kamar) dan events (reservasi)
-        resources={resources}
-        events={events}
-        
-        // Izinkan event (reservasi) untuk di-drag/drop
         editable={true}
-        
-        // Pengaturan Tampilan
-        aspectRatio={1.8}
-        slotMinWidth={100} // Lebar minimum untuk satu hari
-        locale="id" // Gunakan bahasa Indonesia
+        selectable={true}
+        // --- [PENAMBAHAN OPTIMASI] ---
+        height="auto" // Biarkan tinggi kalender menyesuaikan konten
+        stickyHeaderDates={true} // Buat header tanggal menempel saat scroll
+        eventDisplay="block" // Tampilkan event sebagai block solid
+        eventMinHeight={40} // Tinggi minimal event agar mudah dilihat
+        slotMinWidth={60} // Lebar minimal kolom hari
+        // --- [AKHIR PENAMBAHAN] ---
       />
     </Paper>
+    // --- [AKHIR MODIFIKASI] ---
   );
-}
+};
 
 export default ReservationTapeChart;

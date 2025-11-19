@@ -44,7 +44,6 @@ interface NavItem {
   href: string;
 }
 
-// Navigasi khusus untuk Front Office (diperbarui)
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/fo/dashboard' },
   { label: 'Proses Check-in/Out', icon: IconLogin, href: '/fo/check-in' },
@@ -55,15 +54,19 @@ const navItems: NavItem[] = [
   },
   { label: 'Manajemen Tamu', icon: IconUsersGroup, href: '/fo/guests' },
   {
-    label: 'Status & Ketersediaan', // <-- Nama Diubah
+    label: 'Status & Ketersediaan',
     icon: IconSearch,
     href: '/fo/availability',
   },
   { label: 'Billing & Folio', icon: IconCoin, href: '/fo/billing' },
   { label: 'Log Tamu', icon: IconBook2, href: '/fo/log' },
-  // { label: 'Daftar Kamar (View)', icon: IconBed, href: '/fo/rooms' }, // <-- Dihapus
-  // { label: 'Tipe Kamar (View)', icon: IconCategory, href: '/fo/room-types' }, // <-- Dihapus
 ];
+
+// --- [PENAMBAHAN] ---
+// Lebar sidebar saat ditutup dan dibuka
+const NAVBAR_WIDTH_COLLAPSED = rem(80);
+const NAVBAR_WIDTH_EXPANDED = rem(280);
+// --- [AKHIR PENAMBAHAN] ---
 
 function FoLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
@@ -73,7 +76,11 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
   const [hotelName, setHotelName] = useState<string>('');
   const [loadingHotel, setLoadingHotel] = useState(true);
 
-  // Ambil hotel_id dari peran 'Front Office'
+  // --- [PENAMBAHAN] ---
+  // State untuk mengontrol sidebar di desktop (hover)
+  const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
+  // --- [AKHIR PENAMBAHAN] ---
+
   const assignedHotelId = profile?.roles?.find(
     (r) => r.hotel_id && r.role_name === 'Front Office'
   )?.hotel_id;
@@ -148,13 +155,20 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
     <AppShell
       header={{ height: 70 }}
       navbar={{
-        width: 280,
+        // --- [MODIFIKASI] ---
+        width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
+        // --- [AKHIR MODIFIKASI] ---
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
       padding="md"
       styles={{
-        main: { background: '#f5f6fa' },
+        main: { 
+          background: '#f5f6fa',
+          // --- [PENAMBAHAN] ---
+          transition: 'padding-left 0.25s ease',
+          // --- [AKHIR PENAMBAHAN] ---
+        },
       }}
     >
       <AppShell.Header
@@ -178,7 +192,6 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                   width: 40,
                   height: 40,
                   borderRadius: '8px',
-                  // Skema warna Teal/Cyan
                   background:
                     'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)',
                   display: 'flex',
@@ -187,20 +200,34 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                   boxShadow: '0 3px 6px rgba(20, 184, 166, 0.3)',
                 }}
               >
-                <IconUserCheck // Icon berbeda untuk FO
+                <IconUserCheck
                   size={22}
                   stroke={1.5}
                   color="white"
                 />
               </Box>
-              <Box>
+              {/* --- [MODIFIKASI] --- */}
+              {/* Tampilkan judul hanya jika sidebar expanded */}
+              <Box style={{
+                  opacity: isNavbarExpanded ? 1 : 0,
+                  width: isNavbarExpanded ? 'auto' : 0,
+                  overflow: 'hidden',
+                  transition: 'opacity 0.2s ease, width 0.2s ease',
+                  display: opened ? 'block' : 'initial'
+              }}
+               visibleFrom="sm" 
+              >
+                <Text size="lg" fw={800} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
+                  {hotelName || 'Front Office'}
+                </Text>
+              </Box>
+              {/* Logo di mobile (saat burger dibuka) */}
+              <Box hiddenFrom="sm">
                 <Text size="lg" fw={800} style={{ color: '#1e293b' }}>
                   {hotelName || 'Front Office'}
                 </Text>
-                <Badge size="xs" color="teal" variant="light">
-                  {foRoleName}
-                </Badge>
               </Box>
+              {/* --- [AKHIR MODIFIKASI] --- */}
             </Group>
           </Group>
 
@@ -240,10 +267,17 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
 
       <AppShell.Navbar
         p="md"
+        // --- [PENAMBAHAN] ---
+        onMouseEnter={() => setIsNavbarExpanded(true)}
+        onMouseLeave={() => setIsNavbarExpanded(false)}
+        // --- [AKHIR PENAMBAHAN] ---
         style={{
           borderRight: '1px solid #e5e7eb',
           background: 'white',
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
+          // --- [PENAMBAHAN] ---
+          transition: 'width 0.25s ease-in-out',
+          // --- [AKHIR PENAMBAHAN] ---
         }}
       >
         <AppShell.Section grow>
@@ -254,7 +288,9 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
               <NavLink
                 key={item.href}
                 href={item.href}
-                label={item.label}
+                // --- [MODIFIKASI] ---
+                label={isNavbarExpanded ? item.label : undefined}
+                // --- [AKHIR MODIFIKASI] ---
                 leftSection={<Icon size={20} stroke={1.5} />}
                 active={isActive}
                 onClick={(e) => {
@@ -262,31 +298,50 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push(item.href);
                   if (opened) toggle();
                 }}
-                styles={{
+                // --- [MODIFIKASI] ---
+                // Ubah styles menjadi fungsi dan sesuaikan warnanya
+                styles={(theme) => ({
                   root: {
                     borderRadius: rem(8),
                     marginBottom: rem(4),
                     padding: rem(12),
                     fontSize: rem(14),
                     fontWeight: 500,
-                    // Warna Teal/Cyan
-                    color: isActive ? '#0d9488' : '#374151',
+                    color: isActive ? '#0d9488' : '#374151', // Warna Teal
                     transition: 'all 0.25s ease',
+
+                    // Perbaikan sintaks media query
+                    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                      display: opened ? 'flex' : 'none',
+                    },
+
+                    justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
+                    
                     '&:hover': {
-                      background: 'rgba(20, 184, 166, 0.12)',
+                      background: 'rgba(20, 184, 166, 0.12)', // Warna Teal
                       color: '#0d9488',
                       boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)',
                     },
                     '&[dataActive]': {
                       background:
-                        'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                        'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%)', // Warna Teal
                       color: '#0d9488',
                       fontWeight: 600,
                       boxShadow: 'inset 0 0 0 1px rgba(20, 184, 166, 0.3)',
                     },
                   },
-                  label: { fontSize: rem(14) },
-                }}
+                  label: { 
+                    fontSize: rem(14),
+                    display: isNavbarExpanded ? 'block' : 'none',
+                    opacity: isNavbarExpanded ? 1 : 0,
+                    transition: 'opacity 0.2s ease',
+                  },
+                  leftSection: {
+                    marginRight: isNavbarExpanded ? theme.spacing.md : 0,
+                    transition: 'margin-right 0.25s ease',
+                  },
+                })}
+                // --- [AKHIR MODIFIKASI] ---
               />
             );
           })}
@@ -294,10 +349,13 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Tombol Logout */}
         <AppShell.Section>
           <NavLink
-            label="Logout"
+            // --- [MODIFIKASI] ---
+            label={isNavbarExpanded ? 'Logout' : undefined}
+            // --- [AKHIR MODIFIKASI] ---
             leftSection={<IconLogout size={20} stroke={1.5} />}
             onClick={handleLogout}
-            styles={{
+            // --- [MODIFIKASI] ---
+            styles={(theme) => ({
               root: {
                 borderRadius: rem(8),
                 padding: rem(12),
@@ -305,12 +363,31 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                 fontWeight: 500,
                 color: '#ef4444',
                 transition: 'all 0.25s ease',
+
+                // Perbaikan sintaks media query
+                [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                  display: opened ? 'flex' : 'none',
+                },
+
+                justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
+                
                 '&:hover': {
                   background: 'rgba(239, 68, 68, 0.08)',
                   boxShadow: '0 2px 6px rgba(239, 68, 68, 0.15)',
                 },
               },
-            }}
+              label: { 
+                fontSize: rem(14),
+                display: isNavbarExpanded ? 'block' : 'none',
+                opacity: isNavbarExpanded ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+              },
+              leftSection: {
+                marginRight: isNavbarExpanded ? theme.spacing.md : 0,
+                transition: 'margin-right 0.25s ease',
+              },
+            })}
+            // --- [AKHIR MODIFIKASI] ---
           />
         </AppShell.Section>
       </AppShell.Navbar>
@@ -320,7 +397,6 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Export default dengan ProtectedRoute untuk Front Office
 export default function FoLayout({
   children,
 }: {

@@ -521,19 +521,18 @@ function ReservationsManagementContent() {
       settings={{ locale: 'id', firstDayOfWeek: 1, weekendDays: [0] }}
     >
       <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-        {/* Header Gradient (Teal/Cyan FO) */}
+        {/* --- [ASLI] Header Ramping --- */}
         <div
           style={{
             background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)',
-            padding: '2rem 0',
+            padding: '1.25rem 0',
             marginBottom: '2rem',
           }}
         >
-          <Container size="lg">
+          <Container size="xl" px="lg">
             <Group justify="space-between" align="center">
               <div>
                 <Group mb="xs">
-                  {/* Navigasi ke /fo/dashboard */}
                   <ActionIcon
                     variant="transparent"
                     color="white"
@@ -542,7 +541,7 @@ function ReservationsManagementContent() {
                   >
                     <IconArrowLeft size={20} />
                   </ActionIcon>
-                  <Title order={1} c="white">
+                  <Title order={2} c="white">
                     Manajemen Reservasi
                   </Title>
                 </Group>
@@ -550,7 +549,6 @@ function ReservationsManagementContent() {
                   Kelola reservasi hotel Anda
                 </Text>
               </div>
-              {/* Tombol warna teal */}
               <Button
                 leftSection={<IconPlus size={18} />}
                 onClick={() => {
@@ -568,22 +566,25 @@ function ReservationsManagementContent() {
             </Group>
           </Container>
         </div>
+        {/* --- [AKHIR HEADER] --- */}
 
-        <Container size="lg" pb="xl">
-          {/* ... (Seluruh isi JSX <Stack> ... </Stack> sama persis seperti admin/reservations) ... */}
-          <Stack gap="lg">
-            
-            {/* --- [PENAMBAHAN] TAPE CHART --- */}
-            <Title order={2} mb="xs">
-              Visual Tape Chart
-            </Title>
+
+        {/* --- [MODIFIKASI LAYOUT] --- */}
+        {/* Container size="xl" agar matching dengan header */}
+        <Container size="xl" px="lg" pb="xl">
+          {/* Gunakan Stack untuk layout Atas-Bawah */}
+          <Stack gap="xl">
+
+            {/* --- [PINDAH KE ATAS] TAPE CHART --- */}
+            {/* Komponen chart dipanggil di sini */}
             <ReservationTapeChart />
-            {/* --- AKHIR PENAMBAHAN --- */}
+            {/* --- [AKHIR TAPE CHART] --- */}
 
 
-            {/* --- [ASLI] Filter & Search Inputs --- */}
+            {/* --- [ASLI] KOLOM KIRI (CRUD/TABEL) --- */}
+            {/* Filter & Search Inputs */}
             {reservations.length > 0 && (
-              <Paper shadow="xs" p="md" radius="md" withBorder mb="lg" mt="xl">
+              <Paper shadow="xs" p="md" radius="md" withBorder>
                 <Title order={3} mb="md">
                   Filter Tabel Reservasi
                 </Title>
@@ -642,7 +643,7 @@ function ReservationsManagementContent() {
               </Paper>
             )}
 
-            {/* --- [ASLI] Table --- */}
+            {/* --- Table --- */}
             {reservations.length === 0 && !loading ? (
               <Paper shadow="sm" p="xl" radius="md" withBorder>
                 <Box ta="center">
@@ -752,8 +753,12 @@ function ReservationsManagementContent() {
                 </Table>
               </Paper>
             )}
+            {/* --- AKHIR DARI CRUD/TABEL --- */}
+
           </Stack>
         </Container>
+        {/* --- [AKHIR MODIFIKASI LAYOUT] --- */}
+
 
         {/* --- [ASLI] Modals (Warna disesuaikan) --- */}
         <Modal
