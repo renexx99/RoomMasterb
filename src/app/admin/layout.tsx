@@ -27,11 +27,11 @@ import {
   IconChevronDown,
   IconBuildingSkyscraper,
   IconCategory,
-  IconUsers, // <-- IconUsers sudah ada
+  IconUsers,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
-import { useAuth } from '@/features/auth/hooks/useAuth'; // Hook useAuth
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 
 interface NavItem {
@@ -49,15 +49,20 @@ const navItems: NavItem[] = [
   { label: 'Manajemen Staf', icon: IconUsers, href: '/admin/staff' },
 ];
 
+// Konstanta Lebar Sidebar
+const NAVBAR_WIDTH_COLLAPSED = rem(80);
+const NAVBAR_WIDTH_EXPANDED = rem(280);
+
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
-  // --- Panggil useAuth di top level ---
-  const { profile, loading: authLoading, error: authError } = useAuth(); // Ganti nama 'loading' agar tidak konflik
-  // --- End of change ---
+  const { profile, loading: authLoading } = useAuth();
   const [hotelName, setHotelName] = useState<string>('');
   const [loadingHotel, setLoadingHotel] = useState(true);
+
+  // State untuk sidebar hover
+  const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
 
   useEffect(() => {
     const fetchHotelInfo = async () => {
@@ -66,7 +71,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
       if (!assignedHotelId) {
         setLoadingHotel(false);
-        console.warn("Hotel Admin profile does not have an assigned hotel_id in roles.");
         return;
       }
 
@@ -81,8 +85,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         if (error) throw error;
         if (data) {
           setHotelName(data.name);
-        } else {
-           console.warn(`Hotel with ID ${assignedHotelId} not found.`);
         }
       } catch (error) {
         console.error('Error fetching hotel:', error);
@@ -91,45 +93,27 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // --- Gunakan hasil useAuth dari top level ---
     if (profile?.roles) {
        fetchHotelInfo();
-    } else if (!profile && !authLoading) { // Gunakan authLoading
+    } else if (!profile && !authLoading) {
         setLoadingHotel(false);
     }
-    // --- End of change ---
-
-   // --- Gunakan hasil useAuth dari top level di dependency array ---
-  }, [profile, authLoading]); // Gunakan authLoading
-  // --- End of change ---
+  }, [profile, authLoading]);
 
   const handleLogout = async () => {
-    // ... (fungsi logout tetap sama)
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
-      notifications.show({
-        title: 'Sukses',
-        message: 'Berhasil logout',
-        color: 'green',
-      });
-
+      notifications.show({ title: 'Sukses', message: 'Berhasil logout', color: 'green' });
       router.push('/auth/login');
     } catch {
-      notifications.show({
-        title: 'Error',
-        message: 'Gagal logout',
-        color: 'red',
-      });
+      notifications.show({ title: 'Error', message: 'Gagal logout', color: 'red' });
     }
   };
 
   const hotelRoleName = profile?.roles?.find(r => r.hotel_id && r.role_name !== 'Super Admin')?.role_name || 'Hotel User';
 
-  // --- Gunakan hasil useAuth dari top level ---
-  if (loadingHotel || authLoading) { // Gunakan authLoading
-  // --- End of change ---
+  if (loadingHotel || authLoading) {
     return (
       <Center style={{ minHeight: '100vh' }}>
         <Loader size="lg" />
@@ -137,18 +121,20 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // --- Sisa JSX (AppShell, Header, Navbar, Main) tetap sama ---
   return (
     <AppShell
       header={{ height: 70 }}
       navbar={{
-        width: 280,
+        width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
       padding="md"
       styles={{
-        main: { background: '#f5f6fa' },
+        main: { 
+          background: '#f5f6fa',
+          transition: 'padding-left 0.25s ease',
+        },
       }}
     >
       <AppShell.Header
@@ -176,20 +162,32 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               >
                 <IconBuildingSkyscraper size={22} stroke={1.5} color="white" />
               </Box>
-              <Box>
-                <Text
-                  size="lg"
-                  fw={800}
-                  style={{
-                    color: '#1e293b',
-                    letterSpacing: '-0.02em',
-                  }}
-                >
+              
+              {/* Judul dengan animasi opacity */}
+              <Box style={{
+                  opacity: isNavbarExpanded ? 1 : 0,
+                  width: isNavbarExpanded ? 'auto' : 0,
+                  overflow: 'hidden',
+                  transition: 'opacity 0.2s ease, width 0.2s ease',
+                  display: opened ? 'block' : 'initial'
+              }}
+               visibleFrom="sm" 
+              >
+                <Box>
+                  <Text size="lg" fw={800} style={{ color: '#1e293b', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+                    {hotelName || 'Hotel Dashboard'}
+                  </Text>
+                  <Badge size="xs" color="green" variant="light">
+                    {hotelRoleName}
+                  </Badge>
+                </Box>
+              </Box>
+              
+              {/* Judul Mobile */}
+              <Box hiddenFrom="sm">
+                <Text size="lg" fw={800} style={{ color: '#1e293b' }}>
                   {hotelName || 'Hotel Dashboard'}
                 </Text>
-                <Badge size="xs" color="green" variant="light">
-                  {hotelRoleName}
-                </Badge>
               </Box>
             </Group>
           </Group>
@@ -202,12 +200,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     {profile?.full_name?.charAt(0) || 'U'}
                   </Avatar>
                   <Box style={{ flex: 1 }} visibleFrom="sm">
-                    <Text size="sm" fw={600}>
-                      {profile?.full_name || 'User'}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {hotelRoleName}
-                    </Text>
+                    <Text size="sm" fw={600}>{profile?.full_name || 'User'}</Text>
+                    <Text size="xs" c="dimmed">{hotelRoleName}</Text>
                   </Box>
                   <IconChevronDown size={16} stroke={1.5} />
                 </Group>
@@ -216,11 +210,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
             <Menu.Dropdown>
               <Menu.Label>Akun</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLogout size={16} stroke={1.5} />}
-                color="red"
-                onClick={handleLogout}
-              >
+              <Menu.Item leftSection={<IconLogout size={16} stroke={1.5} />} color="red" onClick={handleLogout}>
                 Logout
               </Menu.Item>
             </Menu.Dropdown>
@@ -230,22 +220,25 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
       <AppShell.Navbar
         p="md"
+        onMouseEnter={() => setIsNavbarExpanded(true)}
+        onMouseLeave={() => setIsNavbarExpanded(false)}
         style={{
           borderRight: '1px solid #e5e7eb',
           background: 'white',
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
+          transition: 'width 0.25s ease-in-out',
         }}
       >
         <AppShell.Section grow>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href);
 
             return (
               <NavLink
                 key={item.href}
                 href={item.href}
-                label={item.label}
+                label={isNavbarExpanded ? item.label : undefined}
                 leftSection={<Icon size={20} stroke={1.5} />}
                 active={isActive}
                 onClick={(e) => {
@@ -253,7 +246,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push(item.href);
                   if (opened) toggle();
                 }}
-                styles={{
+                styles={(theme) => ({
                   root: {
                     borderRadius: rem(8),
                     marginBottom: rem(4),
@@ -262,6 +255,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     fontWeight: 500,
                     color: isActive ? '#10b981' : '#374151',
                     transition: 'all 0.25s ease',
+                    
+                    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                      display: opened ? 'flex' : 'none',
+                    },
+
+                    justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
+
                     '&:hover': {
                       background: 'rgba(16, 185, 129, 0.12)',
                       color: '#10b981',
@@ -276,8 +276,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   },
                   label: {
                     fontSize: rem(14),
+                    display: isNavbarExpanded ? 'block' : 'none',
+                    opacity: isNavbarExpanded ? 1 : 0,
+                    transition: 'opacity 0.2s ease',
                   },
-                }}
+                  leftSection: {
+                    marginRight: isNavbarExpanded ? theme.spacing.md : 0,
+                    transition: 'margin-right 0.25s ease',
+                  },
+                })}
               />
             );
           })}
@@ -285,10 +292,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         <AppShell.Section>
           <NavLink
-            label="Logout"
+            label={isNavbarExpanded ? 'Logout' : undefined}
             leftSection={<IconLogout size={20} stroke={1.5} />}
             onClick={handleLogout}
-            styles={{
+            styles={(theme) => ({
               root: {
                 borderRadius: rem(8),
                 padding: rem(12),
@@ -296,12 +303,29 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                 fontWeight: 500,
                 color: '#ef4444',
                 transition: 'all 0.25s ease',
+                
+                [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                   display: opened ? 'flex' : 'none',
+                },
+
+                justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
+
                 '&:hover': {
                   background: 'rgba(239, 68, 68, 0.08)',
                   boxShadow: '0 2px 6px rgba(239, 68, 68, 0.15)',
                 },
               },
-            }}
+              label: {
+                fontSize: rem(14),
+                display: isNavbarExpanded ? 'block' : 'none',
+                opacity: isNavbarExpanded ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+              },
+              leftSection: {
+                marginRight: isNavbarExpanded ? theme.spacing.md : 0,
+                transition: 'margin-right 0.25s ease',
+              },
+            })}
           />
         </AppShell.Section>
       </AppShell.Navbar>
@@ -311,12 +335,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
       <AdminLayoutContent>{children}</AdminLayoutContent>

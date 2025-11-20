@@ -49,6 +49,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { profile } = useAuth();
 
+  // State untuk sidebar hover
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
 
   const handleLogout = async () => {
@@ -56,19 +57,10 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      notifications.show({
-        title: 'Success',
-        message: 'Logged out successfully',
-        color: 'green',
-      });
-
+      notifications.show({ title: 'Success', message: 'Logged out successfully', color: 'green' });
       router.push('/auth/login');
     } catch {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to logout',
-        color: 'red',
-      });
+      notifications.show({ title: 'Error', message: 'Failed to logout', color: 'red' });
     }
   };
 
@@ -88,7 +80,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      {/* Header (Tidak Berubah) */}
       <AppShell.Header
         style={{
           borderBottom: '1px solid #e5e7eb',
@@ -114,6 +105,8 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               >
                 <IconBuildingSkyscraper size={22} stroke={1.5} color="white" />
               </Box>
+              
+              {/* Judul dengan animasi */}
               <Box style={{
                   opacity: isNavbarExpanded ? 1 : 0,
                   width: isNavbarExpanded ? 'auto' : 0,
@@ -123,27 +116,12 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               }}
                visibleFrom="sm" 
               >
-                <Text
-                  size="xl"
-                  fw={800}
-                  style={{
-                    color: '#1e293b',
-                    letterSpacing: '-0.02em',
-                    whiteSpace: 'nowrap', 
-                  }}
-                >
+                <Text size="xl" fw={800} style={{ color: '#1e293b', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
                   RoomMaster
                 </Text>
               </Box>
-              <Box hiddenFrom="sm">
-                 <Text
-                  size="xl"
-                  fw={800}
-                  style={{
-                    color: '#1e293b',
-                    letterSpacing: '-0.02em',
-                  }}
-                >
+               <Box hiddenFrom="sm">
+                 <Text size="xl" fw={800} style={{ color: '#1e293b', letterSpacing: '-0.02em' }}>
                   RoomMaster
                 </Text>
               </Box>
@@ -158,12 +136,8 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     {profile?.full_name?.charAt(0) || 'A'}
                   </Avatar>
                   <Box style={{ flex: 1 }} visibleFrom="sm">
-                    <Text size="sm" fw={600}>
-                      {profile?.full_name || 'Admin'}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      Super Admin
-                    </Text>
+                    <Text size="sm" fw={600}>{profile?.full_name || 'Admin'}</Text>
+                    <Text size="xs" c="dimmed">Super Admin</Text>
                   </Box>
                   <IconChevronDown size={16} stroke={1.5} />
                 </Group>
@@ -172,11 +146,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
 
             <Menu.Dropdown>
               <Menu.Label>Account</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLogout size={16} stroke={1.5} />}
-                color="red"
-                onClick={handleLogout}
-              >
+              <Menu.Item leftSection={<IconLogout size={16} stroke={1.5} />} color="red" onClick={handleLogout}>
                 Logout
               </Menu.Item>
             </Menu.Dropdown>
@@ -184,7 +154,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         </Group>
       </AppShell.Header>
 
-      {/* Sidebar */}
       <AppShell.Navbar
         p="md"
         onMouseEnter={() => setIsNavbarExpanded(true)}
@@ -199,7 +168,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         <AppShell.Section grow>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href);
 
             return (
               <NavLink
@@ -223,12 +192,9 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     color: isActive ? '#4f46e5' : '#374151',
                     transition: 'all 0.25s ease',
 
-                    // --- [PERBAIKAN] ---
-                    // Menggunakan sintaks media query CSS standar
                     [`@media (max-width: ${theme.breakpoints.sm})`]: {
                       display: opened ? 'flex' : 'none',
                     },
-                    // --- [AKHIR PERBAIKAN] ---
                     
                     justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
 
@@ -238,8 +204,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                       boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)',
                     },
                     '&[dataActive]': {
-                      background:
-                        'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
                       color: '#4f46e5',
                       fontWeight: 600,
                       boxShadow: 'inset 0 0 0 1px rgba(99, 102, 241, 0.3)',
@@ -275,12 +240,9 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                 color: '#ef4444',
                 transition: 'all 0.25s ease',
 
-                // --- [PERBAIKAN] ---
                 [`@media (max-width: ${theme.breakpoints.sm})`]: {
                   display: opened ? 'flex' : 'none',
                 },
-                // --- [AKHIR PERBAIKAN] ---
-                
                 justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
 
                 '&:hover': {
@@ -308,11 +270,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function SuperAdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute requiredRoleName="Super Admin">
       <SuperAdminLayoutContent>{children}</SuperAdminLayoutContent>
