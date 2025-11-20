@@ -20,6 +20,8 @@ export interface Hotel {
 export interface HotelWithStats extends Hotel {
   total_rooms: number;
   total_staff: number;
+  active_residents: number; // Field Baru untuk UI
+  total_revenue: number;    // Field Baru untuk UI
 }
 
 export interface Profile {

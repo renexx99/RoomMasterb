@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Stack, TextInput, Button, Group, Select, Grid } from '@mantine/core';
+import { Modal, Stack, TextInput, Button, Group, Select, Grid, FileInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { HotelFormData, createHotel, updateHotel } from '../actions';
+import { IconUpload } from '@tabler/icons-react';
+import { createHotelAction, updateHotelAction } from '../actions';
 import { Hotel } from '@/core/types/database';
 
 interface Props {
@@ -16,13 +17,13 @@ interface Props {
 export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<HotelFormData>({
+  const form = useForm({
     initialValues: {
       name: '',
       code: '',
       address: '',
       status: 'active',
-      image_url: '',
+      image: null as File | null,
     },
     validate: {
       name: (value) => (!value ? 'Nama hotel wajib diisi' : null),
@@ -38,24 +39,33 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
           name: itemToEdit.name,
           code: itemToEdit.code || '',
           address: itemToEdit.address,
-          status: itemToEdit.status as any,
-          image_url: itemToEdit.image_url || '',
+          status: itemToEdit.status as string,
+          image: null, // Reset file input saat edit
         });
       } else {
         form.reset();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, itemToEdit]);
 
-  const handleSubmit = async (values: HotelFormData) => {
+  const handleSubmit = async (values: typeof form.values) => {
     setIsSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append('name', values.name);
+      formData.append('code', values.code);
+      formData.append('address', values.address);
+      formData.append('status', values.status);
+      if (values.image) {
+        formData.append('image', values.image);
+      }
+
       let result;
       if (itemToEdit) {
-        result = await updateHotel(itemToEdit.id, values);
+        formData.append('id', itemToEdit.id);
+        result = await updateHotelAction(formData);
       } else {
-        result = await createHotel(values);
+        result = await createHotelAction(formData);
       }
 
       if (result.error) {
@@ -83,29 +93,14 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
         <Stack gap="md">
           <Grid>
              <Grid.Col span={8}>
-                <TextInput 
-                    label="Nama Hotel" 
-                    placeholder="Contoh: Grand Hotel" 
-                    required 
-                    {...form.getInputProps('name')} 
-                />
+                <TextInput label="Nama Hotel" placeholder="Contoh: Grand Hotel" required {...form.getInputProps('name')} />
              </Grid.Col>
              <Grid.Col span={4}>
-                <TextInput 
-                    label="Kode" 
-                    placeholder="H-01" 
-                    required 
-                    {...form.getInputProps('code')} 
-                />
+                <TextInput label="Kode" placeholder="H-01" required {...form.getInputProps('code')} />
              </Grid.Col>
           </Grid>
 
-          <TextInput 
-            label="Alamat" 
-            placeholder="Alamat lengkap" 
-            required 
-            {...form.getInputProps('address')} 
-          />
+          <TextInput label="Alamat" placeholder="Alamat lengkap" required {...form.getInputProps('address')} />
 
           <Grid>
             <Grid.Col span={6}>
@@ -121,10 +116,12 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
                 />
             </Grid.Col>
             <Grid.Col span={6}>
-                <TextInput 
-                    label="URL Foto Hotel" 
-                    placeholder="https://..." 
-                    {...form.getInputProps('image_url')} 
+                <FileInput 
+                    label="Upload Foto Hotel"
+                    placeholder={itemToEdit?.image_url ? "Ganti foto..." : "Pilih foto..."}
+                    leftSection={<IconUpload size={14} />}
+                    accept="image/png,image/jpeg"
+                    {...form.getInputProps('image')}
                 />
             </Grid.Col>
           </Grid>

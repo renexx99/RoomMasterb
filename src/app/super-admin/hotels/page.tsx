@@ -20,11 +20,7 @@ export default async function HotelsPage() {
 
   if (error || !hotels) return <div>Error loading hotels</div>;
 
-  // 2. Fetch Stats (Rooms & Staff count) for each hotel
-  // Note: Untuk performa terbaik di skala besar, ini sebaiknya menggunakan 
-  // Postgres View atau query aggregate langsung di Supabase. 
-  // Untuk saat ini, kita gunakan Promise.all map agar praktis.
-  
+  // 2. Fetch Stats Aggregation
   const hotelsWithStats: HotelWithStats[] = await Promise.all(
     hotels.map(async (hotel) => {
       // Count Rooms
@@ -33,16 +29,37 @@ export default async function HotelsPage() {
         .select('*', { count: 'exact', head: true })
         .eq('hotel_id', hotel.id);
 
-      // Count Staff (via user_roles)
+      // Count Staff
       const { count: staffCount } = await supabase
         .from('user_roles')
         .select('*', { count: 'exact', head: true })
         .eq('hotel_id', hotel.id);
 
+      // Active Residents (Reservasi aktif hari ini)
+      const today = new Date().toISOString().split('T')[0];
+      const { count: activeResidents } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('hotel_id', hotel.id)
+        .lte('check_in_date', today)
+        .gte('check_out_date', today)
+        .neq('payment_status', 'cancelled');
+
+      // Total Revenue (Semua reservasi 'paid')
+      const { data: revenueData } = await supabase
+        .from('reservations')
+        .select('total_price')
+        .eq('hotel_id', hotel.id)
+        .eq('payment_status', 'paid');
+      
+      const totalRevenue = revenueData?.reduce((sum, res) => sum + (Number(res.total_price) || 0), 0) || 0;
+
       return {
         ...hotel,
         total_rooms: roomCount || 0,
         total_staff: staffCount || 0,
+        active_residents: activeResidents || 0,
+        total_revenue: totalRevenue
       };
     })
   );
