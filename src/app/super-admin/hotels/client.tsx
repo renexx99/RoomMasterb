@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import {
   Container, Title, Button, Group, Paper, TextInput,
-  Select, ActionIcon, Text, Grid, Modal, Stack, SimpleGrid, Box
+  Select, ActionIcon, Text, Grid, Modal, Stack, SimpleGrid, ThemeIcon
 } from '@mantine/core';
 import { IconPlus, IconSearch, IconBuildingStore } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -57,14 +57,12 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
   };
 
   const handleEdit = (hotel: HotelWithStats) => {
-    // Tutup modal detail jika sedang terbuka
     setDetailsModalOpened(false);
     setEditingItem(hotel);
     setFormModalOpened(true);
   };
 
   const handleDelete = (hotel: HotelWithStats) => {
-    // Tutup modal detail jika sedang terbuka
     setDetailsModalOpened(false);
     setDeleteTarget(hotel);
     setDeleteModalOpened(true);
@@ -86,48 +84,71 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header - Dibuat Lebih Tipis (Sama seperti User Management) */}
-      <div style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', padding: '1.25rem 0' }}>
+      {/* Header - Ramping & Efisien */}
+      <div style={{ 
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', 
+          padding: '0.75rem 0', // Padding lebih kecil
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      }}>
         <Container size="lg">
           <Group justify="space-between" align="center">
-            <div>
-              <Group mb="xs">
-                <ActionIcon variant="transparent" color="white">
-                    <IconBuildingStore size={24} />
-                </ActionIcon>
-                <Title order={2} c="white">Manajemen Hotel</Title>
-              </Group>
-              <Text c="white" opacity={0.9} pl={{ base: 0, xs: 40 }} size="sm">
-                Kelola properti dan unit dalam jaringan hotel
-              </Text>
-            </div>
-            <Button leftSection={<IconPlus size={18} />} onClick={handleCreate} variant="white" color="indigo" size="sm">
-              Tambah Hotel
+            <Group gap="xs">
+                <ThemeIcon 
+                    variant="light" 
+                    color="white" 
+                    size="lg" 
+                    radius="md"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}
+                >
+                    <IconBuildingStore size={20} stroke={1.5} />
+                </ThemeIcon>
+                
+                <div style={{ lineHeight: 1 }}>
+                    <Title order={4} c="white" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.2 }}>
+                        Manajemen Hotel
+                    </Title>
+                    <Text c="white" opacity={0.8} size="xs" mt={2}>
+                        {filteredHotels.length} properti terdaftar
+                    </Text>
+                </div>
+            </Group>
+            
+            <Button 
+                leftSection={<IconPlus size={16} />} 
+                onClick={handleCreate} 
+                variant="white" 
+                color="indigo" 
+                size="xs" // Ukuran tombol lebih kecil
+                fw={600}
+            >
+              Tambah
             </Button>
           </Group>
         </Container>
       </div>
 
       {/* Content */}
-      <Container size="lg" py="xl">
-        <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
-          <Grid align="flex-end">
-            <Grid.Col span={{ base: 12, md: 8 }}>
+      <Container size="lg" py="md"> {/* Padding Y diperkecil */}
+        <Paper shadow="xs" p="sm" radius="md" withBorder mb="md"> {/* Paper lebih compact */}
+          <Grid align="center" gutter="xs">
+            <Grid.Col span={{ base: 12, sm: 8 }}>
               <TextInput
                 placeholder="Cari nama, kode, atau alamat..."
-                leftSection={<IconSearch size={16} />}
+                leftSection={<IconSearch size={14} />}
+                size="xs" // Input lebih kecil
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.currentTarget.value)}
               />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 4 }}>
+            <Grid.Col span={{ base: 12, sm: 4 }}>
               <Select
                 value={sortBy}
+                size="xs" // Input lebih kecil
                 onChange={(v) => setSortBy(v || 'created_at_desc')}
                 data={[
-                  { value: 'created_at_desc', label: 'Terbaru Ditambahkan' },
+                  { value: 'created_at_desc', label: 'Terbaru' },
                   { value: 'name_asc', label: 'Nama (A-Z)' },
-                  { value: 'rooms_desc', label: 'Kamar Terbanyak' },
+                  { value: 'rooms_desc', label: 'Kapasitas' },
                 ]}
               />
             </Grid.Col>
@@ -135,16 +156,16 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
         </Paper>
 
         {filteredHotels.length === 0 ? (
-            <Paper p="xl" withBorder ta="center">
-                <Text c="dimmed">Belum ada data hotel.</Text>
+            <Paper p="xl" withBorder ta="center" bg="gray.0">
+                <Text c="dimmed" size="sm">Belum ada data hotel.</Text>
             </Paper>
         ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
                 {filteredHotels.map(hotel => (
                     <HotelCard 
                         key={hotel.id} 
                         hotel={hotel} 
-                        onClick={handleCardClick}
+                        onClick={handleCardClick} 
                     />
                 ))}
             </SimpleGrid>
@@ -166,13 +187,13 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
         onDelete={handleDelete}
       />
 
-      <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered>
-         <Stack>
-            <Text>Apakah Anda yakin ingin menghapus hotel <strong>{deleteTarget?.name}</strong>?</Text>
-            <Text size="xs" c="red">Perhatian: Menghapus hotel akan menghapus semua data kamar, reservasi, dan staf terkait.</Text>
-            <Group justify="flex-end">
-                <Button variant="default" onClick={() => setDeleteModalOpened(false)}>Batal</Button>
-                <Button color="red" loading={isSubmitting} onClick={confirmDelete}>Hapus</Button>
+      <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered size="sm">
+         <Stack gap="sm">
+            <Text size="sm">Apakah Anda yakin ingin menghapus hotel <strong>{deleteTarget?.name}</strong>?</Text>
+            <Text size="xs" c="red">Tindakan ini permanen dan akan menghapus seluruh data terkait hotel ini.</Text>
+            <Group justify="flex-end" mt="sm">
+                <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)}>Batal</Button>
+                <Button color="red" size="xs" loading={isSubmitting} onClick={confirmDelete}>Hapus</Button>
             </Group>
          </Stack>
       </Modal>

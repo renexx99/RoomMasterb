@@ -49,7 +49,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { profile } = useAuth();
 
-  // State untuk sidebar hover
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
 
   const handleLogout = async () => {
@@ -66,17 +65,19 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      header={{ height: 70 }}
+      header={{ height: 60 }} // Sedikit diperkecil dari 70
       navbar={{
         width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
-      padding="md"
+      // PENTING: padding="md" dihapus agar header halaman bisa full-width (mentok)
+      padding="0" 
       styles={{
         main: {
           background: '#f5f6fa',
           transition: 'padding-left 0.25s ease',
+          paddingTop: '60px', // Kompensasi manual untuk header height karena padding=0
         },
       }}
     >
@@ -84,7 +85,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         style={{
           borderBottom: '1px solid #e5e7eb',
           background: 'white',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
         }}
       >
         <Group h="100%" px="md" justify="space-between">
@@ -93,20 +94,18 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
             <Group gap="xs">
               <Box
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '8px',
+                  width: 32, // Diperkecil
+                  height: 32,
+                  borderRadius: '6px',
                   background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 3px 6px rgba(99, 102, 241, 0.3)',
                 }}
               >
-                <IconBuildingSkyscraper size={22} stroke={1.5} color="white" />
+                <IconBuildingSkyscraper size={18} stroke={1.5} color="white" />
               </Box>
               
-              {/* Judul dengan animasi */}
               <Box style={{
                   opacity: isNavbarExpanded ? 1 : 0,
                   width: isNavbarExpanded ? 'auto' : 0,
@@ -116,12 +115,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               }}
                visibleFrom="sm" 
               >
-                <Text size="xl" fw={800} style={{ color: '#1e293b', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
-                  RoomMaster
-                </Text>
-              </Box>
-               <Box hiddenFrom="sm">
-                 <Text size="xl" fw={800} style={{ color: '#1e293b', letterSpacing: '-0.02em' }}>
+                <Text size="sm" fw={700} style={{ color: '#1e293b', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
                   RoomMaster
                 </Text>
               </Box>
@@ -131,22 +125,21 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           <Menu shadow="md" width={200}>
             <Menu.Target>
               <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar color="violet" radius="xl">
+                <Group gap={8}>
+                  <Avatar color="violet" radius="xl" size="sm">
                     {profile?.full_name?.charAt(0) || 'A'}
                   </Avatar>
                   <Box style={{ flex: 1 }} visibleFrom="sm">
-                    <Text size="sm" fw={600}>{profile?.full_name || 'Admin'}</Text>
-                    <Text size="xs" c="dimmed">Super Admin</Text>
+                    <Text size="xs" fw={600}>{profile?.full_name || 'Admin'}</Text>
+                    <Text size="10px" c="dimmed" style={{ lineHeight: 1 }}>Super Admin</Text>
                   </Box>
-                  <IconChevronDown size={16} stroke={1.5} />
+                  <IconChevronDown size={14} stroke={1.5} />
                 </Group>
               </UnstyledButton>
             </Menu.Target>
 
             <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
-              <Menu.Item leftSection={<IconLogout size={16} stroke={1.5} />} color="red" onClick={handleLogout}>
+              <Menu.Item leftSection={<IconLogout size={14} stroke={1.5} />} color="red" onClick={handleLogout}>
                 Logout
               </Menu.Item>
             </Menu.Dropdown>
@@ -155,7 +148,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
       </AppShell.Header>
 
       <AppShell.Navbar
-        p="md"
+        p="xs" // Padding navbar diperkecil
         onMouseEnter={() => setIsNavbarExpanded(true)}
         onMouseLeave={() => setIsNavbarExpanded(false)}
         style={{
@@ -175,7 +168,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 label={isNavbarExpanded ? item.label : undefined}
-                leftSection={<Icon size={20} stroke={1.5} />}
+                leftSection={<Icon size={18} stroke={1.5} />}
                 active={isActive}
                 onClick={(e) => {
                   e.preventDefault();
@@ -184,84 +177,34 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                 }}
                 styles={(theme) => ({
                   root: {
-                    borderRadius: rem(8),
-                    marginBottom: rem(4),
-                    padding: rem(12),
-                    fontSize: rem(14),
+                    borderRadius: rem(6),
+                    marginBottom: rem(2),
+                    padding: `${rem(8)} ${rem(10)}`, // Padding item diperkecil
+                    fontSize: rem(13),
                     fontWeight: 500,
-                    color: isActive ? '#4f46e5' : '#374151',
-                    transition: 'all 0.25s ease',
-
-                    [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                      display: opened ? 'flex' : 'none',
-                    },
+                    color: isActive ? '#4f46e5' : '#4b5563',
                     
-                    justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
-
                     '&:hover': {
-                      background: 'rgba(99, 102, 241, 0.12)',
+                      background: 'rgba(99, 102, 241, 0.08)',
                       color: '#4f46e5',
-                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)',
                     },
-                    '&[dataActive]': {
-                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                    "&[dataActive]": {
+                      background: 'rgba(99, 102, 241, 0.1)',
                       color: '#4f46e5',
                       fontWeight: 600,
-                      boxShadow: 'inset 0 0 0 1px rgba(99, 102, 241, 0.3)',
                     },
                   },
                   label: {
-                    fontSize: rem(14),
+                    fontSize: rem(13),
                     display: isNavbarExpanded ? 'block' : 'none',
-                    opacity: isNavbarExpanded ? 1 : 0,
-                    transition: 'opacity 0.2s ease',
                   },
                   leftSection: {
-                    marginRight: isNavbarExpanded ? theme.spacing.md : 0,
-                    transition: 'margin-right 0.25s ease',
+                    marginRight: isNavbarExpanded ? theme.spacing.sm : 0,
                   },
                 })}
               />
             );
           })}
-        </AppShell.Section>
-
-        <AppShell.Section>
-          <NavLink
-            label={isNavbarExpanded ? 'Logout' : undefined}
-            leftSection={<IconLogout size={20} stroke={1.5} />}
-            onClick={handleLogout}
-            styles={(theme) => ({
-              root: {
-                borderRadius: rem(8),
-                padding: rem(12),
-                fontSize: rem(14),
-                fontWeight: 500,
-                color: '#ef4444',
-                transition: 'all 0.25s ease',
-
-                [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                  display: opened ? 'flex' : 'none',
-                },
-                justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
-
-                '&:hover': {
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.15)',
-                },
-              },
-              label: {
-                fontSize: rem(14),
-                display: isNavbarExpanded ? 'block' : 'none',
-                opacity: isNavbarExpanded ? 1 : 0,
-                transition: 'opacity 0.2s ease',
-              },
-              leftSection: {
-                marginRight: isNavbarExpanded ? theme.spacing.md : 0,
-                transition: 'margin-right 0.25s ease',
-              },
-            })}
-          />
         </AppShell.Section>
       </AppShell.Navbar>
 
