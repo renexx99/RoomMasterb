@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Modal, Stack, TextInput, Button, Group, Select, NumberInput, Paper, Text as MantineText } from '@mantine/core'; // FIX: Alias Text
+import { Modal, Stack, TextInput, Button, Group, Select, NumberInput, Paper, Text as MantineText } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash } from '@tabler/icons-react';
@@ -82,22 +82,27 @@ export function ReservationFormModal({ opened, onClose, hotelId, reservationToEd
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, reservationToEdit]);
 
-  // Kalkulasi Harga Otomatis (Safe Date Check)
+  // Kalkulasi Harga Otomatis (Logic disamakan dengan Admin)
   useEffect(() => {
     const { check_in_date, check_out_date, room_id } = form.values;
     
+    // 1. Cari Harga Per Malam
     let pricePerNight = 0;
+
+    // Coba cari di daftar kamar tersedia
     const roomFromList = availableRooms.find(r => r.id === room_id);
     
     if (roomFromList?.room_type) {
       pricePerNight = roomFromList.room_type.price_per_night;
-    } else if (reservationToEdit && reservationToEdit.room_id === room_id && reservationToEdit.room?.room_type) {
+    } 
+    // Jika tidak ketemu (misal sedang edit & kamar existing), ambil dari data reservasi
+    else if (reservationToEdit && reservationToEdit.room_id === room_id && reservationToEdit.room?.room_type) {
       pricePerNight = reservationToEdit.room.room_type.price_per_night;
     }
 
-    // Pastikan checkIn dan checkOut adalah Date object yang valid
-    const checkIn = check_in_date instanceof Date ? check_in_date : null;
-    const checkOut = check_out_date instanceof Date ? check_out_date : null;
+    // 2. Hitung Total Harga (Menggunakan new Date untuk keamanan tipe data)
+    const checkIn = check_in_date ? new Date(check_in_date) : null;
+    const checkOut = check_out_date ? new Date(check_out_date) : null;
 
     if (
       checkIn && 
@@ -107,8 +112,10 @@ export function ReservationFormModal({ opened, onClose, hotelId, reservationToEd
       checkOut.getTime() > checkIn.getTime() && 
       pricePerNight > 0
     ) {
+      // 1000ms * 3600s * 24h = 1 hari
       const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
       const price = nights * pricePerNight;
+      
       setCalculatedPrice(price);
       form.setFieldValue('total_price', price);
     } else {
