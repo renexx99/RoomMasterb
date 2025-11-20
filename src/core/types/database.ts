@@ -22,6 +22,7 @@ export interface Profile {
 }
 
 export interface RoomType {
+  [x: string]: string;
   id: string;
   hotel_id: string;
   name: string;
