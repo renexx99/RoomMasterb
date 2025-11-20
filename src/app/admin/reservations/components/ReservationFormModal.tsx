@@ -83,7 +83,6 @@ export function ReservationFormModal({ opened, onClose, hotelId, reservationToEd
   }, [opened, reservationToEdit]);
 
   // Kalkulasi Harga Otomatis
-  // Kalkulasi Harga Otomatis
   useEffect(() => {
     const { check_in_date, check_out_date, room_id } = form.values;
     
@@ -102,9 +101,20 @@ export function ReservationFormModal({ opened, onClose, hotelId, reservationToEd
       pricePerNight = reservationToEdit.room.room_type.price_per_night;
     }
 
-    // 2. Hitung Total Harga
-    if (check_in_date && check_out_date && check_out_date > check_in_date && pricePerNight > 0) {
-      const nights = Math.ceil((check_out_date.getTime() - check_in_date.getTime()) / (1000 * 3600 * 24));
+    // 2. Hitung Total Harga (DIPERBAIKI)
+    // Pastikan kita bekerja dengan objek Date yang valid sebelum memanggil .getTime()
+    const checkIn = check_in_date ? new Date(check_in_date) : null;
+    const checkOut = check_out_date ? new Date(check_out_date) : null;
+
+    if (
+      checkIn && 
+      checkOut && 
+      !isNaN(checkIn.getTime()) && 
+      !isNaN(checkOut.getTime()) && 
+      checkOut > checkIn && 
+      pricePerNight > 0
+    ) {
+      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
       const price = nights * pricePerNight;
       
       setCalculatedPrice(price);

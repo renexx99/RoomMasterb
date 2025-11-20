@@ -1,190 +1,227 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { Modal, Button, Select, NumberInput, Stack, Group, Grid, Divider, Text, Paper } from '@mantine/core';
+import { useEffect, useState, useMemo } from 'react';
+import { Modal, Stack, TextInput, Button, Group, Select, NumberInput, Paper, Text as MantineText } from '@mantine/core'; // FIX: Alias Text
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
+import { IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { upsertReservation } from '../actions'; // Pastikan actions.ts sudah dibuat
-import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
 import { PaymentStatus } from '@/core/types/database';
+import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
+import { createReservation, updateReservation, createGuestForReservation } from '../actions';
 
 interface Props {
   opened: boolean;
-  close: () => void;
+  onClose: () => void;
   hotelId: string;
-  rooms: RoomWithDetails[];
+  reservationToEdit: ReservationDetails | null;
   guests: GuestOption[];
-  selectedData?: ReservationDetails | null;
+  availableRooms: RoomWithDetails[];
 }
 
-export function ReservationFormModal({ opened, close, hotelId, rooms, guests, selectedData }: Props) {
+export function ReservationFormModal({ opened, onClose, hotelId, reservationToEdit, guests, availableRooms }: Props) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [guestSelectionMode, setGuestSelectionMode] = useState<'select' | 'new'>('select');
+  const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+  const [guestList, setGuestList] = useState<GuestOption[]>(guests);
+
+  // Update guest list ketika props berubah
+  useEffect(() => {
+    setGuestList(guests);
+  }, [guests]);
+
   const form = useForm({
     initialValues: {
-      id: '',
       guest_id: '',
+      new_guest_name: '',
+      new_guest_email: '',
+      new_guest_phone: '',
       room_id: '',
-      // Kita gunakan array date_range agar kompatibel dengan DatePickerInput type="range"
-      date_range: [null, null] as [Date | null, Date | null],
+      check_in_date: null as Date | null,
+      check_out_date: null as Date | null,
       total_price: 0,
       payment_status: 'pending' as PaymentStatus,
     },
     validate: {
-      guest_id: (val) => (val ? null : 'Pilih tamu'),
-      room_id: (val) => (val ? null : 'Pilih kamar'),
-      date_range: (val) => (val[0] && val[1] ? null : 'Pilih tanggal check-in & check-out'),
+      guest_id: (value) => (guestSelectionMode === 'select' && !value ? 'Pilih tamu' : null),
+      new_guest_name: (value) => (guestSelectionMode === 'new' && !value ? 'Nama wajib diisi' : null),
+      new_guest_email: (value) => (guestSelectionMode === 'new' && (!value || !/^\S+@\S+\.\S+$/.test(value)) ? 'Email tidak valid' : null),
+      room_id: (value) => (!value ? 'Pilih kamar' : null),
+      check_in_date: (value) => (!value ? 'Wajib diisi' : null),
+      check_out_date: (value, values) => {
+        if (!value) return 'Wajib diisi';
+        if (values.check_in_date && value <= values.check_in_date) return 'Harus setelah check-in';
+        return null;
+      },
     },
   });
 
-  // Reset form & Konversi Tanggal saat modal dibuka
+  // Reset Form & State saat Modal Dibuka
   useEffect(() => {
     if (opened) {
-      if (selectedData) {
+      if (reservationToEdit) {
+        setGuestSelectionMode('select');
         form.setValues({
-          id: selectedData.id,
-          guest_id: selectedData.guest_id,
-          room_id: selectedData.room_id,
-          // [CRITICAL FIX]: Konversi String dari DB ke Date Object
-          date_range: [
-            new Date(selectedData.check_in_date),
-            new Date(selectedData.check_out_date),
-          ],
-          total_price: selectedData.total_price,
-          payment_status: selectedData.payment_status as PaymentStatus,
+          guest_id: reservationToEdit.guest_id,
+          room_id: reservationToEdit.room_id,
+          check_in_date: new Date(reservationToEdit.check_in_date),
+          check_out_date: new Date(reservationToEdit.check_out_date),
+          total_price: reservationToEdit.total_price,
+          payment_status: reservationToEdit.payment_status,
+          new_guest_name: '',
+          new_guest_email: '',
+          new_guest_phone: '',
         });
+        setCalculatedPrice(reservationToEdit.total_price);
       } else {
         form.reset();
-        form.setFieldValue('id', '');
+        setGuestSelectionMode('select');
+        setCalculatedPrice(null);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedData, opened]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opened, reservationToEdit]);
 
-  // Kalkulasi harga otomatis (Hanya berjalan jika tanggal valid Date object)
+  // Kalkulasi Harga Otomatis (Safe Date Check)
   useEffect(() => {
-    if (form.values.room_id && form.values.date_range[0] && form.values.date_range[1]) {
-      const room = rooms.find((r) => r.id === form.values.room_id) || (selectedData?.room_id === form.values.room_id ? selectedData?.room : null);
-      // @ts-ignore
-      const pricePerNight = room?.room_type?.price_per_night || 0;
-      
-      if (pricePerNight > 0) {
-        const checkIn = form.values.date_range[0]!;
-        const checkOut = form.values.date_range[1]!;
-        
-        // Pastikan checkIn dan checkOut adalah instance Date sebelum .getTime()
-        if (checkIn instanceof Date && checkOut instanceof Date) {
-          const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-          form.setFieldValue('total_price', pricePerNight * (diffDays || 1));
-        }
-      }
+    const { check_in_date, check_out_date, room_id } = form.values;
+    
+    let pricePerNight = 0;
+    const roomFromList = availableRooms.find(r => r.id === room_id);
+    
+    if (roomFromList?.room_type) {
+      pricePerNight = roomFromList.room_type.price_per_night;
+    } else if (reservationToEdit && reservationToEdit.room_id === room_id && reservationToEdit.room?.room_type) {
+      pricePerNight = reservationToEdit.room.room_type.price_per_night;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.values.room_id, form.values.date_range]);
 
+    // Pastikan checkIn dan checkOut adalah Date object yang valid
+    const checkIn = check_in_date instanceof Date ? check_in_date : null;
+    const checkOut = check_out_date instanceof Date ? check_out_date : null;
+
+    if (
+      checkIn && 
+      checkOut && 
+      !isNaN(checkIn.getTime()) && 
+      !isNaN(checkOut.getTime()) && 
+      checkOut.getTime() > checkIn.getTime() && 
+      pricePerNight > 0
+    ) {
+      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
+      const price = nights * pricePerNight;
+      setCalculatedPrice(price);
+      form.setFieldValue('total_price', price);
+    } else {
+      setCalculatedPrice(null);
+    }
+  }, [form.values.check_in_date, form.values.check_out_date, form.values.room_id, availableRooms, reservationToEdit]);
 
   const handleSubmit = async (values: typeof form.values) => {
-    const formData = new FormData();
-    if (values.id) formData.append('id', values.id);
-    
-    formData.append('hotel_id', hotelId);
-    formData.append('guest_id', values.guest_id);
-    formData.append('room_id', values.room_id);
-    
-    // Konversi Date Object kembali ke String ISO untuk dikirim ke Server Action
-    formData.append('check_in_date', values.date_range[0]!.toISOString().split('T')[0]); 
-    formData.append('check_out_date', values.date_range[1]!.toISOString().split('T')[0]);
-    
-    formData.append('total_price', values.total_price.toString());
-    formData.append('payment_status', values.payment_status);
+    setIsSubmitting(true);
+    try {
+      let finalGuestId = values.guest_id;
 
-    const res = await upsertReservation(null, formData);
-    
-    if (res?.error) {
-      notifications.show({ title: 'Gagal', message: res.error, color: 'red' });
-    } else {
-      notifications.show({ title: 'Berhasil', message: 'Data reservasi tersimpan', color: 'green' });
-      close();
+      if (guestSelectionMode === 'new') {
+        const guestResult = await createGuestForReservation({
+          hotel_id: hotelId,
+          full_name: values.new_guest_name,
+          email: values.new_guest_email,
+          phone_number: values.new_guest_phone || undefined,
+        });
+
+        if (guestResult.error || !guestResult.guestId) {
+          notifications.show({ title: 'Gagal Buat Tamu', message: guestResult.error, color: 'red' });
+          setIsSubmitting(false);
+          return;
+        }
+        finalGuestId = guestResult.guestId;
+      }
+
+      const reservationData = {
+        hotel_id: hotelId,
+        guest_id: finalGuestId,
+        room_id: values.room_id,
+        check_in_date: values.check_in_date!,
+        check_out_date: values.check_out_date!,
+        total_price: calculatedPrice || 0,
+        payment_status: values.payment_status,
+      };
+
+      let result;
+      if (reservationToEdit) {
+        result = await updateReservation(reservationToEdit.id, reservationData);
+      } else {
+        result = await createReservation(reservationData);
+      }
+
+      if (result.error) {
+        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+      } else {
+        notifications.show({ title: 'Sukses', message: 'Data berhasil disimpan', color: 'green' });
+        onClose();
+      }
+    } catch (error) {
+      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const guestOptions = useMemo(() => guests.map(g => ({ 
-    value: g.id, 
-    label: `${g.full_name} (${g.email})` 
-  })), [guests]);
-
-  const roomOptions = useMemo(() => rooms.map(r => ({ 
-    value: r.id, 
-    label: `No. ${r.room_number} (${r.room_type?.name}) - Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')}` 
-  })), [rooms]);
+  const guestOptions = useMemo(() => guestList.map(g => ({ value: g.id, label: `${g.full_name} (${g.email})` })), [guestList]);
+  
+  const roomOptions = useMemo(() => {
+    const options = availableRooms.map(r => ({
+      value: r.id,
+      label: `No. ${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString()})`
+    }));
+    
+    if (reservationToEdit && !options.find(o => o.value === reservationToEdit.room_id)) {
+       options.unshift({
+         value: reservationToEdit.room_id,
+         label: `No. ${reservationToEdit.room?.room_number} (Kamar Saat Ini)`
+       });
+    }
+    return options;
+  }, [availableRooms, reservationToEdit]);
 
   return (
-    <Modal 
-      opened={opened} 
-      onClose={close} 
-      title={selectedData ? "Edit Reservasi" : "Buat Reservasi Baru"} 
-      centered
-      size="lg"
-    >
+    <Modal opened={opened} onClose={onClose} title={reservationToEdit ? 'Edit Reservasi' : 'Reservasi Baru (Front Office)'} centered size="lg">
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <Select
-            label="Tamu"
-            placeholder="Cari & Pilih Tamu"
-            data={guestOptions}
-            searchable
-            nothingFoundMessage="Tamu tidak ditemukan"
-            {...form.getInputProps('guest_id')}
-          />
+          <Group grow>
+            <Button variant={guestSelectionMode === 'select' ? 'filled' : 'outline'} onClick={() => setGuestSelectionMode('select')} color="teal">Pilih Tamu</Button>
+            <Button variant={guestSelectionMode === 'new' ? 'filled' : 'outline'} onClick={() => setGuestSelectionMode('new')} color="teal">Tamu Baru</Button>
+          </Group>
 
-          <Select
-            label="Kamar"
-            placeholder="Pilih Kamar Tersedia"
-            data={roomOptions}
-            searchable
-            {...form.getInputProps('room_id')}
-          />
+          {guestSelectionMode === 'select' ? (
+            <Select label="Cari Tamu" placeholder="Pilih tamu..." data={guestOptions} searchable {...form.getInputProps('guest_id')} />
+          ) : (
+            <>
+              <TextInput label="Nama Lengkap" placeholder="Nama tamu" required leftSection={<IconUser size={18} />} {...form.getInputProps('new_guest_name')} />
+              <TextInput label="Email" placeholder="email@tamu.com" required leftSection={<IconMail size={18} />} {...form.getInputProps('new_guest_email')} />
+              <TextInput label="No. HP" placeholder="Opsional" leftSection={<IconPhone size={18} />} {...form.getInputProps('new_guest_phone')} />
+            </>
+          )}
 
-          <DatePickerInput
-            type="range"
-            label="Tanggal Menginap"
-            placeholder="Check-in — Check-out"
-            minDate={new Date()}
-            allowSingleDateInRange={false}
-            {...form.getInputProps('date_range')}
-          />
+          <Select label="Pilih Kamar" placeholder="Kamar tersedia" data={roomOptions} searchable required leftSection={<IconBed size={18} />} {...form.getInputProps('room_id')} />
+          
+          <Group grow>
+            <DatePickerInput label="Check-in" placeholder="Tanggal Check-in" minDate={new Date()} leftSection={<IconCalendar size={18} />} {...form.getInputProps('check_in_date')} />
+            <DatePickerInput label="Check-out" placeholder="Tanggal Check-out" minDate={form.values.check_in_date || new Date()} leftSection={<IconCalendar size={18} />} {...form.getInputProps('check_out_date')} />
+          </Group>
 
-          <Divider label="Detail Pembayaran" labelPosition="center" />
-
-          <Select
-            label="Status Pembayaran"
-            data={[
-              { value: 'pending', label: 'Pending' },
-              { value: 'paid', label: 'Paid' },
-              { value: 'cancelled', label: 'Cancelled' },
-            ]}
-            {...form.getInputProps('payment_status')}
-          />
-
-          <Paper withBorder p="sm" bg="gray.0">
+          <Paper withBorder p="xs" bg="gray.0">
             <Group justify="space-between">
-                <Text size="sm" fw={500}>Total Biaya</Text>
-                <NumberInput
-                    prefix="Rp "
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    variant="unstyled"
-                    size="lg"
-                    fw={700}
-                    styles={{ input: { textAlign: 'right', color: 'var(--mantine-color-teal-7)' } }}
-                    {...form.getInputProps('total_price')}
-                />
+              <MantineText size="sm" fw={500}>Total Harga:</MantineText>
+              <MantineText size="lg" fw={700} c="teal">{calculatedPrice ? `Rp ${calculatedPrice.toLocaleString('id-ID')}` : '-'}</MantineText>
             </Group>
           </Paper>
 
+          <Select label="Status Pembayaran" data={['pending', 'paid', 'cancelled']} required leftSection={<IconCash size={18} />} {...form.getInputProps('payment_status')} />
+
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={close}>Batal</Button>
-            <Button type="submit" color="teal">Simpan Reservasi</Button>
+            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
+            <Button type="submit" color="teal" loading={isSubmitting} disabled={!calculatedPrice && !reservationToEdit}>Simpan</Button>
           </Group>
         </Stack>
       </form>

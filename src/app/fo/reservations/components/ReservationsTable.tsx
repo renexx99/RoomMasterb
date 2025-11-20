@@ -1,6 +1,6 @@
 'use client';
 
-import { Table, Badge, ActionIcon, Group, Text, Paper, Tooltip } from '@mantine/core';
+import { Table, Badge, ActionIcon, Group, Text as MantineText, Paper, Tooltip } from '@mantine/core'; // FIX: Alias Text
 import { IconPencil, IconTrash } from '@tabler/icons-react';
 import { ReservationDetails } from '../page';
 
@@ -11,7 +11,6 @@ interface Props {
 }
 
 export function ReservationsTable({ data, onEdit, onDelete }: Props) {
-  // Helper warna pembayaran
   const getPaymentColor = (status: string) => {
     switch (status) {
       case 'paid': return 'green';
@@ -38,7 +37,6 @@ export function ReservationsTable({ data, onEdit, onDelete }: Props) {
             <Table.Th>Kamar</Table.Th>
             <Table.Th>Check-in</Table.Th>
             <Table.Th>Check-out</Table.Th>
-            {/* HAPUS Header Status */}
             <Table.Th>Pembayaran</Table.Th>
             <Table.Th>Total</Table.Th>
             <Table.Th style={{ width: 100 }} ta="center">Aksi</Table.Th>
@@ -48,17 +46,17 @@ export function ReservationsTable({ data, onEdit, onDelete }: Props) {
           {data.map((res) => (
             <Table.Tr key={res.id}>
               <Table.Td>
-                <Text fw={500} size="sm">{res.guest?.full_name || 'N/A'}</Text>
-                <Text size="xs" c="dimmed">{res.guest?.email}</Text>
+                <MantineText fw={500} size="sm">{res.guest?.full_name || 'N/A'}</MantineText>
+                <MantineText size="xs" c="dimmed">{res.guest?.email}</MantineText>
               </Table.Td>
               <Table.Td>
                 <Group gap="xs">
                   <Badge variant="dot" size="sm" color="dark">
                     {res.room?.room_number}
                   </Badge>
-                  <Text size="xs" c="dimmed">
+                  <MantineText size="xs" c="dimmed">
                     {res.room?.room_type?.name}
-                  </Text>
+                  </MantineText>
                 </Group>
               </Table.Td>
               <Table.Td>
@@ -67,7 +65,6 @@ export function ReservationsTable({ data, onEdit, onDelete }: Props) {
               <Table.Td>
                 {new Date(res.check_out_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
               </Table.Td>
-              {/* HAPUS Cell Status */}
               <Table.Td>
                 <Badge color={getPaymentColor(res.payment_status)} variant="light">
                   {res.payment_status}

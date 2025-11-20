@@ -1,174 +1,275 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Container, Title, Button, Group, TextInput, Stack, Paper, Grid, MultiSelect, Text, Modal } from '@mantine/core';
-import { IconPlus, IconSearch, IconFilter } from '@tabler/icons-react';
-import { useDisclosure } from '@mantine/hooks';
+import {
+  Container,
+  Title,
+  Button,
+  Group,
+  Paper,
+  TextInput,
+  Select,
+  ActionIcon,
+  Text as MantineText, // FIX: Alias Text untuk hindari konflik tipe
+  Grid,
+  MultiSelect,
+  Modal,
+  Stack,
+} from '@mantine/core';
+import { DatePickerInput, DatesProvider, DateValue } from '@mantine/dates';
+import 'dayjs/locale/id';
+import '@mantine/dates/styles.css';
+import { IconPlus, IconArrowLeft, IconSearch } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 
-// [CRITICAL] Gunakan komponen lokal, JANGAN import dari admin
+import { ReservationDetails, GuestOption, RoomWithDetails } from './page';
 import { ReservationsTable } from './components/ReservationsTable';
-import { ReservationFormModal } from './components/ReservationFormModal'; 
-
+import { ReservationFormModal } from './components/ReservationFormModal';
 import { deleteReservation } from './actions';
-import { ReservationDetails, RoomWithDetails, GuestOption } from './page';
-import { DatePickerInput, DateValue } from '@mantine/dates';
 
 interface ClientProps {
   initialReservations: ReservationDetails[];
-  rooms: RoomWithDetails[];
   guests: GuestOption[];
-  hotelId: string;
+  rooms: RoomWithDetails[]; // Pastikan nama prop ini 'rooms' sesuai dari page.tsx
+  hotelId: string | null;
 }
 
-export default function FoReservationsClient({ initialReservations, rooms, guests, hotelId }: ClientProps) {
-  // ... (Sisa kode client.tsx sama seperti sebelumnya)
-  const [search, setSearch] = useState('');
-  const [filterPayment, setFilterPayment] = useState<string[]>([]);
-  const [filterDate, setFilterDate] = useState<[DateValue, DateValue]>([null, null]);
-  
-  const [opened, { open, close }] = useDisclosure(false);
-  const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
-  const [selectedData, setSelectedData] = useState<ReservationDetails | null>(null);
+export default function FoReservationsManagementClient({ 
+  initialReservations, 
+  guests, 
+  rooms, 
+  hotelId 
+}: ClientProps) {
+  const router = useRouter();
 
-  const handleEdit = (item: ReservationDetails) => {
-    setSelectedData(item);
-    open();
-  };
+  // Gunakan alias agar tidak bingung dengan variabel lain
+  const availableRooms = rooms || []; 
 
-  const handleAdd = () => {
-    setSelectedData(null);
-    open();
-  };
+  const reservations = initialReservations || [];
 
-  const handleDeleteClick = (item: ReservationDetails) => {
-    setSelectedData(item);
-    openDelete();
-  };
+  // UI States
+  const [modalOpened, setModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<ReservationDetails | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ReservationDetails | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const confirmDelete = async () => {
-    if (!selectedData) return;
-    
-    const res = await deleteReservation(selectedData.id);
-    if (res?.error) {
-      notifications.show({ title: 'Gagal', message: res.error, color: 'red' });
-    } else {
-      notifications.show({ title: 'Berhasil', message: 'Reservasi dihapus', color: 'green' });
-      closeDelete();
-      setSelectedData(null);
-    }
-  };
+  // Filter & Sort States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('check_in_asc');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string[]>([]);
+  const [filterDateRange, setFilterDateRange] = useState<[DateValue, DateValue]>([null, null]);
 
-  const filteredData = useMemo(() => {
-    let result = initialReservations;
+  // --- Filter & Sort Logic ---
+  const filteredAndSortedReservations = useMemo(() => {
+    let result = [...reservations];
 
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        result = result.filter(item =>
-            item.guest?.full_name?.toLowerCase().includes(lowerSearch) ||
-            item.room?.room_number?.toLowerCase().includes(lowerSearch)
-        );
+    // 1. Filter Search
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(res =>
+        res.guest?.full_name?.toLowerCase().includes(lowerSearch) ||
+        res.guest?.email?.toLowerCase().includes(lowerSearch) ||
+        res.room?.room_number?.toLowerCase().includes(lowerSearch)
+      );
     }
 
-    if (filterPayment.length > 0) {
-        result = result.filter(item => filterPayment.includes(item.payment_status));
+    // 2. Filter Status
+    if (filterPaymentStatus.length > 0) {
+      result = result.filter(res => filterPaymentStatus.includes(res.payment_status));
     }
 
-    if (filterDate[0] && filterDate[1]) {
-        const start = filterDate[0];
-        const end = filterDate[1];
-        result = result.filter(item => {
-            const checkIn = new Date(item.check_in_date);
-            return checkIn >= start && checkIn <= end;
-        });
+    // 3. Filter Date Range
+    const [startDate, endDate] = filterDateRange;
+    if (startDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        result = result.filter(res => new Date(res.check_in_date + 'T00:00:00') >= startOfDay);
+    }
+    if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        result = result.filter(res => new Date(res.check_in_date + 'T00:00:00') <= endOfDay);
+    }
+
+    // 4. Sort
+    switch (sortBy) {
+        case 'guest_name_asc':
+            result.sort((a, b) => (a.guest?.full_name || '').localeCompare(b.guest?.full_name || ''));
+            break;
+        case 'guest_name_desc':
+            result.sort((a, b) => (b.guest?.full_name || '').localeCompare(a.guest?.full_name || ''));
+            break;
+        case 'check_in_asc':
+            result.sort((a, b) => new Date(a.check_in_date).getTime() - new Date(b.check_in_date).getTime());
+            break;
+        case 'check_in_desc':
+            result.sort((a, b) => new Date(b.check_in_date).getTime() - new Date(a.check_in_date).getTime());
+            break;
+        case 'price_asc':
+            result.sort((a, b) => a.total_price - b.total_price);
+            break;
+        case 'price_desc':
+            result.sort((a, b) => b.total_price - a.total_price);
+            break;
+        default: // check_in_asc
+            result.sort((a, b) => new Date(a.check_in_date).getTime() - new Date(b.check_in_date).getTime());
     }
 
     return result;
-  }, [initialReservations, search, filterPayment, filterDate]);
+  }, [reservations, searchTerm, sortBy, filterPaymentStatus, filterDateRange]);
 
+  // --- Handlers ---
+  const handleOpenCreate = () => {
+    setEditingReservation(null);
+    setModalOpened(true);
+  };
+
+  const handleOpenEdit = (res: ReservationDetails) => {
+    setEditingReservation(res);
+    setModalOpened(true);
+  };
+
+  const handleOpenDelete = (res: ReservationDetails) => {
+    setDeleteTarget(res);
+    setDeleteModalOpened(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsSubmitting(true);
+    try {
+      const result = await deleteReservation(deleteTarget.id);
+      if (result.error) {
+        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+      } else {
+        notifications.show({ title: 'Sukses', message: 'Reservasi berhasil dihapus', color: 'green' });
+        setDeleteModalOpened(false);
+        setDeleteTarget(null);
+      }
+    } catch (error) {
+      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!hotelId) {
+    return (
+      <Container size="lg" py="xl">
+        <Paper withBorder p="xl" ta="center">
+          <MantineText c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</MantineText>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
+    <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1, weekendDays: [0] }}>
+      <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
+        {/* Header dengan Style FO (Cyan/Teal) */}
         <div style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', padding: '2rem 0', marginBottom: '2rem' }}>
-            <Container size="xl">
-                <Group justify="space-between" align="center">
-                    <div>
-                         <Title order={2} c="white">Manajemen Reservasi</Title>
-                         <Text c="white" opacity={0.9}>Kelola booking dan tamu in-house</Text>
-                    </div>
-                    <Button leftSection={<IconPlus size={18} />} onClick={handleAdd} variant="white" color="teal">
-                        Buat Reservasi
-                    </Button>
+          <Container size="lg">
+            <Group justify="space-between" align="center">
+              <div>
+                <Group mb="xs">
+                  <ActionIcon variant="transparent" color="white" onClick={() => router.push('/fo/dashboard')} aria-label="Kembali ke Dashboard">
+                    <IconArrowLeft size={20} />
+                  </ActionIcon>
+                  <Title order={1} c="white">Manajemen Reservasi</Title>
                 </Group>
-            </Container>
+                <MantineText c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>Kelola booking tamu Front Office</MantineText>
+              </div>
+              <Button leftSection={<IconPlus size={18} />} onClick={handleOpenCreate} variant="white" color="teal">
+                Buat Reservasi
+              </Button>
+            </Group>
+          </Container>
         </div>
 
-        <Container size="xl" pb="xl">
-            <Stack gap="lg">
-                <Paper shadow="xs" p="md" radius="md" withBorder>
-                    <Grid align="flex-end">
-                        <Grid.Col span={{ base: 12, md: 4 }}>
-                             <TextInput
-                                label="Cari Reservasi"
-                                placeholder="Nama tamu atau nomor kamar..."
-                                leftSection={<IconSearch size={16} />}
-                                value={search}
-                                onChange={(e) => setSearch(e.currentTarget.value)}
-                            />
-                        </Grid.Col>
-                        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                            <MultiSelect
-                                label="Filter Pembayaran"
-                                placeholder="Pilih status..."
-                                data={['pending', 'paid', 'cancelled']}
-                                value={filterPayment}
-                                onChange={setFilterPayment}
-                                leftSection={<IconFilter size={16} />}
-                                clearable
-                            />
-                        </Grid.Col>
-                        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                            <DatePickerInput
-                                type="range"
-                                label="Filter Tanggal Check-in"
-                                placeholder="Rentang tanggal"
-                                value={filterDate}
-                                onChange={setFilterDate}
-                                clearable
-                            />
-                        </Grid.Col>
-                    </Grid>
-                </Paper>
+        {/* Konten Utama */}
+        <Container size="lg" pb="xl">
+          <Stack gap="lg">
+            {/* Filter */}
+            <Paper shadow="xs" p="md" radius="md" withBorder>
+              <Grid align="flex-end" gutter="md">
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <TextInput
+                    label="Cari Reservasi"
+                    placeholder="Nama tamu, email, atau no. kamar..."
+                    leftSection={<IconSearch size={16} />}
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.currentTarget.value)}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                  <DatePickerInput
+                    type="range"
+                    label="Rentang Check-in"
+                    placeholder="Pilih rentang tanggal"
+                    value={filterDateRange}
+                    onChange={setFilterDateRange}
+                    clearable
+                    valueFormat="DD MMM YYYY"
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+                  <MultiSelect
+                    label="Status Bayar"
+                    placeholder="Semua Status"
+                    data={['pending', 'paid', 'cancelled']}
+                    value={filterPaymentStatus}
+                    onChange={setFilterPaymentStatus}
+                    clearable
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 3 }}>
+                  <Select
+                    label="Urutkan"
+                    value={sortBy}
+                    onChange={(value) => setSortBy(value || 'check_in_asc')}
+                    data={[
+                      { value: 'check_in_asc', label: 'Check-in (Terdekat)' },
+                      { value: 'check_in_desc', label: 'Check-in (Terjauh)' },
+                      { value: 'price_asc', label: 'Harga Termurah' },
+                      { value: 'price_desc', label: 'Harga Termahal' },
+                      { value: 'guest_name_asc', label: 'Nama Tamu (A-Z)' },
+                    ]}
+                  />
+                </Grid.Col>
+              </Grid>
+            </Paper>
 
-                <ReservationsTable 
-                    data={filteredData} 
-                    onEdit={handleEdit} 
-                    onDelete={handleDeleteClick} 
-                />
-            </Stack>
+            {/* Tabel */}
+            <ReservationsTable 
+              data={filteredAndSortedReservations}
+              onEdit={handleOpenEdit}
+              onDelete={handleOpenDelete}
+            />
+          </Stack>
         </Container>
 
-        <ReservationFormModal
-            opened={opened}
-            close={close}
-            hotelId={hotelId}
-            rooms={rooms}
-            guests={guests}
-            selectedData={selectedData}
+        {/* Modals */}
+        <ReservationFormModal 
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          hotelId={hotelId}
+          reservationToEdit={editingReservation}
+          guests={guests}
+          availableRooms={availableRooms}
         />
 
-        <Modal opened={deleteOpened} onClose={closeDelete} title="Konfirmasi Hapus" centered size="sm">
-            <Stack>
-                <Text size="sm">
-                    Apakah Anda yakin ingin menghapus reservasi tamu <strong>{selectedData?.guest?.full_name}</strong>? 
-                    Data yang dihapus tidak dapat dikembalikan.
-                </Text>
-                <Group justify="flex-end">
-                    <Button variant="default" onClick={closeDelete}>Batal</Button>
-                    <Button color="red" onClick={confirmDelete}>Hapus Reservasi</Button>
-                </Group>
-            </Stack>
+        <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered size="sm">
+          <Stack gap="md">
+            <MantineText size="sm">Apakah Anda yakin ingin menghapus reservasi tamu <strong>{deleteTarget?.guest?.full_name}</strong>?</MantineText>
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
+              <Button color="red" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus Reservasi</Button>
+            </Group>
+          </Stack>
         </Modal>
-    </div>
+      </div>
+    </DatesProvider>
   );
 }
