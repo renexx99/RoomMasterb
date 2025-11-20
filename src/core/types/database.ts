@@ -9,7 +9,17 @@ export interface Hotel {
   id: string;
   name: string;
   address: string;
+  // Field baru
+  code?: string | null;
+  status: 'active' | 'maintenance' | 'suspended';
+  image_url?: string | null;
   created_at: string;
+}
+
+// Helper type untuk data hotel + statistik (untuk UI)
+export interface HotelWithStats extends Hotel {
+  total_rooms: number;
+  total_staff: number;
 }
 
 export interface Profile {
