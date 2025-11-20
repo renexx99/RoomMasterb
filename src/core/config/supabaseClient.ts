@@ -1,6 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+// src/core/config/supabaseClient.ts
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// createClientComponentClient secara otomatis membaca env vars:
+// NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY
+// dan mengonfigurasi penyimpanan sesi menggunakan Cookies.
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClientComponentClient();
