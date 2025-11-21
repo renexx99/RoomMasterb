@@ -7,6 +7,7 @@ import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 
 import { AppProvider } from "@/core/providers/AppProvider";
+import { ImpersonateBanner } from "@/components/ImpersonateBanner"; // Import komponen baru
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,9 +26,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <AppProvider>
           {children}
+          <ImpersonateBanner /> {/* Gunakan komponen Client di sini */}
         </AppProvider>
       </body>
     </html>
   );
 }
-

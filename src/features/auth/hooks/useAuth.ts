@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/core/config/supabaseClient';
-import { Profile, Role, UserRoleAssignment } from '@/core/types/database'; // Import Role and UserRoleAssignment
+import { Profile, UserRoleAssignment } from '@/core/types/database';
 
 // Combine Profile with Role information
 interface ProfileWithRoles extends Profile {
@@ -19,9 +19,11 @@ export interface UserRoleAssignmentWithRoleName extends UserRoleAssignment {
 
 interface AuthState {
   user: User | null;
-  profile: ProfileWithRoles | null; // Updated profile type
+  profile: ProfileWithRoles | null;
   loading: boolean;
   error: string | null;
+  // State tambahan untuk indikator impersonasi
+  isImpersonating: boolean;
 }
 
 export function useAuth() {
@@ -30,6 +32,7 @@ export function useAuth() {
     profile: null,
     loading: true,
     error: null,
+    isImpersonating: false,
   });
 
   useEffect(() => {
@@ -37,7 +40,7 @@ export function useAuth() {
 
     // Function to fetch profile and roles
     const fetchProfileAndRoles = async (userId: string): Promise<ProfileWithRoles | null> => {
-      // Fetch profile first
+      // 1. Fetch profile first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -45,9 +48,9 @@ export function useAuth() {
         .maybeSingle();
 
       if (profileError) throw profileError;
-      if (!profileData) return null; // No profile found
+      if (!profileData) return null;
 
-      // Fetch user roles along with the role name using a join
+      // 2. Fetch user roles along with the role name using a join
       const { data: userRolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select(`
@@ -61,41 +64,92 @@ export function useAuth() {
       // Map roles data to include role_name directly
       const rolesWithNames: UserRoleAssignmentWithRoleName[] = (userRolesData || []).map(ur => ({
         ...ur,
-        role_name: (ur.role as unknown as { name: string })?.name || undefined, // Type assertion for joined data
+        role_name: (ur.role as unknown as { name: string })?.name || undefined,
       }));
 
-
-      // Combine profile and roles
       return {
         ...profileData,
-        roles: rolesWithNames, // Assign the fetched roles
+        roles: rolesWithNames,
       };
     };
 
     const initializeAuth = async () => {
       try {
-        setAuthState(prev => ({ ...prev, loading: true, error: null })); // Set loading true at start
+        if (mounted) setAuthState(prev => ({ ...prev, loading: true, error: null }));
+        
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) throw sessionError;
 
-        if (session?.user && mounted) {
-          const profileWithRoles = await fetchProfileAndRoles(session.user.id);
+        if (session?.user) {
+          // A. Ambil data user asli dari database
+          const originalProfile = await fetchProfileAndRoles(session.user.id);
+          
+          if (!originalProfile) {
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                profile: null,
+                loading: false,
+                error: null,
+                isImpersonating: false,
+              });
+            }
+            return;
+          }
+
+          // B. Cek apakah sedang dalam mode IMPERSONASI (Login As)
+          const impersonationData = sessionStorage.getItem('impersonate_data');
+          let finalProfile = originalProfile;
+          let isImpersonating = false;
+
+          if (impersonationData) {
+            // Security Check: Pastikan user ASLI benar-benar Super Admin
+            const isSuperAdmin = originalProfile.roles.some(r => r.role_name === 'Super Admin');
+            
+            if (isSuperAdmin) {
+              const { hotelId, roleName } = JSON.parse(impersonationData);
+              isImpersonating = true;
+
+              // Buat Role Palsu (Mocked Role) untuk menggantikan role asli di session ini
+              const mockedRole: UserRoleAssignmentWithRoleName = {
+                id: 'temp_impersonate_id',
+                user_id: session.user.id,
+                role_id: 'temp_role_id',
+                hotel_id: hotelId,
+                role_name: roleName,
+                created_at: new Date().toISOString(),
+              };
+
+              // Override profile dengan role palsu
+              finalProfile = {
+                ...originalProfile,
+                roles: [mockedRole],
+              };
+            }
+          }
+
           if (mounted) {
             setAuthState({
               user: session.user,
-              profile: profileWithRoles,
+              profile: finalProfile,
               loading: false,
               error: null,
+              isImpersonating: isImpersonating,
             });
           }
-        } else if (mounted) {
-          setAuthState({
-            user: null,
-            profile: null,
-            loading: false,
-            error: null,
-          });
+
+        } else {
+          // Tidak ada session / user logout
+          if (mounted) {
+            setAuthState({
+              user: null,
+              profile: null,
+              loading: false,
+              error: null,
+              isImpersonating: false,
+            });
+          }
         }
       } catch (error) {
         console.error("Auth Initialization Error:", error);
@@ -105,57 +159,55 @@ export function useAuth() {
             profile: null,
             loading: false,
             error: error instanceof Error ? error.message : 'An error occurred during auth initialization',
+            isImpersonating: false,
           });
         }
       }
     };
 
+    // Jalankan inisialisasi
     initializeAuth();
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return; // Prevent state updates if unmounted
-
-      setAuthState(prev => ({ ...prev, loading: true, error: null })); // Set loading on change
-      try {
-          if (session?.user) {
-            const profileWithRoles = await fetchProfileAndRoles(session.user.id);
-             if (mounted) {
-                 setAuthState({
-                    user: session.user,
-                    profile: profileWithRoles,
-                    loading: false,
-                    error: null,
-                });
-             }
-          } else {
-             if (mounted) {
-                 setAuthState({
-                    user: null,
-                    profile: null,
-                    loading: false,
-                    error: null,
-                });
-             }
-          }
-      } catch(error) {
-          console.error("Auth State Change Error:", error);
-           if (mounted) {
-                setAuthState({
-                    user: null,
-                    profile: null,
-                    loading: false,
-                    error: error instanceof Error ? error.message : 'An error occurred processing auth change',
-                });
-           }
-      }
+      // Trigger re-initialization on auth change
+      initializeAuth();
     });
 
-    // Cleanup function
     return () => {
       mounted = false;
-      subscription?.unsubscribe(); // Check if subscription exists before unsubscribing
+      subscription?.unsubscribe();
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   return authState;
 }
+
+// --- HELPER FUNCTIONS (Exported) ---
+
+/**
+ * Memulai sesi impersonasi (Login As).
+ * Menyimpan target hotel dan role ke sessionStorage lalu me-refresh halaman.
+ */
+export const startImpersonation = (hotelId: string, roleName: string) => {
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('impersonate_data', JSON.stringify({ hotelId, roleName }));
+    
+    // Redirect ke dashboard yang sesuai berdasarkan role yang dipilih
+    if (roleName === 'Hotel Manager') window.location.href = '/manager/dashboard';
+    else if (roleName === 'Front Office') window.location.href = '/fo/dashboard';
+    else if (roleName === 'Hotel Admin') window.location.href = '/admin/dashboard';
+    else window.location.reload(); // Default refresh
+  }
+};
+
+/**
+ * Menghentikan sesi impersonasi.
+ * Menghapus data dari sessionStorage dan kembali ke dashboard Super Admin.
+ */
+export const stopImpersonation = () => {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('impersonate_data');
+    window.location.href = '/super-admin/dashboard';
+  }
+};

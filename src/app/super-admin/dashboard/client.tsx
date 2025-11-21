@@ -1,7 +1,9 @@
 'use client';
 
-import { Container, Grid, Paper, Text, Group, Title, ThemeIcon, SimpleGrid, RingProgress, Center } from '@mantine/core';
-import { IconBuildingSkyscraper, IconUsers, IconActivity, IconServer, IconArrowUpRight } from '@tabler/icons-react';
+import { Container, Grid, Paper, Text, Group, Title, ThemeIcon, SimpleGrid } from '@mantine/core';
+import { IconBuildingSkyscraper, IconUsers, IconActivity, IconServer } from '@tabler/icons-react';
+import RevenueChart from '@/components/Dashboard/RevenueChart'; // Import Grafik Revenue
+import SalesChart from '@/components/Dashboard/SalesChart';     // Import Grafik Sales
 
 interface DashboardProps {
   stats: {
@@ -47,7 +49,8 @@ export default function SuperAdminDashboardClient({ stats }: DashboardProps) {
 
       {/* Content */}
       <Container size="lg" py="md">
-        <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
+        {/* Baris Statistik (Cards) */}
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md" mb="md">
           {cards.map((stat) => (
             <Paper key={stat.title} p="md" radius="md" shadow="xs" withBorder>
               <Group justify="space-between">
@@ -78,36 +81,18 @@ export default function SuperAdminDashboardClient({ stats }: DashboardProps) {
           ))}
         </SimpleGrid>
 
-        <Grid mt="md">
+        {/* Baris Grafik Analitik */}
+        <Grid gutter="md">
+            {/* Grafik Pendapatan (Area Chart) */}
             <Grid.Col span={{ base: 12, md: 8 }}>
-                <Paper shadow="xs" radius="md" p="md" withBorder h="100%">
-                    <Title order={5} mb="md">Aktivitas Sistem (Dummy Chart)</Title>
-                    <div style={{ height: 200, background: '#f1f3f5', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text c="dimmed" size="sm">Area Grafik Analitik</Text>
-                    </div>
-                </Paper>
+                {/* Menggunakan komponen RevenueChart yang sudah ada */}
+                <RevenueChart style={{ height: '100%' }} />
             </Grid.Col>
+
+            {/* Grafik Penjualan/Distribusi (Donut Chart) */}
             <Grid.Col span={{ base: 12, md: 4 }}>
-                <Paper shadow="xs" radius="md" p="md" withBorder h="100%">
-                     <Title order={5} mb="md">Distribusi Server</Title>
-                     <Center>
-                        <RingProgress
-                            size={180}
-                            thickness={16}
-                            roundCaps
-                            sections={[
-                                { value: 40, color: 'cyan', tooltip: 'Web Server' },
-                                { value: 25, color: 'orange', tooltip: 'Database' },
-                                { value: 15, color: 'grape', tooltip: 'Storage' },
-                            ]}
-                            label={
-                                <Center>
-                                    <IconServer size={24} style={{ opacity: 0.5 }} />
-                                </Center>
-                            }
-                        />
-                     </Center>
-                </Paper>
+                {/* Menggunakan komponen SalesChart yang sudah ada */}
+                <SalesChart style={{ height: '100%' }} />
             </Grid.Col>
         </Grid>
       </Container>
