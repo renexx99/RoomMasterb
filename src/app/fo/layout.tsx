@@ -17,27 +17,38 @@ import {
   Badge,
   Loader,
   Center,
+  Autocomplete,
+  ActionIcon,
+  Indicator,
+  Popover,
+  ScrollArea,
+  ThemeIcon,
+  Divider,
+  Button,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconLayoutDashboard,
-  IconBed,
   IconCalendarEvent,
   IconUsersGroup,
   IconLogout,
   IconChevronDown,
-  // IconCategory, // Dihapus
   IconSearch,
   IconUserCheck,
   IconLogin,
   IconCoin,
   IconBook2,
+  IconBell,
+  IconInfoCircle,
+  IconMessage,
+  IconBed,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 
+// --- Navigasi Menu ---
 interface NavItem {
   label: string;
   icon: React.ComponentType<{ size?: number; stroke?: number }>;
@@ -47,26 +58,29 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/fo/dashboard' },
   { label: 'Proses Check-in/Out', icon: IconLogin, href: '/fo/check-in' },
-  {
-    label: 'Manajemen Reservasi',
-    icon: IconCalendarEvent,
-    href: '/fo/reservations',
-  },
-  { label: 'Manajemen Tamu', icon: IconUsersGroup, href: '/fo/guests' },
-  {
-    label: 'Status & Ketersediaan',
-    icon: IconSearch,
-    href: '/fo/availability',
-  },
+  { label: 'Reservasi', icon: IconCalendarEvent, href: '/fo/reservations' },
+  { label: 'Buku Tamu', icon: IconUsersGroup, href: '/fo/guests' },
+  { label: 'Ketersediaan Kamar', icon: IconSearch, href: '/fo/availability' }, // IconSearch diganti di bawah agar tidak duplikat
   { label: 'Billing & Folio', icon: IconCoin, href: '/fo/billing' },
   { label: 'Log Tamu', icon: IconBook2, href: '/fo/log' },
 ];
 
-// --- [PENAMBAHAN] ---
-// Lebar sidebar saat ditutup dan dibuka
+// --- Mock Data (Search & Notif) ---
+const mockNotifications = [
+  { id: 1, title: 'Permintaan Housekeeping', message: 'Kamar 201 minta handuk tambahan', time: '2 menit lalu', icon: IconBed, color: 'blue' },
+  { id: 2, title: 'Check-out Segera', message: 'Tamu kamar 105 akan check-out', time: '15 menit lalu', icon: IconLogout, color: 'orange' },
+  { id: 3, title: 'Pesan Baru', message: 'Konfirmasi pembayaran dari Tamu VIP', time: '1 jam lalu', icon: IconMessage, color: 'teal' },
+];
+
+const searchData = [
+  { value: 'Dashboard', href: '/fo/dashboard' },
+  { value: 'Check In Tamu', href: '/fo/check-in' },
+  { value: 'Cek Ketersediaan', href: '/fo/availability' },
+  { value: 'Buat Reservasi', href: '/fo/reservations' },
+];
+
 const NAVBAR_WIDTH_COLLAPSED = rem(80);
 const NAVBAR_WIDTH_EXPANDED = rem(280);
-// --- [AKHIR PENAMBAHAN] ---
 
 function FoLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
@@ -76,10 +90,8 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
   const [hotelName, setHotelName] = useState<string>('');
   const [loadingHotel, setLoadingHotel] = useState(true);
 
-  // --- [PENAMBAHAN] ---
-  // State untuk mengontrol sidebar di desktop (hover)
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
-  // --- [AKHIR PENAMBAHAN] ---
+  const [searchQuery, setSearchQuery] = useState('');
 
   const assignedHotelId = profile?.roles?.find(
     (r) => r.hotel_id && r.role_name === 'Front Office'
@@ -89,12 +101,8 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
     const fetchHotelInfo = async () => {
       if (!assignedHotelId) {
         setLoadingHotel(false);
-        console.warn(
-          'Front Office profile does not have an assigned hotel_id in roles.'
-        );
         return;
       }
-
       try {
         setLoadingHotel(true);
         const { data, error } = await supabase
@@ -107,177 +115,197 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
         setHotelName(data?.name || 'Hotel Tidak Ditemukan');
       } catch (error) {
         console.error('Error fetching hotel:', error);
-        setHotelName('Gagal Memuat Nama Hotel');
       } finally {
         setLoadingHotel(false);
       }
     };
 
-    if (!authLoading && profile) {
-      fetchHotelInfo();
-    } else if (!authLoading && !profile) {
-      setLoadingHotel(false);
-    }
+    if (!authLoading && profile) fetchHotelInfo();
+    else if (!authLoading && !profile) setLoadingHotel(false);
   }, [profile, authLoading, assignedHotelId]);
 
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      notifications.show({
-        title: 'Sukses',
-        message: 'Berhasil logout',
-        color: 'green',
-      });
+      notifications.show({ title: 'Sukses', message: 'Berhasil logout', color: 'green' });
       router.push('/auth/login');
     } catch {
-      notifications.show({
-        title: 'Error',
-        message: 'Gagal logout',
-        color: 'red',
-      });
+      notifications.show({ title: 'Error', message: 'Gagal logout', color: 'red' });
     }
   };
 
-  const foRoleName =
-    profile?.roles?.find((r) => r.role_name === 'Front Office')?.role_name ||
-    'Front Office';
+  const handleSearchSubmit = (value: string) => {
+    const target = searchData.find((item) => item.value === value);
+    if (target) {
+      router.push(target.href);
+      setSearchQuery('');
+    }
+  };
+
+  const roleName = profile?.roles?.find((r) => r.role_name === 'Front Office')?.role_name || 'Front Office';
 
   if (authLoading || loadingHotel) {
-    return (
-      <Center style={{ minHeight: '100vh' }}>
-        <Loader size="lg" />
-      </Center>
-    );
+    return <Center style={{ minHeight: '100vh' }}><Loader size="lg" color="teal" /></Center>;
   }
 
   return (
     <AppShell
-      header={{ height: 70 }}
+      header={{ height: 60 }}
       navbar={{
-        // --- [MODIFIKASI] ---
         width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
-        // --- [AKHIR MODIFIKASI] ---
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
-      padding="md"
+      padding="0"
       styles={{
         main: { 
           background: '#f5f6fa',
-          // --- [PENAMBAHAN] ---
           transition: 'padding-left 0.25s ease',
-          // --- [AKHIR PENAMBAHAN] ---
+          paddingTop: '60px',
         },
       }}
     >
-      <AppShell.Header
-        style={{
-          borderBottom: '1px solid #e5e7eb',
-          background: 'white',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-        }}
-      >
-        <Group h="100%" px="md" justify="space-between">
+      {/* --- HEADER --- */}
+      <AppShell.Header style={{ borderBottom: '1px solid #e5e7eb', background: 'white', zIndex: 101 }}>
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+          
+          {/* Kiri: Logo & Burger */}
           <Group>
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
-            <Group gap="xs">
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Group gap="xs" wrap="nowrap">
               <Box
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '8px',
-                  background:
-                    'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '6px',
+                  background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', // Teal Gradient
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 3px 6px rgba(20, 184, 166, 0.3)',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 4px rgba(20, 184, 166, 0.3)',
                 }}
               >
-                <IconUserCheck
-                  size={22}
-                  stroke={1.5}
-                  color="white"
-                />
+                <IconUserCheck size={18} stroke={1.5} color="white" />
               </Box>
-              {/* --- [MODIFIKASI] --- */}
-              {/* Tampilkan judul hanya jika sidebar expanded */}
-              <Box style={{
+              
+              <Box visibleFrom="sm" style={{
                   opacity: isNavbarExpanded ? 1 : 0,
                   width: isNavbarExpanded ? 'auto' : 0,
                   overflow: 'hidden',
-                  transition: 'opacity 0.2s ease, width 0.2s ease',
+                  transition: 'all 0.2s ease',
                   display: opened ? 'block' : 'initial'
-              }}
-               visibleFrom="sm" 
-              >
-                <Text size="lg" fw={800} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
-                  {hotelName || 'Front Office'}
+              }}>
+                <Text size="sm" fw={700} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
+                  {hotelName}
                 </Text>
               </Box>
-              {/* Logo di mobile (saat burger dibuka) */}
-              <Box hiddenFrom="sm">
-                <Text size="lg" fw={800} style={{ color: '#1e293b' }}>
-                  {hotelName || 'Front Office'}
-                </Text>
-              </Box>
-              {/* --- [AKHIR MODIFIKASI] --- */}
             </Group>
           </Group>
 
-          {/* Menu User (Avatar, Nama, Logout) */}
-          <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar color="teal" radius="xl">
-                    {profile?.full_name?.charAt(0) || 'F'}
-                  </Avatar>
-                  <Box style={{ flex: 1 }} visibleFrom="sm">
-                    <Text size="sm" fw={600}>
-                      {profile?.full_name || 'Staff'}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {foRoleName}
-                    </Text>
-                  </Box>
-                  <IconChevronDown size={16} stroke={1.5} />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Akun</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLogout size={16} stroke={1.5} />}
-                color="red"
-                onClick={handleLogout}
-              >
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          {/* Tengah: Search Bar */}
+          <Box style={{ flex: 1, maxWidth: 500 }} visibleFrom="sm" mx="md">
+            <Autocomplete
+              placeholder="Cari menu atau fitur..."
+              leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
+              data={searchData.map(item => item.value)}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onOptionSubmit={handleSearchSubmit}
+              size="sm"
+              radius="md"
+              styles={{
+                input: {
+                    backgroundColor: 'var(--mantine-color-gray-1)', 
+                    border: '1px solid var(--mantine-color-gray-3)',
+                    transition: 'all 0.2s ease',
+                    '&:focus': {
+                        backgroundColor: 'white',
+                        borderColor: '#14b8a6', // Teal Border
+                        boxShadow: '0 0 0 1px #14b8a6', 
+                    }
+                }
+              }}
+            />
+          </Box>
+
+          {/* Kanan: Notifikasi & Profil */}
+          <Group gap="sm" wrap="nowrap">
+            <Popover width={320} position="bottom-end" withArrow shadow="md">
+              <Popover.Target>
+                <Indicator inline label="" size={8} color="red" offset={4} processing>
+                    <ActionIcon variant="subtle" color="gray" size="lg">
+                        <IconBell size={20} stroke={1.5} />
+                    </ActionIcon>
+                </Indicator>
+              </Popover.Target>
+              <Popover.Dropdown p={0}>
+                 <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifikasi FO</Text>
+                 </Box>
+                 <ScrollArea.Autosize mah={300}>
+                    {mockNotifications.map((item) => (
+                        <UnstyledButton key={item.id} p="sm" className="hover:bg-gray-50" style={{ width: '100%', borderBottom: '1px solid #f1f3f5' }}>
+                            <Group align="flex-start" wrap="nowrap">
+                                <ThemeIcon variant="light" color={item.color} size="md" radius="md" mt={2}>
+                                    <item.icon size={16} />
+                                </ThemeIcon>
+                                <div style={{ flex: 1 }}>
+                                    <Text size="sm" fw={600}>{item.title}</Text>
+                                    <Text size="xs" c="dimmed" lineClamp={2}>{item.message}</Text>
+                                    <Text size="10px" c="dimmed" mt={2} ta="right">{item.time}</Text>
+                                </div>
+                            </Group>
+                        </UnstyledButton>
+                    ))}
+                 </ScrollArea.Autosize>
+                 <Box p={8} ta="center">
+                    <Button variant="subtle" size="xs" fullWidth color="teal">Lihat Semua</Button>
+                 </Box>
+              </Popover.Dropdown>
+            </Popover>
+
+            <Divider orientation="vertical" style={{ height: 24 }} />
+
+            <Menu shadow="md" width={200} position="bottom-end">
+              <Menu.Target>
+                <UnstyledButton>
+                  <Group gap={8}>
+                    <Avatar color="teal" radius="xl" size="sm">
+                      {profile?.full_name?.charAt(0) || 'F'}
+                    </Avatar>
+                    <Box visibleFrom="sm" style={{ lineHeight: 1 }}>
+                      <Text size="xs" fw={600}>{profile?.full_name}</Text>
+                      <Text size="10px" c="dimmed">{roleName}</Text>
+                    </Box>
+                    <IconChevronDown size={14} stroke={1.5} color="gray" />
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>Akun</Menu.Label>
+                <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={handleLogout}>
+                  Logout
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
         </Group>
       </AppShell.Header>
 
+      {/* --- NAVBAR --- */}
       <AppShell.Navbar
-        p="md"
-        // --- [PENAMBAHAN] ---
+        p="xs"
         onMouseEnter={() => setIsNavbarExpanded(true)}
         onMouseLeave={() => setIsNavbarExpanded(false)}
-        // --- [AKHIR PENAMBAHAN] ---
         style={{
           borderRight: '1px solid #e5e7eb',
           background: 'white',
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
-          // --- [PENAMBAHAN] ---
           transition: 'width 0.25s ease-in-out',
-          // --- [AKHIR PENAMBAHAN] ---
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <AppShell.Section grow>
@@ -288,106 +316,65 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
               <NavLink
                 key={item.href}
                 href={item.href}
-                // --- [MODIFIKASI] ---
                 label={isNavbarExpanded ? item.label : undefined}
-                // --- [AKHIR MODIFIKASI] ---
-                leftSection={<Icon size={20} stroke={1.5} />}
+                leftSection={<Icon size={18} stroke={1.5} />}
                 active={isActive}
                 onClick={(e) => {
                   e.preventDefault();
                   router.push(item.href);
                   if (opened) toggle();
                 }}
-                // --- [MODIFIKASI] ---
-                // Ubah styles menjadi fungsi dan sesuaikan warnanya
-                styles={(theme) => ({
+                styles={() => ({
                   root: {
-                    borderRadius: rem(8),
-                    marginBottom: rem(4),
-                    padding: rem(12),
-                    fontSize: rem(14),
+                    borderRadius: rem(6),
+                    marginBottom: rem(2),
+                    padding: `${rem(8)} ${rem(10)}`,
                     fontWeight: 500,
-                    color: isActive ? '#0d9488' : '#374151', // Warna Teal
-                    transition: 'all 0.25s ease',
-
-                    // Perbaikan sintaks media query
-                    [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                      display: opened ? 'flex' : 'none',
-                    },
-
-                    justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
-                    
+                    color: isActive ? '#0d9488' : '#4b5563', // Teal active
+                    backgroundColor: isActive ? 'rgba(20, 184, 166, 0.1)' : 'transparent',
                     '&:hover': {
-                      background: 'rgba(20, 184, 166, 0.12)', // Warna Teal
+                      backgroundColor: 'rgba(20, 184, 166, 0.08)', // Teal hover
                       color: '#0d9488',
-                      boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)',
-                    },
-                    '&[dataActive]': {
-                      background:
-                        'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%)', // Warna Teal
-                      color: '#0d9488',
-                      fontWeight: 600,
-                      boxShadow: 'inset 0 0 0 1px rgba(20, 184, 166, 0.3)',
                     },
                   },
-                  label: { 
-                    fontSize: rem(14),
+                  label: {
+                    fontSize: rem(13),
                     display: isNavbarExpanded ? 'block' : 'none',
-                    opacity: isNavbarExpanded ? 1 : 0,
-                    transition: 'opacity 0.2s ease',
                   },
                   leftSection: {
-                    marginRight: isNavbarExpanded ? theme.spacing.md : 0,
-                    transition: 'margin-right 0.25s ease',
+                    marginRight: isNavbarExpanded ? rem(12) : 0,
                   },
                 })}
-                // --- [AKHIR MODIFIKASI] ---
               />
             );
           })}
         </AppShell.Section>
-        {/* Tombol Logout */}
+
+        {/* Footer / Logout */}
         <AppShell.Section>
           <NavLink
-            // --- [MODIFIKASI] ---
             label={isNavbarExpanded ? 'Logout' : undefined}
-            // --- [AKHIR MODIFIKASI] ---
-            leftSection={<IconLogout size={20} stroke={1.5} />}
+            leftSection={<IconLogout size={18} stroke={1.5} />}
             onClick={handleLogout}
-            // --- [MODIFIKASI] ---
-            styles={(theme) => ({
+            styles={() => ({
               root: {
-                borderRadius: rem(8),
-                padding: rem(12),
-                fontSize: rem(14),
+                borderRadius: rem(6),
+                marginTop: rem(2),
+                padding: `${rem(8)} ${rem(10)}`,
                 fontWeight: 500,
                 color: '#ef4444',
-                transition: 'all 0.25s ease',
-
-                // Perbaikan sintaks media query
-                [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                  display: opened ? 'flex' : 'none',
-                },
-
-                justifyContent: isNavbarExpanded ? 'flex-start' : 'center',
-                
                 '&:hover': {
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.15)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
                 },
               },
-              label: { 
-                fontSize: rem(14),
+              label: {
+                fontSize: rem(13),
                 display: isNavbarExpanded ? 'block' : 'none',
-                opacity: isNavbarExpanded ? 1 : 0,
-                transition: 'opacity 0.2s ease',
               },
               leftSection: {
-                marginRight: isNavbarExpanded ? theme.spacing.md : 0,
-                transition: 'margin-right 0.25s ease',
+                marginRight: isNavbarExpanded ? rem(12) : 0,
               },
             })}
-            // --- [AKHIR MODIFIKASI] ---
           />
         </AppShell.Section>
       </AppShell.Navbar>
@@ -397,11 +384,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function FoLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function FoLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute requiredRoleName="Front Office">
       <FoLayoutContent>{children}</FoLayoutContent>

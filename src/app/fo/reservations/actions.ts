@@ -1,3 +1,4 @@
+// src/app/fo/reservations/actions.ts
 'use server';
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
@@ -5,12 +6,10 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { PaymentStatus } from '@/core/types/database';
 
-// Helper Supabase
 async function getSupabase() {
   const cookieStore = await cookies();
-  return createServerActionClient({ 
-    cookies: () => cookieStore as any 
-  });
+  // @ts-ignore
+  return createServerActionClient({ cookies: () => cookieStore });
 }
 
 export interface ReservationData {
@@ -23,8 +22,7 @@ export interface ReservationData {
   payment_status: PaymentStatus;
 }
 
-// --- Actions ---
-
+// --- CREATE ---
 export async function createReservation(data: ReservationData) {
   const supabase = await getSupabase();
 
@@ -38,6 +36,7 @@ export async function createReservation(data: ReservationData) {
   return { success: true };
 }
 
+// --- UPDATE ---
 export async function updateReservation(id: string, data: Partial<ReservationData>) {
   const supabase = await getSupabase();
 
@@ -52,6 +51,7 @@ export async function updateReservation(id: string, data: Partial<ReservationDat
   return { success: true };
 }
 
+// --- DELETE ---
 export async function deleteReservation(id: string) {
   const supabase = await getSupabase();
 
@@ -66,7 +66,7 @@ export async function deleteReservation(id: string) {
   return { success: true };
 }
 
-// Action khusus untuk membuat Guest baru dari Form Reservasi FO
+// --- HELPER: CREATE GUEST ON THE FLY ---
 export async function createGuestForReservation(guestData: {
   hotel_id: string;
   full_name: string;

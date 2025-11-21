@@ -5,23 +5,20 @@ import { redirect } from 'next/navigation';
 import FoAvailabilityClient from './client';
 import { Room, RoomType } from '@/core/types/database';
 
-// Interface gabungan untuk data kamar dengan detail tipe kamarnya
-export interface RoomWithType extends Room {
+// Interface Data Gabungan
+export interface RoomWithDetails extends Room {
   room_type?: RoomType | null;
 }
 
 export default async function AvailabilityPage() {
   const cookieStore = await cookies();
-  // @ts-ignore 
-  const supabase = createServerComponentClient({ cookies: () => cookieStore as any });
+  // @ts-ignore
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
-  // 1. Cek Sesi
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    redirect('/auth/login');
-  }
+  if (!session) redirect('/auth/login');
 
-  // 2. Ambil Hotel ID dari Role
+  // 1. Ambil Hotel ID
   const { data: userRole } = await supabase
     .from('user_roles')
     .select('hotel_id')
@@ -31,34 +28,29 @@ export default async function AvailabilityPage() {
 
   const hotelId = userRole?.hotel_id;
 
-  // Jika tidak ada hotel, kirim data kosong
   if (!hotelId) {
     return <FoAvailabilityClient initialRooms={[]} roomTypes={[]} />;
   }
 
-  // 3. Fetch Data Secara Paralel
+  // 2. Fetch Data Kamar & Tipe Kamar
   const [roomsRes, typesRes] = await Promise.all([
-    // Ambil kamar beserta detail room_type-nya (Join)
     supabase
       .from('rooms')
-      .select('*, room_type:room_types(*)')
-      .eq('hotel_id', hotelId),
+      .select(`*, room_type:room_types(*)`)
+      .eq('hotel_id', hotelId)
+      .order('room_number', { ascending: true }),
     
-    // Ambil daftar tipe kamar untuk filter dropdown
     supabase
       .from('room_types')
       .select('*')
       .eq('hotel_id', hotelId)
+      .order('name', { ascending: true })
   ]);
-
-  // Casting data agar sesuai interface
-  const rooms = (roomsRes.data as unknown as RoomWithType[]) || [];
-  const roomTypes = (typesRes.data as RoomType[]) || [];
 
   return (
     <FoAvailabilityClient 
-      initialRooms={rooms} 
-      roomTypes={roomTypes} 
+      initialRooms={(roomsRes.data as RoomWithDetails[]) || []}
+      roomTypes={(typesRes.data as RoomType[]) || []}
     />
   );
 }

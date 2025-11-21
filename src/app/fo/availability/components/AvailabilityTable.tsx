@@ -1,66 +1,80 @@
+// src/app/fo/availability/components/AvailabilityTable.tsx
 'use client';
 
-import { Table, Paper, Badge, Text, Box } from '@mantine/core';
-import { RoomWithType } from '../page';
+import { Table, Paper, Badge, Text, Group, Box, ThemeIcon } from '@mantine/core';
+import { IconUsers, IconCoin } from '@tabler/icons-react';
+import { RoomWithDetails } from '../page';
 
 interface Props {
-  rooms: RoomWithType[];
+  data: RoomWithDetails[];
 }
 
-export function AvailabilityTable({ rooms }: Props) {
-  // Helper functions dipindahkan ke dalam komponen tabel atau utils
+export function AvailabilityTable({ data }: Props) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available': return 'green';
       case 'occupied': return 'red';
       case 'maintenance': return 'orange';
+      case 'dirty': return 'yellow'; // Menambahkan status dirty jika ada
       default: return 'gray';
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'available': return 'Tersedia';
-      case 'occupied': return 'Terisi';
-      case 'maintenance': return 'Maintenance';
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  };
-
-  if (rooms.length === 0) {
+  if (data.length === 0) {
     return (
-      <Paper shadow="sm" p="lg" radius="md" withBorder>
-        <Text c="dimmed" ta="center" py="xl">
-          Tidak ada kamar yang cocok dengan filter atau pencarian Anda.
-        </Text>
+      <Paper p="xl" withBorder ta="center" c="dimmed" radius="md">
+        Tidak ada kamar yang sesuai dengan filter.
       </Paper>
     );
   }
 
   return (
-    <Paper shadow="sm" p="lg" radius="md" withBorder>
-      <Table striped highlightOnHover>
-        <Table.Thead>
+    <Paper shadow="sm" radius="md" withBorder style={{ overflow: 'hidden' }}>
+      <Table striped highlightOnHover verticalSpacing="xs">
+        <Table.Thead bg="gray.0">
           <Table.Tr>
-            <Table.Th>No. Kamar</Table.Th>
+            <Table.Th>Nomor Kamar</Table.Th>
             <Table.Th>Tipe Kamar</Table.Th>
-            <Table.Th>Harga/Malam</Table.Th>
+            <Table.Th>Harga / Malam</Table.Th>
             <Table.Th>Kapasitas</Table.Th>
-            <Table.Th>Status Saat Ini</Table.Th>
+            <Table.Th ta="center">Status</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {rooms.map((room) => (
+          {data.map((room) => (
             <Table.Tr key={room.id}>
-              <Table.Td fw={600}>{room.room_number}</Table.Td>
-              <Table.Td>{room.room_type?.name || 'N/A'}</Table.Td>
               <Table.Td>
-                Rp {room.room_type?.price_per_night.toLocaleString('id-ID') || '0'}
+                <Text fw={700} size="sm" c="dark.3">
+                  {room.room_number}
+                </Text>
               </Table.Td>
-              <Table.Td>{room.room_type?.capacity || 0} orang</Table.Td>
               <Table.Td>
-                <Badge color={getStatusColor(room.status)} variant="light">
-                  {getStatusLabel(room.status)}
+                <Badge variant="dot" color="blue" size="sm">
+                  {room.room_type?.name || 'Unknown'}
+                </Badge>
+              </Table.Td>
+              <Table.Td>
+                <Group gap={4}>
+                  <IconCoin size={14} style={{ opacity: 0.5 }} />
+                  <Text size="sm" fw={500} c="teal.7">
+                    Rp {room.room_type?.price_per_night.toLocaleString('id-ID')}
+                  </Text>
+                </Group>
+              </Table.Td>
+              <Table.Td>
+                <Group gap={4}>
+                  <IconUsers size={14} style={{ opacity: 0.5 }} />
+                  <Text size="sm">{room.room_type?.capacity} Org</Text>
+                </Group>
+              </Table.Td>
+              <Table.Td ta="center">
+                <Badge 
+                  color={getStatusColor(room.status)} 
+                  variant="light" 
+                  size="sm"
+                  tt="uppercase"
+                >
+                  {room.status}
                 </Badge>
               </Table.Td>
             </Table.Tr>

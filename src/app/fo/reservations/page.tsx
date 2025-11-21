@@ -1,15 +1,11 @@
+// src/app/fo/reservations/page.tsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import FoReservationsClient from './client';
 import { Reservation, Guest, Room, RoomType } from '@/core/types/database';
 
-// Interface Data
 export interface ReservationDetails extends Reservation {
-  // Hapus 'status' dari sini jika di interface Reservation (database.ts) sudah tidak ada.
-  // Jika di Reservation ada 'status' tapi di DB tidak, Anda perlu update database.ts juga.
-  // Berdasarkan schema Anda, 'status' TIDAK ADA di tabel reservations.
-  
   guest?: Pick<Guest, 'id' | 'full_name' | 'email' | 'phone_number'>;
   room?: Pick<Room, 'id' | 'room_number'> & {
     room_type?: Pick<RoomType, 'id' | 'name' | 'price_per_night'>;
@@ -44,16 +40,10 @@ export default async function FoReservationsPage() {
   const hotelId = userRole?.hotel_id;
 
   if (!hotelId) {
-    return (
-        <FoReservationsClient 
-            initialReservations={[]}
-            rooms={[]}
-            guests={[]}
-            hotelId=""
-        />
-    );
+    return <FoReservationsClient initialReservations={[]} guests={[]} rooms={[]} hotelId={null} />;
   }
 
+  // Fetch Data
   const [reservationsRes, roomsRes, guestsRes] = await Promise.all([
     supabase
       .from('reservations')
@@ -65,17 +55,11 @@ export default async function FoReservationsPage() {
       .eq('hotel_id', hotelId)
       .order('check_in_date', { ascending: false }),
     
-    supabase
-      .from('rooms')
-      .select(`*, room_type:room_types(*)`)
-      .eq('hotel_id', hotelId)
-      .order('room_number', { ascending: true }),
+    supabase.from('rooms').select(`*, room_type:room_types(*)`)
+      .eq('hotel_id', hotelId).eq('status', 'available').order('room_number', { ascending: true }),
 
-    supabase
-      .from('guests')
-      .select('id, full_name, email')
-      .eq('hotel_id', hotelId)
-      .order('full_name', { ascending: true })
+    supabase.from('guests').select('id, full_name, email')
+      .eq('hotel_id', hotelId).order('full_name', { ascending: true })
   ]);
 
   return (
