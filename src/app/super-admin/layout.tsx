@@ -13,6 +13,14 @@ import {
   UnstyledButton,
   Box,
   rem,
+  Autocomplete,
+  ActionIcon,
+  Indicator,
+  Popover,
+  ScrollArea,
+  ThemeIcon,
+  Divider,
+  Button,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -22,6 +30,11 @@ import {
   IconLogout,
   IconChevronDown,
   IconBuildingSkyscraper,
+  IconSearch,
+  IconBell,
+  IconInfoCircle,
+  IconUserPlus,
+  IconHomePlus,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -40,6 +53,41 @@ const navItems: NavItem[] = [
   { label: 'Manajemen User', icon: IconUsers, href: '/super-admin/users' },
 ];
 
+// Data Dummy Notifikasi
+const mockNotifications = [
+  {
+    id: 1,
+    title: 'Hotel Baru Terdaftar',
+    message: 'Santika baru saja ditambahkan ke sistem.',
+    time: '6 hari yang lalu',
+    icon: IconHomePlus,
+    color: 'teal',
+  },
+  {
+    id: 2,
+    title: 'User Baru',
+    message: 'Richand ditambahkan sebagai Hotel Manager.',
+    time: '7 hari yang lalu',
+    icon: IconUserPlus,
+    color: 'blue',
+  },
+  {
+    id: 3,
+    title: 'Peringatan Sistem',
+    message: 'Jadwal maintenance server akan dilakukan besok.',
+    time: '3 jam yang lalu',
+    icon: IconInfoCircle,
+    color: 'orange',
+  },
+];
+
+// Data untuk Autocomplete Search
+const searchData = [
+  { value: 'Dashboard', href: '/super-admin/dashboard' },
+  { value: 'Manajemen Hotel', href: '/super-admin/hotels' },
+  { value: 'Manajemen User', href: '/super-admin/users' },
+];
+
 const NAVBAR_WIDTH_COLLAPSED = rem(80);
 const NAVBAR_WIDTH_EXPANDED = rem(280);
 
@@ -50,6 +98,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
 
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = async () => {
     try {
@@ -63,21 +112,28 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleSearchSubmit = (value: string) => {
+    const target = searchData.find((item) => item.value === value);
+    if (target) {
+      router.push(target.href);
+      setSearchQuery(''); // Reset search setelah navigasi
+    }
+  };
+
   return (
     <AppShell
-      header={{ height: 60 }} // Sedikit diperkecil dari 70
+      header={{ height: 60 }}
       navbar={{
         width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
-      // PENTING: padding="md" dihapus agar header halaman bisa full-width (mentok)
-      padding="0" 
+      padding="0"
       styles={{
         main: {
           background: '#f5f6fa',
           transition: 'padding-left 0.25s ease',
-          paddingTop: '60px', // Kompensasi manual untuk header height karena padding=0
+          paddingTop: '60px',
         },
       }}
     >
@@ -86,21 +142,25 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           borderBottom: '1px solid #e5e7eb',
           background: 'white',
           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          zIndex: 101,
         }}
       >
-        <Group h="100%" px="md" justify="space-between">
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+          
+          {/* BAGIAN KIRI: Logo & Burger */}
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Group gap="xs">
+            <Group gap="xs" wrap="nowrap">
               <Box
                 style={{
-                  width: 32, // Diperkecil
+                  width: 32,
                   height: 32,
                   borderRadius: '6px',
                   background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  flexShrink: 0,
                 }}
               >
                 <IconBuildingSkyscraper size={18} stroke={1.5} color="white" />
@@ -122,33 +182,121 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
             </Group>
           </Group>
 
-          <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <UnstyledButton>
-                <Group gap={8}>
-                  <Avatar color="violet" radius="xl" size="sm">
-                    {profile?.full_name?.charAt(0) || 'A'}
-                  </Avatar>
-                  <Box style={{ flex: 1 }} visibleFrom="sm">
-                    <Text size="xs" fw={600}>{profile?.full_name || 'Admin'}</Text>
-                    <Text size="10px" c="dimmed" style={{ lineHeight: 1 }}>Super Admin</Text>
-                  </Box>
-                  <IconChevronDown size={14} stroke={1.5} />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
+          {/* BAGIAN TENGAH: Global Search */}
+          <Box style={{ flex: 1, maxWidth: 480 }} visibleFrom="xs" mx="md">
+            <Autocomplete
+              placeholder="Cari..."
+              // Ubah warna ikon agar lebih gelap sedikit
+              leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
+              data={searchData.map(item => item.value)}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onOptionSubmit={handleSearchSubmit}
+              size="sm"
+              radius="md"
+              styles={{
+                input: {
+                    // Ubah background menjadi lebih gelap (gray.2 / #e9ecef) agar kontras dengan header putih
+                    backgroundColor: 'var(--mantine-color-gray-2)', 
+                    border: '1px solid var(--mantine-color-gray-3)',
+                    color: 'var(--mantine-color-gray-9)',
+                    transition: 'all 0.2s ease',
+                    '&::placeholder': {
+                        color: 'var(--mantine-color-gray-6)',
+                    },
+                    '&:focus': {
+                        backgroundColor: 'white',
+                        borderColor: '#6366f1', // Warna primary saat fokus
+                        boxShadow: '0 0 0 1px #6366f1', // Tambahkan sedikit glow saat fokus
+                    }
+                }
+              }}
+            />
+          </Box>
 
-            <Menu.Dropdown>
-              <Menu.Item leftSection={<IconLogout size={14} stroke={1.5} />} color="red" onClick={handleLogout}>
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          {/* BAGIAN KANAN: Notifikasi & Profil */}
+          <Group gap="sm" wrap="nowrap">
+            
+            {/* Notifikasi Popover */}
+            <Popover width={320} position="bottom-end" withArrow shadow="md">
+              <Popover.Target>
+                <Indicator inline label="" size={8} color="red" offset={4} processing>
+                    <ActionIcon variant="subtle" color="gray" size="lg" aria-label="Notifications">
+                        <IconBell size={20} stroke={1.5} />
+                    </ActionIcon>
+                </Indicator>
+              </Popover.Target>
+              <Popover.Dropdown p={0}>
+                 <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifikasi Terbaru</Text>
+                 </Box>
+                 
+                 {/* PERBAIKAN DI SINI: Menggunakan 'mah' (max-height shorthand) */}
+                 <ScrollArea.Autosize mah={300}>
+                    {mockNotifications.map((item) => (
+                        <UnstyledButton 
+                            key={item.id} 
+                            p="sm" 
+                            style={{ 
+                                width: '100%', 
+                                borderBottom: '1px solid var(--mantine-color-gray-1)',
+                                transition: 'background-color 0.2s' 
+                            }}
+                            className="hover:bg-gray-50"
+                        >
+                            <Group align="flex-start" wrap="nowrap">
+                                <ThemeIcon variant="light" color={item.color} size="md" radius="md" mt={2}>
+                                    <item.icon size={16} />
+                                </ThemeIcon>
+                                <div style={{ flex: 1 }}>
+                                    <Text size="sm" fw={600} lineClamp={1}>{item.title}</Text>
+                                    <Text size="xs" c="dimmed" lineClamp={2} mt={2}>{item.message}</Text>
+                                    <Text size="10px" c="dimmed" mt={4} ta="right">{item.time}</Text>
+                                </div>
+                            </Group>
+                        </UnstyledButton>
+                    ))}
+                 </ScrollArea.Autosize>
+                 
+                 <Box p={8} ta="center">
+                    <Button variant="subtle" size="xs" fullWidth>Lihat Semua</Button>
+                 </Box>
+              </Popover.Dropdown>
+            </Popover>
+
+            {/* PERBAIKAN DI SINI: Menggunakan style={{ height: ... }} */}
+            <Divider orientation="vertical" style={{ height: 24 }} color="gray.3" />
+
+            {/* Profil Menu */}
+            <Menu shadow="md" width={200} position="bottom-end">
+              <Menu.Target>
+                <UnstyledButton>
+                  <Group gap={8}>
+                    <Avatar color="violet" radius="xl" size="sm">
+                      {profile?.full_name?.charAt(0) || 'A'}
+                    </Avatar>
+                    <Box style={{ flex: 1 }} visibleFrom="sm">
+                      <Text size="xs" fw={600}>{profile?.full_name || 'Admin'}</Text>
+                      <Text size="10px" c="dimmed" style={{ lineHeight: 1 }}>Super Admin</Text>
+                    </Box>
+                    <IconChevronDown size={14} stroke={1.5} color="gray" />
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+
+              <Menu.Dropdown>
+                <Menu.Label>Account</Menu.Label>
+                <Menu.Item leftSection={<IconLogout size={14} stroke={1.5} />} color="red" onClick={handleLogout}>
+                  Logout
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar
-        p="xs" // Padding navbar diperkecil
+        p="xs"
         onMouseEnter={() => setIsNavbarExpanded(true)}
         onMouseLeave={() => setIsNavbarExpanded(false)}
         style={{
@@ -179,7 +327,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                   root: {
                     borderRadius: rem(6),
                     marginBottom: rem(2),
-                    padding: `${rem(8)} ${rem(10)}`, // Padding item diperkecil
+                    padding: `${rem(8)} ${rem(10)}`,
                     fontSize: rem(13),
                     fontWeight: 500,
                     color: isActive ? '#4f46e5' : '#4b5563',
