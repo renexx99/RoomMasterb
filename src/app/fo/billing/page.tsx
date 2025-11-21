@@ -20,14 +20,31 @@ export default async function BillingPage() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/auth/login');
 
-  const { data: userRole } = await supabase
-    .from('user_roles')
-    .select('hotel_id')
-    .eq('user_id', session.user.id)
-    .not('hotel_id', 'is', null)
-    .maybeSingle();
+  // --- LOGIKA IMPERSONASI ---
+  let hotelId: string | null = null;
 
-  const hotelId = userRole?.hotel_id;
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('*, role:roles(name)')
+    .eq('user_id', session.user.id);
+
+  const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
+
+  if (isSuperAdmin) {
+    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
+    if (impersonatedId) {
+      hotelId = impersonatedId;
+    } else {
+      redirect('/super-admin/dashboard');
+    }
+  } else {
+    const operationalRole = userRoles?.find((ur: any) => 
+      ur.hotel_id && 
+      ['Front Office', 'Hotel Manager', 'Hotel Admin'].includes(ur.role?.name || '')
+    );
+    hotelId = operationalRole?.hotel_id || null;
+  }
+  // --- AKHIR LOGIKA IMPERSONASI ---
 
   if (!hotelId) {
     return <BillingClient initialReservations={[]} hotelId={null} />;

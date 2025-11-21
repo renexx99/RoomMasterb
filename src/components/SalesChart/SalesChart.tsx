@@ -109,7 +109,7 @@ const SalesChart = ({ ...others }: SalesChartProps) => {
     >
       <Group justify="space-between" mb="md">
         <Text size="lg" fw={600}>
-          Penjualan Mingguan (Contoh)
+          Penjualan Mingguan
         </Text>
         <ActionIcon variant="subtle">
           <IconDotsVertical size={16} />

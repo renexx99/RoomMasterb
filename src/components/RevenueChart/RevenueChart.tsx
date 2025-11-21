@@ -98,7 +98,7 @@ const RevenueChart = ({ ...others }: RevenueChartProps) => {
     >
       <Group justify="space-between" mb="md">
         <Text size="lg" fw={600}>
-          Total Pemasukan (Contoh)
+          Total Pemasukan
         </Text>
         <ActionIcon variant="subtle">
           <IconDotsVertical size={16} />

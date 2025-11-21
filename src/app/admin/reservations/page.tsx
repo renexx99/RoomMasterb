@@ -1,10 +1,10 @@
+// src/app/admin/reservations/page.tsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import ReservationsManagementClient from './client';
 import { Reservation, Guest, Room, RoomType } from '@/core/types/database';
 
-// Definisikan tipe gabungan untuk passing ke Client
 export interface ReservationDetails extends Reservation {
   guest?: Pick<Guest, 'id' | 'full_name' | 'email'>;
   room?: Pick<Room, 'id' | 'room_number'> & {
@@ -24,22 +24,38 @@ export interface GuestOption {
 
 export default async function ReservationsPage() {
   const cookieStore = await cookies();
-  // @ts-ignore - workaround tipe Next.js 15
+  // @ts-ignore
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   // 1. Cek User
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect('/auth/login');
 
-  // 2. Ambil Hotel ID
-  const { data: userRole } = await supabase
-    .from('user_roles')
-    .select('hotel_id')
-    .eq('user_id', user.id)
-    .not('hotel_id', 'is', null)
-    .maybeSingle();
+  // --- LOGIKA IMPERSONASI ---
+  let hotelId: string | null = null;
 
-  const hotelId = userRole?.hotel_id;
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('*, role:roles(name)')
+    .eq('user_id', user.id);
+
+  const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
+
+  if (isSuperAdmin) {
+    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
+    if (impersonatedId) {
+      hotelId = impersonatedId;
+    } else {
+      redirect('/super-admin/dashboard');
+    }
+  } else {
+    const adminRole = userRoles?.find((ur: any) => 
+      ur.hotel_id && 
+      ['Hotel Admin', 'Hotel Manager'].includes(ur.role?.name || '')
+    );
+    hotelId = adminRole?.hotel_id || null;
+  }
+  // --- AKHIR LOGIKA IMPERSONASI ---
 
   if (!hotelId) {
     return <ReservationsManagementClient 
@@ -52,7 +68,6 @@ export default async function ReservationsPage() {
 
   // 3. Fetch Data Secara Paralel
   const [reservationsRes, guestsRes, roomsRes] = await Promise.all([
-    // a. Fetch Reservasi (dengan join)
     supabase
       .from('reservations')
       .select(`
@@ -63,18 +78,14 @@ export default async function ReservationsPage() {
         )
       `)
       .eq('hotel_id', hotelId)
-      .order('created_at', { ascending: false }), // Default sort created_at desc untuk data awal
+      .order('created_at', { ascending: false }),
 
-    // b. Fetch Daftar Tamu (untuk dropdown)
     supabase
       .from('guests')
       .select('id, full_name, email')
       .eq('hotel_id', hotelId)
       .order('full_name', { ascending: true }),
 
-    // c. Fetch Kamar Tersedia (untuk dropdown form)
-    // Catatan: Idealnya ini memfilter kamar yang benar-benar kosong di tanggal tertentu,
-    // tapi untuk MVP kita ambil yang statusnya 'available' di master data.
     supabase
       .from('rooms')
       .select(`*, room_type:room_types(*)`)

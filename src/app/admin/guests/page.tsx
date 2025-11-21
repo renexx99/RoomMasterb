@@ -1,34 +1,48 @@
+// src/app/admin/guests/page.tsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import GuestsManagementClient from './client';
 
 export default async function GuestsPage() {
-  // PERBAIKAN: Tambahkan 'await' di sini
-  const cookieStore = await cookies(); 
-  
-  // @ts-ignore - workaround tipe untuk Next.js 15 + Supabase Auth Helpers
+  const cookieStore = await cookies();
+  // @ts-ignore
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
-  // 1. Cek User (Gunakan getUser() yang lebih aman daripada getSession())
+  // 1. Cek User
   const { data: { user }, error } = await supabase.auth.getUser();
-  
   if (error || !user) {
     redirect('/auth/login');
   }
 
-  // 2. Ambil Hotel ID dari user_roles
-  const { data: userRole } = await supabase
-    .from('user_roles')
-    .select('hotel_id')
-    .eq('user_id', user.id)
-    .not('hotel_id', 'is', null)
-    .maybeSingle();
+  // --- LOGIKA IMPERSONASI ---
+  let hotelId: string | null = null;
 
-  const hotelId = userRole?.hotel_id;
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('*, role:roles(name)')
+    .eq('user_id', user.id);
+
+  const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
+
+  if (isSuperAdmin) {
+    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
+    if (impersonatedId) {
+      hotelId = impersonatedId;
+    } else {
+      redirect('/super-admin/dashboard');
+    }
+  } else {
+    // Cari role admin/manager yang valid
+    const adminRole = userRoles?.find((ur: any) => 
+      ur.hotel_id && 
+      ['Hotel Admin', 'Hotel Manager'].includes(ur.role?.name || '')
+    );
+    hotelId = adminRole?.hotel_id || null;
+  }
+  // --- AKHIR LOGIKA IMPERSONASI ---
 
   if (!hotelId) {
-    // Tampilkan state kosong jika tidak ada hotel
     return <GuestsManagementClient initialGuests={[]} hotelId={null} />;
   }
 
