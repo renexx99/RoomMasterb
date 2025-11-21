@@ -186,7 +186,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           <Box style={{ flex: 1, maxWidth: 480 }} visibleFrom="xs" mx="md">
             <Autocomplete
               placeholder="Cari..."
-              // Ubah warna ikon agar lebih gelap sedikit
               leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
               data={searchData.map(item => item.value)}
               value={searchQuery}
@@ -196,7 +195,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               radius="md"
               styles={{
                 input: {
-                    // Ubah background menjadi lebih gelap (gray.2 / #e9ecef) agar kontras dengan header putih
                     backgroundColor: 'var(--mantine-color-gray-2)', 
                     border: '1px solid var(--mantine-color-gray-3)',
                     color: 'var(--mantine-color-gray-9)',
@@ -206,8 +204,8 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     },
                     '&:focus': {
                         backgroundColor: 'white',
-                        borderColor: '#6366f1', // Warna primary saat fokus
-                        boxShadow: '0 0 0 1px #6366f1', // Tambahkan sedikit glow saat fokus
+                        borderColor: '#6366f1', 
+                        boxShadow: '0 0 0 1px #6366f1', 
                     }
                 }
               }}
@@ -231,7 +229,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifikasi Terbaru</Text>
                  </Box>
                  
-                 {/* PERBAIKAN DI SINI: Menggunakan 'mah' (max-height shorthand) */}
                  <ScrollArea.Autosize mah={300}>
                     {mockNotifications.map((item) => (
                         <UnstyledButton 
@@ -264,7 +261,6 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               </Popover.Dropdown>
             </Popover>
 
-            {/* PERBAIKAN DI SINI: Menggunakan style={{ height: ... }} */}
             <Divider orientation="vertical" style={{ height: 24 }} color="gray.3" />
 
             {/* Profil Menu */}
@@ -304,8 +300,11 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           background: 'white',
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
           transition: 'width 0.25s ease-in-out',
+          display: 'flex',
+          flexDirection: 'column', // Pastikan layout kolom untuk footer di bawah
         }}
       >
+        {/* Bagian Menu Utama */}
         <AppShell.Section grow>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -353,6 +352,37 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               />
             );
           })}
+        </AppShell.Section>
+
+        {/* Bagian Logout (Ditambahkan di bawah) */}
+        <AppShell.Section>
+          <NavLink
+            label={isNavbarExpanded ? 'Logout' : undefined}
+            leftSection={<IconLogout size={18} stroke={1.5} />}
+            onClick={handleLogout}
+            styles={(theme) => ({
+              root: {
+                borderRadius: rem(6),
+                marginTop: rem(2), // Sedikit margin di atas
+                padding: `${rem(8)} ${rem(10)}`,
+                fontSize: rem(13),
+                fontWeight: 500,
+                color: '#ef4444', // Warna merah untuk logout
+                
+                '&:hover': {
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  color: '#ef4444',
+                },
+              },
+              label: {
+                fontSize: rem(13),
+                display: isNavbarExpanded ? 'block' : 'none',
+              },
+              leftSection: {
+                marginRight: isNavbarExpanded ? theme.spacing.sm : 0,
+              },
+            })}
+          />
         </AppShell.Section>
       </AppShell.Navbar>
 

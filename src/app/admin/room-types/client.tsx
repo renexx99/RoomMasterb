@@ -14,8 +14,10 @@ import {
   Grid,
   Modal,
   Stack,
+  Box,
+  ThemeIcon,
 } from '@mantine/core';
-import { IconPlus, IconArrowLeft, IconSearch } from '@tabler/icons-react';
+import { IconPlus, IconSearch, IconCategory } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import { RoomType } from '@/core/types/database';
@@ -30,6 +32,9 @@ interface ClientProps {
 
 export default function RoomTypesManagementClient({ initialRoomTypes, hotelId }: ClientProps) {
   const router = useRouter();
+
+  // Konsistensi Layout
+  const MAX_WIDTH = 1200;
 
   // State Data
   const roomTypes = initialRoomTypes;
@@ -120,7 +125,7 @@ export default function RoomTypesManagementClient({ initialRoomTypes, hotelId }:
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
-        <Paper withBorder p="xl" ta="center">
+        <Paper withBorder p="xl" ta="center" radius="md">
           <Text c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</Text>
         </Paper>
       </Container>
@@ -129,63 +134,96 @@ export default function RoomTypesManagementClient({ initialRoomTypes, hotelId }:
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '2rem 0', marginBottom: '2rem' }}>
-        <Container size="lg">
-          <Group justify="space-between" align="center">
-            <div>
-              <Group mb="xs">
-                <ActionIcon variant="transparent" color="white" onClick={() => router.push('/admin/dashboard')} aria-label="Kembali">
-                  <IconArrowLeft size={20} />
-                </ActionIcon>
-                <Title order={1} c="white">Tipe Kamar</Title>
+      {/* Header Ramping (Admin Green Style) */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          padding: '0.75rem 0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        }}
+      >
+        <Container fluid px="lg">
+          <Box maw={MAX_WIDTH} mx="auto">
+            <Group justify="space-between">
+              <Group gap="xs">
+                <ThemeIcon
+                  variant="light"
+                  color="white"
+                  size={34}
+                  radius="md"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+                >
+                  <IconCategory size={18} stroke={1.5} />
+                </ThemeIcon>
+                <div style={{ lineHeight: 1 }}>
+                  <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>
+                    Manajemen Tipe Kamar
+                  </Title>
+                  <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>
+                    Atur kategori, harga, dan kapasitas kamar
+                  </Text>
+                </div>
               </Group>
-              <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>Atur kategori dan harga kamar</Text>
-            </div>
-            <Button leftSection={<IconPlus size={18} />} onClick={handleOpenCreate} variant="white" color="teal">
-              Tambah Tipe
-            </Button>
-          </Group>
+
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={handleOpenCreate}
+                variant="white"
+                color="teal"
+                size="xs"
+                radius="md"
+                fw={600}
+              >
+                Tambah Tipe
+              </Button>
+            </Group>
+          </Box>
         </Container>
       </div>
 
-      {/* Konten */}
-      <Container size="lg" pb="xl">
-        <Stack gap="lg">
-          <Paper shadow="xs" p="md" radius="md" withBorder>
-            <Grid align="flex-end" gutter="md">
-              <Grid.Col span={{ base: 12, md: 8 }}>
-                <TextInput
-                  label="Cari Tipe Kamar"
-                  placeholder="Nama tipe atau deskripsi..."
-                  leftSection={<IconSearch size={16} />}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.currentTarget.value)}
-                />
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, md: 4 }}>
-                <Select
-                  label="Urutkan"
-                  value={sortBy}
-                  onChange={(v) => setSortBy(v || 'name_asc')}
-                  data={[
-                    { value: 'name_asc', label: 'Nama (A-Z)' },
-                    { value: 'name_desc', label: 'Nama (Z-A)' },
-                    { value: 'price_asc', label: 'Harga Termurah' },
-                    { value: 'price_desc', label: 'Harga Termahal' },
-                    { value: 'capacity_desc', label: 'Kapasitas Tertinggi' },
-                  ]}
-                />
-              </Grid.Col>
-            </Grid>
-          </Paper>
+      {/* Konten Utama */}
+      <Container fluid px="lg" py="md">
+        <Box maw={MAX_WIDTH} mx="auto">
+          <Stack gap="md">
+            
+            {/* Filter Section */}
+            <Paper shadow="xs" p="sm" radius="md" withBorder>
+              <Grid align="center" gutter="sm">
+                <Grid.Col span={{ base: 12, md: 8 }}>
+                  <TextInput
+                    placeholder="Cari nama tipe atau deskripsi..."
+                    leftSection={<IconSearch size={16} stroke={1.5} />}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                    size="sm"
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <Select
+                    placeholder="Urutkan"
+                    value={sortBy}
+                    onChange={(v) => setSortBy(v || 'name_asc')}
+                    data={[
+                      { value: 'name_asc', label: 'Nama (A-Z)' },
+                      { value: 'name_desc', label: 'Nama (Z-A)' },
+                      { value: 'price_asc', label: 'Harga Termurah' },
+                      { value: 'price_desc', label: 'Harga Termahal' },
+                      { value: 'capacity_desc', label: 'Kapasitas Tertinggi' },
+                    ]}
+                    size="sm"
+                  />
+                </Grid.Col>
+              </Grid>
+            </Paper>
 
-          <RoomTypesTable 
-            data={filteredAndSortedData}
-            onEdit={handleOpenEdit}
-            onDelete={handleOpenDelete}
-          />
-        </Stack>
+            {/* Tabel Data */}
+            <RoomTypesTable 
+              data={filteredAndSortedData}
+              onEdit={handleOpenEdit}
+              onDelete={handleOpenDelete}
+            />
+          </Stack>
+        </Box>
       </Container>
 
       {/* Modals */}
@@ -196,14 +234,21 @@ export default function RoomTypesManagementClient({ initialRoomTypes, hotelId }:
         itemToEdit={editingItem}
       />
 
-      <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered size="sm">
+      <Modal 
+        opened={deleteModalOpened} 
+        onClose={() => setDeleteModalOpened(false)} 
+        title="Konfirmasi Hapus" 
+        centered 
+        size="sm"
+        radius="md"
+      >
         <Stack gap="md">
           <Text size="sm">
             Apakah Anda yakin ingin menghapus tipe <strong>{deleteTarget?.name}</strong>?
           </Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
-            <Button color="red" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus</Button>
+            <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
+            <Button color="red" size="xs" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus</Button>
           </Group>
         </Stack>
       </Modal>

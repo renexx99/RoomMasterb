@@ -15,11 +15,13 @@ import {
   MultiSelect,
   Modal,
   Stack,
+  Box,
+  ThemeIcon,
 } from '@mantine/core';
 import { DatePickerInput, DatesProvider, DateValue } from '@mantine/dates';
 import 'dayjs/locale/id';
 import '@mantine/dates/styles.css';
-import { IconPlus, IconArrowLeft, IconSearch } from '@tabler/icons-react';
+import { IconPlus, IconArrowLeft, IconSearch, IconCalendarEvent } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 
@@ -42,6 +44,9 @@ export default function ReservationsManagementClient({
   hotelId 
 }: ClientProps) {
   const router = useRouter();
+
+  // Konsistensi Layout
+  const MAX_WIDTH = 1200;
 
   // State Data
   const reservations = initialReservations;
@@ -156,7 +161,7 @@ export default function ReservationsManagementClient({
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
-        <Paper withBorder p="xl" ta="center">
+        <Paper withBorder p="xl" ta="center" radius="md">
           <Text c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</Text>
         </Paper>
       </Container>
@@ -166,86 +171,109 @@ export default function ReservationsManagementClient({
   return (
     <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1, weekendDays: [0] }}>
       <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-        {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '2rem 0', marginBottom: '2rem' }}>
-          <Container size="lg">
-            <Group justify="space-between" align="center">
-              <div>
-                <Group mb="xs">
-                  <ActionIcon variant="transparent" color="white" onClick={() => router.push('/admin/dashboard')} aria-label="Kembali ke Dashboard">
-                    <IconArrowLeft size={20} />
-                  </ActionIcon>
-                  <Title order={1} c="white">Manajemen Reservasi</Title>
+        {/* Header Ramping */}
+        <div style={{ 
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+          padding: '0.75rem 0', 
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
+        }}>
+          <Container fluid px="lg">
+            <Box maw={MAX_WIDTH} mx="auto">
+              <Group justify="space-between" align="center">
+                <Group gap="xs">
+                  <ThemeIcon
+                    variant="light"
+                    color="white"
+                    size={34}
+                    radius="md"
+                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+                  >
+                    <IconCalendarEvent size={18} stroke={1.5} />
+                  </ThemeIcon>
+                  <div style={{ lineHeight: 1 }}>
+                    <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>Manajemen Reservasi</Title>
+                    <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>Kelola booking dan jadwal check-in/out</Text>
+                  </div>
                 </Group>
-                <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>Kelola reservasi hotel Anda</Text>
-              </div>
-              <Button leftSection={<IconPlus size={18} />} onClick={handleOpenCreate} variant="white" color="teal">
-                Buat Reservasi
-              </Button>
-            </Group>
+                <Button 
+                  leftSection={<IconPlus size={16} />} 
+                  onClick={handleOpenCreate} 
+                  variant="white" 
+                  color="teal"
+                  size="xs"
+                  radius="md"
+                  fw={600}
+                >
+                  Buat Reservasi
+                </Button>
+              </Group>
+            </Box>
           </Container>
         </div>
 
         {/* Konten Utama */}
-        <Container size="lg" pb="xl">
-          <Stack gap="lg">
-            {/* Filter */}
-            <Paper shadow="xs" p="md" radius="md" withBorder>
-              <Grid align="flex-end" gutter="md">
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <TextInput
-                    label="Cari Reservasi"
-                    placeholder="Nama tamu, email, atau no. kamar..."
-                    leftSection={<IconSearch size={16} />}
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.currentTarget.value)}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                  <DatePickerInput
-                    type="range"
-                    label="Rentang Check-in"
-                    placeholder="Pilih rentang tanggal"
-                    value={filterDateRange}
-                    onChange={setFilterDateRange}
-                    clearable
-                    valueFormat="DD MMM YYYY"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
-                  <MultiSelect
-                    label="Status Bayar"
-                    placeholder="Semua Status"
-                    data={['pending', 'paid', 'cancelled']}
-                    value={filterPaymentStatus}
-                    onChange={setFilterPaymentStatus}
-                    clearable
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 3 }}>
-                  <Select
-                    label="Urutkan"
-                    value={sortBy}
-                    onChange={(value) => setSortBy(value || 'check_in_asc')}
-                    data={[
-                      { value: 'check_in_asc', label: 'Check-in (Terdekat)' },
-                      { value: 'check_in_desc', label: 'Check-in (Terjauh)' },
-                      { value: 'price_asc', label: 'Harga Termurah' },
-                      { value: 'price_desc', label: 'Harga Termahal' },
-                      { value: 'guest_name_asc', label: 'Nama Tamu (A-Z)' },
-                    ]}
-                  />
-                </Grid.Col>
-              </Grid>
-            </Paper>
+        <Container fluid px="lg" py="md">
+          <Box maw={MAX_WIDTH} mx="auto">
+            <Stack gap="md">
+              
+              {/* Filter */}
+              <Paper shadow="xs" p="sm" radius="md" withBorder>
+                <Grid align="flex-end" gutter="sm">
+                  <Grid.Col span={{ base: 12, md: 4 }}>
+                    <TextInput
+                      placeholder="Nama tamu, email, atau no. kamar..."
+                      leftSection={<IconSearch size={16} stroke={1.5} />}
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.currentTarget.value)}
+                      size="sm"
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                    <DatePickerInput
+                      type="range"
+                      placeholder="Rentang Check-in"
+                      value={filterDateRange}
+                      onChange={setFilterDateRange}
+                      clearable
+                      valueFormat="DD MMM YYYY"
+                      size="sm"
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+                    <MultiSelect
+                      placeholder="Status Bayar"
+                      data={['pending', 'paid', 'cancelled']}
+                      value={filterPaymentStatus}
+                      onChange={setFilterPaymentStatus}
+                      clearable
+                      size="sm"
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 3 }}>
+                    <Select
+                      value={sortBy}
+                      onChange={(value) => setSortBy(value || 'check_in_asc')}
+                      data={[
+                        { value: 'check_in_asc', label: 'Check-in (Terdekat)' },
+                        { value: 'check_in_desc', label: 'Check-in (Terjauh)' },
+                        { value: 'price_asc', label: 'Harga Termurah' },
+                        { value: 'price_desc', label: 'Harga Termahal' },
+                        { value: 'guest_name_asc', label: 'Nama Tamu (A-Z)' },
+                      ]}
+                      size="sm"
+                    />
+                  </Grid.Col>
+                </Grid>
+              </Paper>
 
-            {/* Tabel */}
-            <ReservationsTable 
-              reservations={filteredAndSortedReservations}
-              onEdit={handleOpenEdit}
-              onDelete={handleOpenDelete}
-            />
-          </Stack>
+              {/* Tabel */}
+              <ReservationsTable 
+                reservations={filteredAndSortedReservations}
+                onEdit={handleOpenEdit}
+                onDelete={handleOpenDelete}
+              />
+            </Stack>
+          </Box>
         </Container>
 
         {/* Modals */}
@@ -258,12 +286,19 @@ export default function ReservationsManagementClient({
           availableRooms={availableRooms}
         />
 
-        <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered size="sm">
+        <Modal 
+          opened={deleteModalOpened} 
+          onClose={() => setDeleteModalOpened(false)} 
+          title="Konfirmasi Hapus" 
+          centered 
+          size="sm" 
+          radius="md"
+        >
           <Stack gap="md">
             <Text size="sm">Apakah Anda yakin ingin menghapus reservasi tamu <strong>{deleteTarget?.guest?.full_name}</strong>?</Text>
             <Group justify="flex-end">
-              <Button variant="default" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
-              <Button color="red" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus Reservasi</Button>
+              <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
+              <Button color="red" size="xs" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus Reservasi</Button>
             </Group>
           </Stack>
         </Modal>

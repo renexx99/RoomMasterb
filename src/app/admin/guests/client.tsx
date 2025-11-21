@@ -13,11 +13,15 @@ import {
   Text,
   Grid,
   Modal,
+  Stack,
+  Box,
+  ThemeIcon,
 } from '@mantine/core';
 import {
   IconPlus,
   IconArrowLeft,
   IconSearch,
+  IconUsersGroup,
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { Guest } from '@/core/types/database';
@@ -33,9 +37,12 @@ interface ClientProps {
 
 export default function GuestsManagementClient({ initialGuests, hotelId }: ClientProps) {
   const router = useRouter();
-  
-  // State Data (Diperbarui via props dari Server Component saat revalidatePath)
-  // Kita gunakan initialGuests langsung, tapi untuk filter/sort client-side kita butuh memo
+
+  // Konsistensi Layout
+  const MAX_WIDTH = 1200;
+
+  // State Data
+  // Diperbarui via props dari Server Component saat revalidatePath
   const guests = initialGuests;
 
   // Modal States
@@ -129,7 +136,7 @@ export default function GuestsManagementClient({ initialGuests, hotelId }: Clien
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
-         <Paper withBorder p="xl" ta="center">
+         <Paper withBorder p="xl" ta="center" radius="md">
            <Text size="lg" fw={500} c="dimmed">
              Akun Anda belum terhubung dengan Hotel manapun.
            </Text>
@@ -140,62 +147,92 @@ export default function GuestsManagementClient({ initialGuests, hotelId }: Clien
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '2rem 0', marginBottom: '2rem' }}>
-        <Container size="lg">
-          <Group justify="space-between" align="center">
-            <div>
-              <Group mb="xs">
-                <ActionIcon variant="transparent" color="white" onClick={() => router.push('/admin/dashboard')} aria-label="Kembali ke Dashboard">
-                  <IconArrowLeft size={20} />
-                </ActionIcon>
-                <Title order={1} c="white">Manajemen Tamu</Title>
+      {/* Header Ramping (Admin Green) */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+        padding: '0.75rem 0', 
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
+      }}>
+        <Container fluid px="lg">
+          <Box maw={MAX_WIDTH} mx="auto">
+            <Group justify="space-between" align="center">
+              <Group gap="xs">
+                <ThemeIcon
+                  variant="light"
+                  color="white"
+                  size={34}
+                  radius="md"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+                >
+                  <IconUsersGroup size={18} stroke={1.5} />
+                </ThemeIcon>
+                <div style={{ lineHeight: 1 }}>
+                  <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>Manajemen Tamu</Title>
+                  <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>Kelola database tamu dan riwayat kunjungan</Text>
+                </div>
               </Group>
-              <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>Kelola data tamu hotel Anda</Text>
-            </div>
-            <Button leftSection={<IconPlus size={18} />} onClick={handleOpenCreate} variant="white" color="teal">
-              Tambah Tamu
-            </Button>
-          </Group>
+              <Button 
+                leftSection={<IconPlus size={16} />} 
+                onClick={handleOpenCreate} 
+                variant="white" 
+                color="teal"
+                size="xs"
+                radius="md"
+                fw={600}
+              >
+                Tambah Tamu
+              </Button>
+            </Group>
+          </Box>
         </Container>
       </div>
 
       {/* Main Content */}
-      <Container size="lg" pb="xl">
-        <Paper shadow="xs" p="md" radius="md" withBorder mb="lg">
-          <Grid align="flex-end" gutter="md">
-            <Grid.Col span={{ base: 12, md: 8 }}>
-              <TextInput
-                label="Cari Tamu"
-                placeholder="Cari nama, email, atau no. telepon..."
-                leftSection={<IconSearch size={16} />}
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.currentTarget.value)}
-              />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 4 }}>
-              <Select
-                label="Urutkan"
-                value={sortBy}
-                onChange={(value) => setSortBy(value || 'name_asc')}
-                data={[
-                  { value: 'name_asc', label: 'Nama (A-Z)' },
-                  { value: 'name_desc', label: 'Nama (Z-A)' },
-                  { value: 'email_asc', label: 'Email (A-Z)' },
-                  { value: 'email_desc', label: 'Email (Z-A)' },
-                  { value: 'created_at_desc', label: 'Terbaru Ditambahkan' },
-                  { value: 'created_at_asc', label: 'Terlama Ditambahkan' },
-                ]}
-              />
-            </Grid.Col>
-          </Grid>
-        </Paper>
+      <Container fluid px="lg" py="md">
+        <Box maw={MAX_WIDTH} mx="auto">
+          <Stack gap="md">
+            
+            {/* Filter Section */}
+            <Paper shadow="xs" p="sm" radius="md" withBorder>
+              <Grid align="flex-end" gutter="sm">
+                <Grid.Col span={{ base: 12, md: 8 }}>
+                  <TextInput
+                    label="Cari Tamu"
+                    placeholder="Cari nama, email, atau no. telepon..."
+                    leftSection={<IconSearch size={16} stroke={1.5} />}
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.currentTarget.value)}
+                    size="sm"
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <Select
+                    label="Urutkan"
+                    placeholder="Urutkan berdasarkan"
+                    value={sortBy}
+                    onChange={(value) => setSortBy(value || 'name_asc')}
+                    data={[
+                      { value: 'name_asc', label: 'Nama (A-Z)' },
+                      { value: 'name_desc', label: 'Nama (Z-A)' },
+                      { value: 'email_asc', label: 'Email (A-Z)' },
+                      { value: 'email_desc', label: 'Email (Z-A)' },
+                      { value: 'created_at_desc', label: 'Terbaru Ditambahkan' },
+                      { value: 'created_at_asc', label: 'Terlama Ditambahkan' },
+                    ]}
+                    size="sm"
+                  />
+                </Grid.Col>
+              </Grid>
+            </Paper>
 
-        <GuestsTable 
-          guests={filteredAndSortedGuests}
-          onEdit={handleOpenEdit}
-          onDelete={handleOpenDelete}
-        />
+            {/* Tabel Tamu */}
+            <GuestsTable 
+              guests={filteredAndSortedGuests}
+              onEdit={handleOpenEdit}
+              onDelete={handleOpenDelete}
+            />
+          </Stack>
+        </Box>
       </Container>
 
       {/* Modal Form (Add/Edit) */}
@@ -213,18 +250,21 @@ export default function GuestsManagementClient({ initialGuests, hotelId }: Clien
         title="Konfirmasi Hapus Tamu" 
         centered 
         size="sm"
+        radius="md"
       >
-        <Text size="sm" mb="lg">
-          Apakah Anda yakin ingin menghapus data tamu <strong>{deleteTarget?.full_name}</strong>? Tindakan ini tidak dapat dibatalkan.
-        </Text>
-        <Group justify="flex-end">
-          <Button variant="default" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>
-            Batal
-          </Button>
-          <Button color="red" onClick={handleDeleteConfirm} loading={isSubmitting}>
-            Hapus Tamu
-          </Button>
-        </Group>
+        <Stack gap="md">
+          <Text size="sm">
+            Apakah Anda yakin ingin menghapus data tamu <strong>{deleteTarget?.full_name}</strong>? Tindakan ini tidak dapat dibatalkan.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>
+              Batal
+            </Button>
+            <Button color="red" size="xs" onClick={handleDeleteConfirm} loading={isSubmitting}>
+              Hapus Tamu
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </div>
   );

@@ -15,8 +15,10 @@ import {
   Modal,
   Stack,
   MultiSelect,
+  Box,
+  ThemeIcon,
 } from '@mantine/core';
-import { IconPlus, IconArrowLeft, IconSearch } from '@tabler/icons-react';
+import { IconPlus, IconArrowLeft, IconSearch, IconBed } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import { RoomType } from '@/core/types/database';
@@ -33,6 +35,9 @@ interface ClientProps {
 
 export default function RoomsManagementClient({ initialRooms, roomTypes, hotelId }: ClientProps) {
   const router = useRouter();
+
+  // Konsistensi Layout
+  const MAX_WIDTH = 1200;
 
   // State Data
   const rooms = initialRooms;
@@ -114,7 +119,7 @@ export default function RoomsManagementClient({ initialRooms, roomTypes, hotelId
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
-        <Paper withBorder p="xl" ta="center">
+        <Paper withBorder p="xl" ta="center" radius="md">
           <Text c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</Text>
         </Paper>
       </Container>
@@ -123,75 +128,102 @@ export default function RoomsManagementClient({ initialRooms, roomTypes, hotelId
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '2rem 0', marginBottom: '2rem' }}>
-        <Container size="lg">
-          <Group justify="space-between" align="center">
-            <div>
-              <Group mb="xs">
-                <ActionIcon variant="transparent" color="white" onClick={() => router.push('/admin/dashboard')} aria-label="Kembali">
-                  <IconArrowLeft size={20} />
-                </ActionIcon>
-                <Title order={1} c="white">Manajemen Kamar</Title>
+      {/* Header Ramping */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+        padding: '0.75rem 0', 
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
+      }}>
+        <Container fluid px="lg">
+          <Box maw={MAX_WIDTH} mx="auto">
+            <Group justify="space-between" align="center">
+              <Group gap="xs">
+                 <ThemeIcon
+                  variant="light"
+                  color="white"
+                  size={34}
+                  radius="md"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+                >
+                  <IconBed size={18} stroke={1.5} />
+                </ThemeIcon>
+                <div style={{ lineHeight: 1 }}>
+                  <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>Manajemen Kamar</Title>
+                  <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>Kelola inventaris kamar fisik dan statusnya</Text>
+                </div>
               </Group>
-              <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>Kelola daftar kamar fisik dan statusnya</Text>
-            </div>
-            <Button leftSection={<IconPlus size={18} />} onClick={handleOpenCreate} variant="white" color="teal">
-              Tambah Kamar
-            </Button>
-          </Group>
+              <Button 
+                leftSection={<IconPlus size={16} />} 
+                onClick={handleOpenCreate} 
+                variant="white" 
+                color="teal"
+                size="xs"
+                radius="md"
+                fw={600}
+              >
+                Tambah Kamar
+              </Button>
+            </Group>
+          </Box>
         </Container>
       </div>
 
       {/* Content */}
-      <Container size="lg" pb="xl">
-        <Stack gap="lg">
-          {/* Filters */}
-          <Paper shadow="xs" p="md" radius="md" withBorder>
-            <Grid align="flex-end" gutter="md">
-              <Grid.Col span={{ base: 12, md: 4 }}>
-                <TextInput
-                  label="Cari Nomor Kamar"
-                  placeholder="Contoh: 101"
-                  leftSection={<IconSearch size={16} />}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.currentTarget.value)}
-                />
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                 <Select
-                  label="Tipe Kamar"
-                  placeholder="Semua Tipe"
-                  data={typeOptions}
-                  value={typeFilter}
-                  onChange={setTypeFilter}
-                  clearable
-                />
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                <MultiSelect
-                  label="Status Kamar"
-                  placeholder="Filter Status"
-                  data={[
-                    { value: 'available', label: 'Tersedia' },
-                    { value: 'occupied', label: 'Terisi' },
-                    { value: 'maintenance', label: 'Perbaikan' },
-                    { value: 'dirty', label: 'Kotor' },
-                  ]}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  clearable
-                />
-              </Grid.Col>
-            </Grid>
-          </Paper>
+      <Container fluid px="lg" py="md">
+        <Box maw={MAX_WIDTH} mx="auto">
+          <Stack gap="md">
+            
+            {/* Filters */}
+            <Paper shadow="xs" p="sm" radius="md" withBorder>
+              <Grid align="flex-end" gutter="sm">
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <TextInput
+                    label="Cari Nomor Kamar"
+                    placeholder="Contoh: 101"
+                    leftSection={<IconSearch size={16} stroke={1.5} />}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                    size="sm"
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                   <Select
+                    label="Tipe Kamar"
+                    placeholder="Semua Tipe"
+                    data={typeOptions}
+                    value={typeFilter}
+                    onChange={setTypeFilter}
+                    clearable
+                    searchable
+                    size="sm"
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                  <MultiSelect
+                    label="Status Kamar"
+                    placeholder="Filter Status"
+                    data={[
+                      { value: 'available', label: 'Tersedia' },
+                      { value: 'occupied', label: 'Terisi' },
+                      { value: 'maintenance', label: 'Perbaikan' },
+                      { value: 'dirty', label: 'Kotor' },
+                    ]}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    clearable
+                    size="sm"
+                  />
+                </Grid.Col>
+              </Grid>
+            </Paper>
 
-          <RoomsTable 
-            data={filteredRooms}
-            onEdit={handleOpenEdit}
-            onDelete={handleOpenDelete}
-          />
-        </Stack>
+            <RoomsTable 
+              data={filteredRooms}
+              onEdit={handleOpenEdit}
+              onDelete={handleOpenDelete}
+            />
+          </Stack>
+        </Box>
       </Container>
 
       {/* Modals */}
@@ -203,14 +235,21 @@ export default function RoomsManagementClient({ initialRooms, roomTypes, hotelId
         roomTypes={roomTypes}
       />
 
-      <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered size="sm">
+      <Modal 
+        opened={deleteModalOpened} 
+        onClose={() => setDeleteModalOpened(false)} 
+        title="Konfirmasi Hapus" 
+        centered 
+        size="sm" 
+        radius="md"
+      >
         <Stack gap="md">
           <Text size="sm">
             Apakah Anda yakin ingin menghapus Kamar <strong>{deleteTarget?.room_number}</strong>?
           </Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
-            <Button color="red" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus</Button>
+            <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
+            <Button color="red" size="xs" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus</Button>
           </Group>
         </Stack>
       </Modal>

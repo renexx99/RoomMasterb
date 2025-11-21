@@ -1,8 +1,25 @@
 'use client';
 
-import { Container, Title, Stack, Grid, Paper, Text, Group, Badge, Box } from '@mantine/core';
+import {
+  Container,
+  Title,
+  Grid,
+  Paper,
+  Text,
+  Group,
+  ThemeIcon,
+  SimpleGrid,
+  Box,
+} from '@mantine/core';
+import {
+  IconBed,
+  IconCalendarCheck,
+  IconClock,
+  IconUsers,
+  IconLayoutDashboard,
+  IconTrendingUp,
+} from '@tabler/icons-react';
 import { DashboardData } from './page';
-import { DashboardStats } from './components/DashboardStats';
 import { RecentReservationsTable } from './components/RecentReservationsTable';
 import SalesChart from '@/components/SalesChart/SalesChart';
 import RevenueChart from '@/components/RevenueChart/RevenueChart';
@@ -12,64 +29,172 @@ interface ClientProps {
 }
 
 export default function AdminDashboardClient({ data }: ClientProps) {
-  // 1. DESTRUKTURISASI DATA
   const { stats, recentReservations, hotelId } = data;
 
-  // 2. PANGGIL HOOKS DI SINI (JIKA ADA)
-  // Meskipun saat ini belum ada hooks eksplisit, menempatkan struktur ini
-  // mencegah error jika nanti Anda menambahkan useMantineTheme(), useRouter(), dll.
-  // const theme = useMantineTheme(); 
+  // Membatasi lebar agar tampilan lebih compact dan fokus di tengah
+  const MAX_WIDTH = 1200; 
 
-  // 3. LOGIKA RENDERING (RETURN)
-  // Kita gunakan satu return utama dan kondisikan kontennya di dalam JSX
-  
-  // Jika tidak ada Hotel ID (Kondisi Error/Belum Assign)
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
-         <Paper withBorder p="xl" ta="center" radius="md">
-           <Title order={3} mb="sm">Akses Terbatas</Title>
-           <Text size="lg" fw={500} c="dimmed">
-             Akun Anda belum terhubung dengan Hotel manapun.
-           </Text>
-           <Text size="sm" c="dimmed">Hubungi Super Admin untuk penugasan.</Text>
-         </Paper>
-       </Container>
+        <Paper withBorder p="xl" ta="center" radius="md" shadow="sm">
+          <Title order={3} mb="sm">Akses Terbatas</Title>
+          <Text c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</Text>
+        </Paper>
+      </Container>
     );
   }
 
-  // Jika Hotel ID ada (Render Dashboard Normal)
+  const statCards = [
+    {
+      title: 'Kamar Tersedia',
+      value: stats.availableRooms,
+      icon: IconBed,
+      color: 'green',
+      desc: 'Siap dijual',
+      diff: 12,
+    },
+    {
+      title: 'Check-in Hari Ini',
+      value: stats.todayCheckIns,
+      icon: IconCalendarCheck,
+      color: 'blue',
+      desc: 'Akan datang',
+      diff: -5,
+    },
+    {
+      title: 'Tamu In-House',
+      value: stats.activeReservations,
+      icon: IconClock,
+      color: 'orange',
+      desc: 'Sedang menginap',
+      diff: 0,
+    },
+    {
+      title: 'Total Tamu',
+      value: stats.totalGuests,
+      icon: IconUsers,
+      color: 'violet',
+      desc: 'Database tamu',
+      diff: 8,
+    },
+  ];
+
   return (
-    <Container fluid p="lg">
-      <Stack gap="lg">
-        <Group justify="space-between">
-            <Title order={2} fw={600}>Dashboard Admin</Title>
-            <Badge size="lg" variant="light" color="blue">{stats.hotelName}</Badge>
-        </Group>
+    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
+      {/* Banner Header: Compact & Rapi */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          padding: '0.75rem 0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        }}
+      >
+        <Container fluid px="lg">
+          <Box maw={MAX_WIDTH} mx="auto">
+            <Group gap="xs">
+              <ThemeIcon
+                variant="light"
+                color="white"
+                size={34} // Icon header lebih kecil
+                radius="md"
+                style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+              >
+                <IconLayoutDashboard size={18} stroke={1.5} />
+              </ThemeIcon>
+              <div style={{ lineHeight: 1 }}>
+                <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>
+                  Dashboard Admin
+                </Title>
+                <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>
+                  {stats.hotelName} &bull; Ringkasan Operasional
+                </Text>
+              </div>
+            </Group>
+          </Box>
+        </Container>
+      </div>
 
-        {/* Kartu Statistik */}
-        <DashboardStats stats={stats} />
+      {/* Konten Utama: Compact Layout */}
+      <Container fluid px="lg" py="md">
+        <Box maw={MAX_WIDTH} mx="auto">
+          
+          {/* Baris 1: Kartu Statistik (Ukuran diperkecil) */}
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mb="lg">
+            {statCards.map((stat) => {
+              const isPositive = stat.diff >= 0;
+              return (
+                <Paper key={stat.title} p="sm" radius="md" shadow="xs" withBorder>
+                  <Group justify="space-between" align="flex-start">
+                    <div>
+                      <Text c="dimmed" size="xs" tt="uppercase" fw={700} style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
+                        {stat.title}
+                      </Text>
+                      <Text fw={700} style={{ fontSize: '1.35rem', lineHeight: 1, marginTop: 6, color: '#333' }}>
+                        {stat.value}
+                      </Text>
+                    </div>
+                    <ThemeIcon
+                      color={stat.color}
+                      variant="light"
+                      size={36} // Icon dalam kartu lebih kecil
+                      radius="md"
+                    >
+                      <stat.icon size="1.1rem" stroke={1.5} />
+                    </ThemeIcon>
+                  </Group>
+                  
+                  <Group mt="sm" gap={6}>
+                    {stat.diff !== 0 && (
+                      <Text c={isPositive ? 'teal' : 'red'} size="xs" fw={600} style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem' }}>
+                        <IconTrendingUp 
+                          size={12} 
+                          style={{ marginRight: 2, transform: isPositive ? 'none' : 'scaleY(-1)' }} 
+                        />
+                        {Math.abs(stat.diff)}%
+                      </Text>
+                    )}
+                    <Text c="dimmed" size="xs" style={{ fontSize: '0.75rem' }}>
+                      {stat.desc}
+                    </Text>
+                  </Group>
+                </Paper>
+              );
+            })}
+          </SimpleGrid>
 
-        {/* Grafik */}
-        <Grid>
-          <Grid.Col span={{ base: 12, md: 7 }}>
-            {/* Pastikan komponen SalesChart tidak error internal */}
-            <SalesChart withBorder radius="md" />
-          </Grid.Col>
+          {/* Baris 2: Grafik Analitik (Lebih pendek) */}
+          <Grid gutter="md" mb="lg">
+            {/* Revenue Chart */}
+            <Grid.Col span={{ base: 12, md: 8 }}>
+              <Paper shadow="xs" radius="md" p="sm" withBorder style={{ height: '100%', minHeight: 280 }}>
+                 {/* Mengurangi minHeight agar grafik tidak terlalu tinggi */}
+                 <RevenueChart style={{ height: '100%', width: '100%', border: 'none', boxShadow: 'none' }} />
+              </Paper>
+            </Grid.Col>
 
-          <Grid.Col span={{ base: 12, md: 5 }}>
-             {/* Pastikan komponen RevenueChart tidak error internal */}
-            <RevenueChart withBorder radius="md" />
-          </Grid.Col>
-        </Grid>
+            {/* Sales/Donut Chart */}
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Paper shadow="xs" radius="md" p="sm" withBorder style={{ height: '100%', minHeight: 280 }}>
+                  <SalesChart style={{ height: '100%', width: '100%', border: 'none', boxShadow: 'none' }} />
+              </Paper>
+            </Grid.Col>
+          </Grid>
 
-        {/* Tabel Reservasi */}
-        <Stack gap="sm">
-            <Title order={3}>5 Reservasi Terbaru</Title>
+          {/* Baris 3: Tabel Reservasi Terbaru */}
+          <Paper p="sm" radius="md" shadow="xs" withBorder>
+            <Group justify="space-between" mb="xs">
+              <Title order={5} style={{ fontSize: '0.95rem' }}>Reservasi Terbaru</Title>
+              <Text size="xs" c="dimmed" style={{ cursor: 'pointer', fontSize: '0.75rem' }} td="underline">
+                Lihat Semua
+              </Text>
+            </Group>
+            {/* Tabel otomatis menyesuaikan padding dari parent Paper */}
             <RecentReservationsTable reservations={recentReservations} />
-        </Stack>
-        
-      </Stack>
-    </Container>
+          </Paper>
+
+        </Box>
+      </Container>
+    </div>
   );
 }
