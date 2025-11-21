@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/core/config/supabaseClient';
 import { Profile, UserRoleAssignment } from '@/core/types/database';
+import { deleteCookie, setCookie } from 'cookies-next';
 
 // Combine Profile with Role information
 interface ProfileWithRoles extends Profile {
@@ -99,6 +100,7 @@ export function useAuth() {
           }
 
           // B. Cek apakah sedang dalam mode IMPERSONASI (Login As)
+          // Kita cek sessionStorage (Client side source of truth)
           const impersonationData = sessionStorage.getItem('impersonate_data');
           let finalProfile = originalProfile;
           let isImpersonating = false;
@@ -187,27 +189,40 @@ export function useAuth() {
 
 /**
  * Memulai sesi impersonasi (Login As).
- * Menyimpan target hotel dan role ke sessionStorage lalu me-refresh halaman.
+ * Menyimpan target hotel dan role ke Cookies (untuk Server Component) 
+ * dan sessionStorage (untuk Client Component), lalu me-refresh halaman.
  */
 export const startImpersonation = (hotelId: string, roleName: string) => {
   if (typeof window !== 'undefined') {
+    // 1. Simpan ke Client Storage (untuk UI Client side dan persistensi tab)
     sessionStorage.setItem('impersonate_data', JSON.stringify({ hotelId, roleName }));
     
-    // Redirect ke dashboard yang sesuai berdasarkan role yang dipilih
+    // 2. Simpan ke Cookies (agar Server Components di Next.js bisa membacanya)
+    // Set expire 1 jam
+    setCookie('impersonated_hotel_id', hotelId, { maxAge: 60 * 60 });
+    setCookie('impersonated_role', roleName, { maxAge: 60 * 60 });
+
+    // 3. Redirect ke dashboard yang sesuai
     if (roleName === 'Hotel Manager') window.location.href = '/manager/dashboard';
     else if (roleName === 'Front Office') window.location.href = '/fo/dashboard';
     else if (roleName === 'Hotel Admin') window.location.href = '/admin/dashboard';
-    else window.location.reload(); // Default refresh
+    else window.location.reload(); 
   }
 };
 
 /**
  * Menghentikan sesi impersonasi.
- * Menghapus data dari sessionStorage dan kembali ke dashboard Super Admin.
+ * Menghapus data dari sessionStorage dan Cookies, lalu kembali ke dashboard Super Admin.
  */
 export const stopImpersonation = () => {
   if (typeof window !== 'undefined') {
+    // Hapus data sesi client
     sessionStorage.removeItem('impersonate_data');
+    
+    // Hapus cookies server
+    deleteCookie('impersonated_hotel_id');
+    deleteCookie('impersonated_role');
+    
     window.location.href = '/super-admin/dashboard';
   }
 };

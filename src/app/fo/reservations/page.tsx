@@ -30,20 +30,42 @@ export default async function FoReservationsPage() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/auth/login');
 
-  const { data: userRole } = await supabase
-    .from('user_roles')
-    .select('hotel_id')
-    .eq('user_id', session.user.id)
-    .not('hotel_id', 'is', null)
-    .maybeSingle();
+  // --- LOGIKA IMPERSONASI (DIPERBARUI) ---
+  let hotelId: string | null = null;
 
-  const hotelId = userRole?.hotel_id;
+  // 1. Ambil roles user saat ini
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('*, role:roles(name)')
+    .eq('user_id', session.user.id);
+
+  // 2. Cek apakah Super Admin
+  const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
+
+  if (isSuperAdmin) {
+    // 3a. Jika Super Admin, ambil dari Cookie
+    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
+    if (impersonatedId) {
+      hotelId = impersonatedId;
+    } else {
+      // Jika tidak ada cookie, kembalikan ke dashboard utama super admin
+      redirect('/super-admin/dashboard');
+    }
+  } else {
+    // 3b. Jika User Biasa, ambil dari DB
+    const operationalRole = userRoles?.find((ur: any) => 
+      ur.hotel_id && 
+      ['Front Office', 'Hotel Manager', 'Hotel Admin'].includes(ur.role?.name || '')
+    );
+    hotelId = operationalRole?.hotel_id || null;
+  }
+  // --- AKHIR LOGIKA IMPERSONASI ---
 
   if (!hotelId) {
     return <FoReservationsClient initialReservations={[]} guests={[]} rooms={[]} hotelId={null} />;
   }
 
-  // Fetch Data
+  // 4. Fetch Data (Kode lama, tidak berubah, hanya menggunakan hotelId yang sudah didapat di atas)
   const [reservationsRes, roomsRes, guestsRes] = await Promise.all([
     supabase
       .from('reservations')

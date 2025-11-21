@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import ManagerDashboardClient from './client';
 
-// Interface untuk data yang dikirim ke client
 export interface ManagerDashboardData {
   stats: {
     availableRooms: number;
@@ -13,7 +12,7 @@ export interface ManagerDashboardData {
     guestsInHouse: number;
     hotelName: string;
   };
-  recentActivities: any[]; // Placeholder untuk data tabel
+  recentActivities: any[];
   hotelId: string;
 }
 
@@ -26,18 +25,34 @@ export default async function ManagerDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/auth/login');
 
-  // 2. Ambil Hotel ID
-  const { data: userRole } = await supabase
+  // 2. Ambil Role Asli User & Cek Impersonasi
+  let hotelId: string | null = null;
+
+  // A. Ambil data roles user dari DB
+  const { data: userRoles } = await supabase
     .from('user_roles')
-    .select('hotel_id')
-    .eq('user_id', user.id)
-    .not('hotel_id', 'is', null)
-    .limit(1)
-    .single();
+    .select('*, role:roles(name)')
+    .eq('user_id', user.id);
 
-  const hotelId = userRole?.hotel_id;
+  const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
 
-  // Jika tidak ada hotel, tampilkan state kosong di client
+  // B. Logika Penentuan Hotel ID
+  if (isSuperAdmin) {
+    // Jika Super Admin, cek apakah ada cookie impersonasi
+    const impersonatedHotelId = cookieStore.get('impersonated_hotel_id')?.value;
+    if (impersonatedHotelId) {
+      hotelId = impersonatedHotelId;
+    } else {
+      // Jika Super Admin masuk halaman ini tanpa impersonasi, redirect balik
+      redirect('/super-admin/dashboard');
+    }
+  } else {
+    // Jika User Biasa (Manager asli), ambil dari role mereka
+    const managerRole = userRoles?.find((ur: any) => ur.hotel_id && ur.role?.name === 'Hotel Manager');
+    hotelId = managerRole?.hotel_id;
+  }
+
+  // Jika tetap tidak ada hotel, tampilkan kosong
   if (!hotelId) {
     return <ManagerDashboardClient data={{ 
         stats: { availableRooms: 0, todayCheckIns: 0, todayCheckOuts: 0, guestsInHouse: 0, hotelName: 'No Hotel' }, 
@@ -46,7 +61,7 @@ export default async function ManagerDashboardPage() {
     }} />;
   }
 
-  // 3. Fetch Statistik secara Paralel
+  // 3. Fetch Statistik (Sama seperti sebelumnya)
   const today = new Date().toISOString().split('T')[0];
 
   const [
@@ -72,7 +87,7 @@ export default async function ManagerDashboardPage() {
       todayCheckOuts: todayCheckOutsRes.count || 0,
       guestsInHouse: guestsInHouseRes.count || 0,
     },
-    recentActivities: [], // Nanti diisi data real atau fetch di client
+    recentActivities: [],
   };
 
   return <ManagerDashboardClient data={dashboardData} />;
