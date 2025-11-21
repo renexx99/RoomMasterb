@@ -3,30 +3,31 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Container, Title, Group, TextInput, Stack, Paper, ActionIcon, Text, Grid, MultiSelect, Select, Box, ThemeIcon
+  Container, Title, Group, TextInput, Stack, Paper, ActionIcon, Text, 
+  Grid, MultiSelect, Box, ThemeIcon, Badge
 } from '@mantine/core';
-import { IconArrowLeft, IconSearch, IconCalendarSearch } from '@tabler/icons-react';
+import { IconArrowLeft, IconSearch, IconCalendarSearch, IconFilter } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import ReservationTapeChart from '@/components/ReservationChart/ReservationTapeChart';
 import { RoomType } from '@/core/types/database';
-import { RoomWithDetails } from './page';
-import { AvailabilityTable } from './components/AvailabilityTable';
+import { RoomWithDetails, ReservationDetails } from './page';
 
 interface ClientProps {
   initialRooms: RoomWithDetails[];
+  initialReservations: ReservationDetails[]; // Tambahan props
   roomTypes: RoomType[];
 }
 
-export default function FoAvailabilityClient({ initialRooms, roomTypes }: ClientProps) {
+export default function FoAvailabilityClient({ initialRooms, initialReservations, roomTypes }: ClientProps) {
   const router = useRouter();
-  const MAX_WIDTH = 1200;
+  const MAX_WIDTH = 1400; // Perlebar container agar chart lebih lega
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('room_number_asc');
   const [filterType, setFilterType] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
 
-  // --- Filter Logic ---
+  // --- Filter Rooms Logic ---
+  // Chart resource hanya akan menampilkan kamar yang sesuai filter
   const filteredRooms = useMemo(() => {
     let result = [...initialRooms];
 
@@ -40,47 +41,42 @@ export default function FoAvailabilityClient({ initialRooms, roomTypes }: Client
     if (filterStatus.length > 0) {
       result = result.filter((r) => filterStatus.includes(r.status));
     }
-
-    switch (sortBy) {
-      case 'room_number_desc':
-        result.sort((a, b) => b.room_number.localeCompare(a.room_number, undefined, { numeric: true }));
-        break;
-      case 'price_asc':
-        result.sort((a, b) => (a.room_type?.price_per_night || 0) - (b.room_type?.price_per_night || 0));
-        break;
-      default: // room_number_asc
-        result.sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }));
-        break;
-    }
-
+    
     return result;
-  }, [initialRooms, searchTerm, sortBy, filterType, filterStatus]);
+  }, [initialRooms, searchTerm, filterType, filterStatus]);
 
+  // Options
   const roomTypeOptions = roomTypes.map((rt) => ({ value: rt.id, label: rt.name }));
   const statusOptions = [
-    { value: 'available', label: 'Available' },
-    { value: 'occupied', label: 'Occupied' },
+    { value: 'available', label: 'Available (Tersedia)' },
+    { value: 'occupied', label: 'Occupied (Terisi)' },
     { value: 'maintenance', label: 'Maintenance' },
-    { value: 'dirty', label: 'Dirty' },
+    { value: 'dirty', label: 'Dirty (Kotor)' },
   ];
+
+  const handleEventClick = (id: string) => {
+    // Navigasi ke detail reservasi (bisa juga buka modal di sini)
+    // router.push(`/fo/reservations?id=${id}`);
+    console.log("Klik event:", id);
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header Ramping */}
-      <div style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', padding: '0.75rem 0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <Container fluid px="lg">
+      {/* Header */}
+      <div style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', padding: '1rem 0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+        <Container fluid px="xl">
           <Box maw={MAX_WIDTH} mx="auto">
             <Group justify="space-between" align="center">
-              <Group gap="xs">
-                <ThemeIcon variant="light" color="white" size="lg" radius="md" style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}>
-                  <IconCalendarSearch size={20} stroke={1.5} />
+              <Group gap="sm">
+                <ThemeIcon variant="white" color="teal" size="xl" radius="md">
+                  <IconCalendarSearch size={24} stroke={1.5} />
                 </ThemeIcon>
-                <div style={{ lineHeight: 1 }}>
-                  <Title order={4} c="white" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.2 }}>Ketersediaan Kamar</Title>
-                  <Text c="white" opacity={0.8} size="xs" mt={2}>Monitoring status kamar & timeline</Text>
+                <div>
+                  <Title order={3} c="white">Ketersediaan & Timeline</Title>
+                  <Text c="teal.0" size="sm" opacity={0.9}>Monitoring okupansi kamar secara visual</Text>
                 </div>
               </Group>
-              <ActionIcon variant="white" color="teal" size="lg" radius="md" onClick={() => router.push('/fo/dashboard')} aria-label="Kembali">
+              <ActionIcon variant="white" color="teal" size="lg" radius="md" onClick={() => router.push('/fo/dashboard')}>
                 <IconArrowLeft size={20} />
               </ActionIcon>
             </Group>
@@ -89,70 +85,70 @@ export default function FoAvailabilityClient({ initialRooms, roomTypes }: Client
       </div>
 
       {/* Konten Utama */}
-      <Container fluid px="lg" py="md">
+      <Container fluid px="xl" py="lg">
         <Box maw={MAX_WIDTH} mx="auto">
           <Stack gap="lg">
             
-            {/* Section: Visual Chart */}
-            <Paper shadow="sm" p="sm" radius="md" withBorder>
-              <Group mb="md">
-                <Title order={5}>Timeline Okupansi</Title>
-              </Group>
-              <ReservationTapeChart />
-            </Paper>
-
-            {/* Section: Filter & Table */}
-            <Paper shadow="xs" p="sm" radius="md" withBorder>
-              <Grid align="flex-end" gutter="sm">
+            {/* Filter Bar (Di Atas Chart) */}
+            <Paper shadow="xs" p="md" radius="md" withBorder>
+              <Grid align="flex-end">
                 <Grid.Col span={{ base: 12, md: 4 }}>
                   <TextInput
-                    placeholder="Cari nomor kamar..."
-                    leftSection={<IconSearch size={16} stroke={1.5} />}
+                    label="Cari Nomor Kamar"
+                    placeholder="Contoh: 101"
+                    leftSection={<IconSearch size={16} />}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.currentTarget.value)}
-                    size="sm"
                   />
                 </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                   <MultiSelect
-                    placeholder="Filter Tipe"
+                    label="Filter Tipe Kamar"
+                    placeholder="Semua Tipe"
                     data={roomTypeOptions}
                     value={filterType}
                     onChange={setFilterType}
                     clearable
                     searchable
-                    size="sm"
+                    leftSection={<IconFilter size={16} />}
                   />
                 </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                   <MultiSelect
-                    placeholder="Filter Status"
+                    label="Status Fisik Kamar"
+                    placeholder="Semua Status"
                     data={statusOptions}
                     value={filterStatus}
                     onChange={setFilterStatus}
                     clearable
-                    size="sm"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 2 }}>
-                  <Select
-                    value={sortBy}
-                    onChange={(v) => setSortBy(v || 'room_number_asc')}
-                    data={[
-                      { value: 'room_number_asc', label: 'No. Kamar (Asc)' },
-                      { value: 'room_number_desc', label: 'No. Kamar (Desc)' },
-                      { value: 'price_asc', label: 'Harga (Termurah)' },
-                    ]}
-                    size="sm"
-                    allowDeselect={false}
                   />
                 </Grid.Col>
               </Grid>
             </Paper>
 
-            {/* Tabel Data */}
-            <AvailabilityTable data={filteredRooms} />
-            
+            {/* Visual Chart */}
+            <Paper shadow="sm" p={0} radius="md" withBorder style={{ overflow: 'hidden' }}>
+               <Box p="md" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
+                  <Group justify="space-between">
+                      <Title order={5}>Timeline Kamar</Title>
+                      <Group gap="xs">
+                          <Badge color="teal" variant="dot">Paid</Badge>
+                          <Badge color="orange" variant="dot">Pending</Badge>
+                          <Badge color="red" variant="dot">Cancelled</Badge>
+                      </Group>
+                  </Group>
+               </Box>
+               
+               {/* Chart Component */}
+               <Box p="xs">
+                  <ReservationTapeChart 
+                    rooms={filteredRooms} 
+                    reservations={initialReservations}
+                    onEventClick={handleEventClick}
+                  />
+               </Box>
+            </Paper>
+
           </Stack>
         </Box>
       </Container>

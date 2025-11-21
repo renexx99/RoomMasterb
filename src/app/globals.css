@@ -24,3 +24,80 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+:root {
+  --fc-border-color: #e5e7eb;
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: #f8f9fa;
+  --fc-list-event-hover-bg-color: #f1f5f9;
+  --fc-today-bg-color: rgba(20, 184, 166, 0.05) !important; /* Teal tipis */
+  --fc-primary-color: #14b8a6; /* Teal-500 */
+}
+
+.fc {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+/* Header Toolbar */
+.fc .fc-toolbar-title {
+  font-size: 1.25rem !important;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.fc .fc-button-primary {
+  background-color: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  font-weight: 600;
+  text-transform: capitalize;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.fc .fc-button-primary:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+  border-color: #9ca3af;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: #14b8a6 !important; /* Teal Active */
+  border-color: #14b8a6 !important;
+  color: white !important;
+}
+
+/* Resource Area (Kolom Kamar) */
+.fc-resource-area .fc-scrollgrid-sync-inner {
+  padding: 8px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.fc-datagrid-cell-main {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+}
+
+/* Event Bars */
+.fc-event {
+  border: none !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.1s ease;
+  cursor: pointer;
+}
+
+.fc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  z-index: 5;
+}
+
+/* Sticky Header Fixes */
+.fc .fc-scrollgrid-section-header.fc-scrollgrid-section-sticky > * {
+    background: #fff;
+    backdrop-filter: blur(8px);
+}
