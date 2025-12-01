@@ -6,12 +6,9 @@ import FullCalendar from '@fullcalendar/react';
 import resourceTimelinePlugin from '@fullcalendar/resource-timeline';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Paper, Text, Badge, Group, Avatar, Tooltip, Box } from '@mantine/core';
-// HAPUS import ini:
-// import { RoomWithDetails, ReservationDetails } from '@/app/fo/reservations/page';
-// GANTI dengan import base type dari database:
 import { Room, RoomType, Reservation, Guest } from '@/core/types/database';
 
-// Buat Interface Lokal yang lebih fleksibel (bisa terima null/undefined)
+// --- Interfaces Lokal ---
 export interface ChartRoom extends Room {
   room_type?: RoomType | null;
 }
@@ -24,37 +21,36 @@ interface Props {
   rooms: ChartRoom[];
   reservations: ChartReservation[];
   onEventClick?: (id: string) => void;
+  onDateSelect?: (selection: { start: Date; end: Date; resourceId: string }) => void; // Callback baru
 }
 
-const ReservationTapeChart = ({ rooms, reservations, onEventClick }: Props) => {
+const ReservationTapeChart = ({ rooms, reservations, onEventClick, onDateSelect }: Props) => {
   const calendarRef = useRef<FullCalendar>(null);
 
-  // 1. Transform Data Rooms ke format FullCalendar Resource
   const resources = useMemo(() => {
     return rooms.map(room => ({
       id: room.id,
       title: room.room_number,
       extendedProps: {
-        type: room.room_type?.name,
+        type: room.room_type?.name || 'Unknown',
         price: room.room_type?.price_per_night,
         status: room.status
       }
     }));
   }, [rooms]);
 
-  // 2. Transform Data Reservasi ke format FullCalendar Event
   const events = useMemo(() => {
     return reservations.map(res => {
-      let color = '#6366f1'; // Default Indigo
-      if (res.payment_status === 'paid') color = '#10b981'; // Green
-      if (res.payment_status === 'pending') color = '#f59e0b'; // Orange
-      if (res.payment_status === 'cancelled') color = '#ef4444'; // Red
+      let color = '#6366f1';
+      if (res.payment_status === 'paid') color = '#10b981';
+      if (res.payment_status === 'pending') color = '#f59e0b';
+      if (res.payment_status === 'cancelled') color = '#ef4444';
 
       return {
         id: res.id,
         resourceId: res.room_id,
-        title: res.guest?.full_name || 'Unknown Guest',
-        start: res.check_in_date, 
+        title: res.guest?.full_name || 'Tamu',
+        start: res.check_in_date,
         end: res.check_out_date,
         backgroundColor: color,
         extendedProps: {
@@ -65,7 +61,6 @@ const ReservationTapeChart = ({ rooms, reservations, onEventClick }: Props) => {
     });
   }, [reservations]);
 
-  // 3. Custom Render untuk Label Kamar (Sebelah Kiri)
   const renderResourceLabel = (info: any) => {
     const { type, status } = info.resource.extendedProps;
     const statusColor = status === 'available' ? 'teal' : status === 'dirty' ? 'yellow' : 'red';
@@ -81,17 +76,11 @@ const ReservationTapeChart = ({ rooms, reservations, onEventClick }: Props) => {
     );
   };
 
-  // 4. Custom Render untuk Event Bar (Kotak Reservasi)
   const renderEventContent = (info: any) => {
     const guestName = info.event.title;
-    
     return (
       <Tooltip label={`${guestName} (${info.event.extendedProps.status})`} withArrow>
-        <div style={{ 
-            width: '100%', height: '100%', 
-            display: 'flex', alignItems: 'center', 
-            padding: '0 8px', gap: '6px', overflow: 'hidden' 
-        }}>
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '0 8px', gap: '6px', overflow: 'hidden' }}>
           <Avatar size="xs" radius="xl" color="white" variant="filled">
             {guestName.charAt(0)}
           </Avatar>
@@ -131,8 +120,23 @@ const ReservationTapeChart = ({ rooms, reservations, onEventClick }: Props) => {
         resourceLabelContent={renderResourceLabel}
         eventContent={renderEventContent}
         eventClick={(info) => onEventClick && onEventClick(info.event.id)}
+        
+        // --- INTERAKSI ---
+        selectable={true}
+        selectMirror={true}
+        select={(info) => {
+            // Panggil callback saat user blok tanggal
+            if (onDateSelect && info.resource) {
+                onDateSelect({
+                    start: info.start,
+                    end: info.end,
+                    resourceId: info.resource.id
+                });
+            }
+        }}
+        // -----------------
+
         height="auto"
-        contentHeight="auto"
         aspectRatio={1.8}
         slotMinWidth={50}
         nowIndicator={true}
