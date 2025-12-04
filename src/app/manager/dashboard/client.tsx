@@ -18,8 +18,6 @@ import {
   Avatar,
   Grid,
   Card,
-  ActionIcon,
-  Tooltip,
   ScrollArea,
 } from '@mantine/core';
 import {
@@ -28,18 +26,13 @@ import {
   IconCash,
   IconBed,
   IconSparkles,
-  IconRobot,
   IconChartBar,
   IconAlertCircle,
-  IconCheck,
   IconArrowUpRight,
-  IconCalendar,
   IconClockHour4,
   IconGift,
-  IconBell,
-  IconZoomCheck,
-  IconPercentage,
   IconBrandBooking,
+  IconPercentage,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 
@@ -49,17 +42,6 @@ interface ClientProps {
 
 export default function ManagerDashboardClient({ data }: ClientProps) {
   const [activeInsights, setActiveInsights] = useState([true, true, true, true, true]);
-
-  // Dummy Data
-  const currentHour = new Date().getHours();
-  const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 18 ? 'Good Afternoon' : 'Good Evening';
-  const managerName = 'Pak Budi';
-  const hotelName = 'Grand Azure Surabaya';
-  const currentDate = new Date().toLocaleDateString('id-ID', { 
-    day: 'numeric', 
-    month: 'short',
-    year: 'numeric'
-  });
 
   // KPI Metrics (4 cards - RevPAR diganti Direct Booking Ratio)
   const kpiData = [
@@ -197,58 +179,11 @@ export default function ManagerDashboardClient({ data }: ClientProps) {
 
   return (
     <Box style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Compact Header */}
-      <Box
-        style={{
-          background: 'linear-gradient(135deg, #4c6ef5 0%, #364fc7 100%)',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-        }}
-      >
-        <Container fluid px="md" py="xs">
-          <Group justify="space-between" align="center">
-            <Group gap="sm">
-              <ThemeIcon size={36} radius="md" variant="light" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <IconRobot size={20} stroke={1.5} color="white" />
-              </ThemeIcon>
-              <div>
-                <Text size="xs" c="white" opacity={0.85} fw={500}>
-                  {greeting}, {managerName}
-                </Text>
-                <Group gap={6}>
-                  <Title order={4} c="white" style={{ fontSize: '1.125rem', fontWeight: 700 }}>
-                    {hotelName}
-                  </Title>
-                  <Badge size="xs" variant="light" color="teal" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
-                    Live
-                  </Badge>
-                </Group>
-              </div>
-            </Group>
-            
-            <Group gap="xs">
-              <Group gap={4}>
-                <IconCalendar size={12} stroke={1.5} color="white" opacity={0.7} />
-                <Text size="xs" c="white" opacity={0.7}>
-                  {currentDate}
-                </Text>
-              </Group>
-              <Tooltip label="Notifications">
-                <ActionIcon size="sm" variant="light" color="white" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                  <IconBell size={14} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Quick Actions">
-                <ActionIcon size="sm" variant="light" color="white" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                  <IconZoomCheck size={14} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          </Group>
-        </Container>
-      </Box>
+      
+      {/* Header lama DIHAPUS. Konten langsung mulai di sini. */}
 
       {/* Main 2-Column Layout */}
-      <Container fluid px="md" py="sm">
+      <Container fluid px="md" py="lg">
         <Grid gutter="sm">
           
           {/* LEFT COLUMN - Main Dashboard (75%) */}
@@ -341,7 +276,7 @@ export default function ManagerDashboardClient({ data }: ClientProps) {
                     <Group justify="space-between" mb="xs">
                       <div>
                         <Text size="xs" fw={700}>Revenue Split</Text>
-                        <Text size="9px" c="dimmed">Today's breakdown</Text>
+                        <Text size="9px" c="dimmed">Today breakdown</Text>
                       </div>
                       <RingProgress
                         size={60}

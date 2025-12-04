@@ -14,9 +14,6 @@ import {
   UnstyledButton,
   Box,
   rem,
-  Badge,
-  Loader,
-  Center,
   Autocomplete,
   ActionIcon,
   Indicator,
@@ -25,6 +22,9 @@ import {
   ThemeIcon,
   Divider,
   Button,
+  Stack,
+  Center,
+  Loader,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -42,7 +42,6 @@ import {
   IconSearch,
   IconBell,
   IconInfoCircle,
-  IconMessage,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -94,9 +93,39 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // State untuk Waktu dan Greeting
+  const [currentDate, setCurrentDate] = useState('');
+  const [greeting, setGreeting] = useState('');
+
   const assignedHotelId = profile?.roles?.find(
     (r) => r.hotel_id && r.role_name === 'Hotel Manager'
   )?.hotel_id;
+
+  // Efek untuk Waktu dan Greeting (ENGLISH VERSION)
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      
+      // Format Tanggal Bahasa Inggris (e.g., "Thursday, Dec 4, 2025")
+      const dateOptions: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      };
+      setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
+
+      // Greeting Logic (English)
+      const hour = now.getHours();
+      if (hour < 12) setGreeting('Good Morning');
+      else if (hour < 18) setGreeting('Good Afternoon');
+      else setGreeting('Good Evening');
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchHotelInfo = async () => {
@@ -129,10 +158,10 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      notifications.show({ title: 'Sukses', message: 'Berhasil logout', color: 'green' });
+      notifications.show({ title: 'Success', message: 'Logged out successfully', color: 'green' });
       router.push('/auth/login');
     } catch {
-      notifications.show({ title: 'Error', message: 'Gagal logout', color: 'red' });
+      notifications.show({ title: 'Error', message: 'Failed to logout', color: 'red' });
     }
   };
 
@@ -144,15 +173,13 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const managerRoleName = profile?.roles?.find((r) => r.role_name === 'Hotel Manager')?.role_name || 'Hotel Manager';
-
   if (authLoading || loadingHotel) {
     return <Center style={{ minHeight: '100vh' }}><Loader size="lg" color="blue" /></Center>;
   }
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 70 }}
       navbar={{
         width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
@@ -163,7 +190,7 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
         main: { 
           background: '#f5f6fa',
           transition: 'padding-left 0.25s ease',
-          paddingTop: '60px',
+          paddingTop: '70px',
         },
       }}
     >
@@ -171,16 +198,17 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
       <AppShell.Header style={{ borderBottom: '1px solid #e5e7eb', background: 'white', zIndex: 101 }}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           
-          {/* Kiri: Logo & Burger */}
+          {/* BAGIAN KIRI: Logo, Nama Hotel, DAN Sapaan/Tanggal */}
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            
+            {/* Logo & Hotel Name */}
             <Group gap="xs" wrap="nowrap">
               <Box
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '6px',
-                  // Theme Blue Gradient
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   display: 'flex',
                   alignItems: 'center',
@@ -189,7 +217,7 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
                   boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
                 }}
               >
-                <IconBuildingSkyscraper size={18} stroke={1.5} color="white" />
+                <IconBuildingSkyscraper size={20} stroke={1.5} color="white" />
               </Box>
               
               <Box visibleFrom="sm" style={{
@@ -202,14 +230,24 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
                 <Text size="sm" fw={700} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
                   {hotelName}
                 </Text>
+                <Text size="10px" c="dimmed" tt="uppercase" fw={600}>Manager Panel</Text>
               </Box>
             </Group>
+
+            {/* Divider Pemisah */}
+            <Divider orientation="vertical" visibleFrom="md" mx="xs" style={{ height: 24 }} />
+
+            {/* INFO WAKTU & SAPAAN (Pindah ke Kiri - Bahasa Inggris) */}
+            <Stack gap={0} visibleFrom="md" style={{ lineHeight: 1 }}>
+                <Text size="xs" c="dimmed" fw={500}>{currentDate}</Text>
+                <Text size="sm" fw={600} c="blue.7">{greeting}, {profile?.full_name?.split(' ')[0]}</Text>
+            </Stack>
           </Group>
 
-          {/* Tengah: Search Bar */}
-          <Box style={{ flex: 1, maxWidth: 500 }} visibleFrom="sm" mx="md">
+          {/* BAGIAN TENGAH: Search Bar */}
+          <Box style={{ flex: 1, maxWidth: 400 }} visibleFrom="sm" mx="md">
             <Autocomplete
-              placeholder="Cari menu..."
+              placeholder="Search menu..."
               leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
               data={searchData.map(item => item.value)}
               value={searchQuery}
@@ -232,8 +270,9 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
             />
           </Box>
 
-          {/* Kanan: Notifikasi & Profil */}
-          <Group gap="sm" wrap="nowrap">
+          {/* BAGIAN KANAN: Notifikasi & Profil */}
+          <Group gap="md" wrap="nowrap">
+            {/* Notifikasi */}
             <Popover width={320} position="bottom-end" withArrow shadow="md">
               <Popover.Target>
                 <Indicator inline label="" size={8} color="red" offset={4} processing>
@@ -244,7 +283,7 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
               </Popover.Target>
               <Popover.Dropdown p={0}>
                  <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
-                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifikasi Manager</Text>
+                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifications</Text>
                  </Box>
                  <ScrollArea.Autosize mah={300}>
                     {mockNotifications.map((item) => (
@@ -263,30 +302,26 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
                     ))}
                  </ScrollArea.Autosize>
                  <Box p={8} ta="center">
-                    <Button variant="subtle" size="xs" fullWidth color="blue">Lihat Semua</Button>
+                    <Button variant="subtle" size="xs" fullWidth color="blue">View All</Button>
                  </Box>
               </Popover.Dropdown>
             </Popover>
 
-            <Divider orientation="vertical" style={{ height: 24 }} />
-
+            {/* Profile Menu */}
             <Menu shadow="md" width={200} position="bottom-end">
               <Menu.Target>
                 <UnstyledButton>
-                  <Group gap={8}>
-                    <Avatar color="blue" radius="xl" size="sm">
-                      {profile?.full_name?.charAt(0) || 'M'}
-                    </Avatar>
-                    <Box visibleFrom="sm" style={{ lineHeight: 1 }}>
-                      <Text size="xs" fw={600}>{profile?.full_name}</Text>
-                      <Text size="10px" c="dimmed">Manager</Text>
-                    </Box>
-                    <IconChevronDown size={14} stroke={1.5} color="gray" />
-                  </Group>
+                  <Avatar color="blue" radius="xl" size="md">
+                    {profile?.full_name?.charAt(0) || 'M'}
+                  </Avatar>
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>Akun</Menu.Label>
+                <Box p="xs" pb="sm">
+                    <Text size="sm" fw={600}>{profile?.full_name}</Text>
+                    <Text size="xs" c="dimmed">Hotel Manager</Text>
+                </Box>
+                <Divider mb="xs" />
                 <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={handleLogout}>
                   Logout
                 </Menu.Item>
