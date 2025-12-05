@@ -59,6 +59,7 @@ export interface Guest {
   email: string;
   phone_number: string | null;
   created_at: string;
+  title?: string | null;
 }
 
 export interface Reservation {

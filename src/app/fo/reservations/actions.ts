@@ -69,6 +69,7 @@ export async function deleteReservation(id: string) {
 // --- HELPER: CREATE GUEST ON THE FLY ---
 export async function createGuestForReservation(guestData: {
   hotel_id: string;
+  title: string; // Tambahkan ini
   full_name: string;
   email: string;
   phone_number?: string;
@@ -77,7 +78,13 @@ export async function createGuestForReservation(guestData: {
 
   const { data, error } = await supabase
     .from('guests')
-    .insert(guestData)
+    .insert({
+      hotel_id: guestData.hotel_id,
+      title: guestData.title, // Masukkan ke DB
+      full_name: guestData.full_name,
+      email: guestData.email,
+      phone_number: guestData.phone_number
+    })
     .select('id')
     .single();
 
