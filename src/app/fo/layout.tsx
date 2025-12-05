@@ -1,4 +1,3 @@
-// src/app/fo/layout.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,9 +13,6 @@ import {
   UnstyledButton,
   Box,
   rem,
-  Badge,
-  Loader,
-  Center,
   Autocomplete,
   ActionIcon,
   Indicator,
@@ -25,6 +21,9 @@ import {
   ThemeIcon,
   Divider,
   Button,
+  Loader,
+  Center,
+  Stack,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -48,7 +47,7 @@ import { supabase } from '@/core/config/supabaseClient';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 
-// --- Navigasi Menu ---
+// --- Navigation Menu ---
 interface NavItem {
   label: string;
   icon: React.ComponentType<{ size?: number; stroke?: number }>;
@@ -57,26 +56,26 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/fo/dashboard' },
-  { label: 'Proses Check-in/Out', icon: IconLogin, href: '/fo/check-in' },
-  { label: 'Reservasi', icon: IconCalendarEvent, href: '/fo/reservations' },
-  { label: 'Buku Tamu', icon: IconUsersGroup, href: '/fo/guests' },
-  { label: 'Ketersediaan Kamar', icon: IconSearch, href: '/fo/availability' }, // IconSearch diganti di bawah agar tidak duplikat
+  { label: 'Check-In / Out', icon: IconLogin, href: '/fo/check-in' },
+  { label: 'Reservations', icon: IconCalendarEvent, href: '/fo/reservations' },
+  { label: 'Guest Book', icon: IconUsersGroup, href: '/fo/guests' },
+  { label: 'Room Availability', icon: IconSearch, href: '/fo/availability' },
   { label: 'Billing & Folio', icon: IconCoin, href: '/fo/billing' },
-  { label: 'Log Tamu', icon: IconBook2, href: '/fo/log' },
+  { label: 'Guest Log', icon: IconBook2, href: '/fo/log' },
 ];
 
-// --- Mock Data (Search & Notif) ---
+// --- Mock Data ---
 const mockNotifications = [
-  { id: 1, title: 'Permintaan Housekeeping', message: 'Kamar 201 minta handuk tambahan', time: '2 menit lalu', icon: IconBed, color: 'blue' },
-  { id: 2, title: 'Check-out Segera', message: 'Tamu kamar 105 akan check-out', time: '15 menit lalu', icon: IconLogout, color: 'orange' },
-  { id: 3, title: 'Pesan Baru', message: 'Konfirmasi pembayaran dari Tamu VIP', time: '1 jam lalu', icon: IconMessage, color: 'teal' },
+  { id: 1, title: 'Housekeeping Request', message: 'Room 201 requested extra towels', time: '2 mins ago', icon: IconBed, color: 'blue' },
+  { id: 2, title: 'Immediate Check-out', message: 'Guest in 105 is checking out', time: '15 mins ago', icon: IconLogout, color: 'orange' },
+  { id: 3, title: 'New Message', message: 'Payment confirmation from VIP Guest', time: '1 hour ago', icon: IconMessage, color: 'teal' },
 ];
 
 const searchData = [
   { value: 'Dashboard', href: '/fo/dashboard' },
-  { value: 'Check In Tamu', href: '/fo/check-in' },
-  { value: 'Cek Ketersediaan', href: '/fo/availability' },
-  { value: 'Buat Reservasi', href: '/fo/reservations' },
+  { value: 'Check In Guest', href: '/fo/check-in' },
+  { value: 'Check Availability', href: '/fo/availability' },
+  { value: 'Create Reservation', href: '/fo/reservations' },
 ];
 
 const NAVBAR_WIDTH_COLLAPSED = rem(80);
@@ -84,7 +83,7 @@ const NAVBAR_WIDTH_EXPANDED = rem(280);
 
 function FoLayoutContent({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
-  const pathname = usePathname();
+  const pathname = usePathname(); // <--- PERBAIKAN: Menambahkan deklarasi pathname
   const router = useRouter();
   const { profile, loading: authLoading } = useAuth();
   const [hotelName, setHotelName] = useState<string>('');
@@ -93,9 +92,36 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Time & Greeting State
+  const [currentDate, setCurrentDate] = useState('');
+  const [greeting, setGreeting] = useState('');
+
   const assignedHotelId = profile?.roles?.find(
     (r) => r.hotel_id && r.role_name === 'Front Office'
   )?.hotel_id;
+
+  // Time Effect
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const dateOptions: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      };
+      setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
+
+      const hour = now.getHours();
+      if (hour < 12) setGreeting('Good Morning');
+      else if (hour < 18) setGreeting('Good Afternoon');
+      else setGreeting('Good Evening');
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchHotelInfo = async () => {
@@ -112,7 +138,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (error) throw error;
-        setHotelName(data?.name || 'Hotel Tidak Ditemukan');
+        setHotelName(data?.name || 'Hotel Not Found');
       } catch (error) {
         console.error('Error fetching hotel:', error);
       } finally {
@@ -128,10 +154,10 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      notifications.show({ title: 'Sukses', message: 'Berhasil logout', color: 'green' });
+      notifications.show({ title: 'Success', message: 'Logged out successfully', color: 'green' });
       router.push('/auth/login');
     } catch {
-      notifications.show({ title: 'Error', message: 'Gagal logout', color: 'red' });
+      notifications.show({ title: 'Error', message: 'Failed to logout', color: 'red' });
     }
   };
 
@@ -151,7 +177,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 70 }}
       navbar={{
         width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
@@ -162,24 +188,23 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
         main: { 
           background: '#f5f6fa',
           transition: 'padding-left 0.25s ease',
-          paddingTop: '60px',
+          paddingTop: '70px',
         },
       }}
     >
-      {/* --- HEADER --- */}
       <AppShell.Header style={{ borderBottom: '1px solid #e5e7eb', background: 'white', zIndex: 101 }}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           
-          {/* Kiri: Logo & Burger */}
+          {/* LEFT: Logo & Hotel Info */}
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Group gap="xs" wrap="nowrap">
               <Box
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '6px',
-                  background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', // Teal Gradient
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -187,7 +212,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                   boxShadow: '0 2px 4px rgba(20, 184, 166, 0.3)',
                 }}
               >
-                <IconUserCheck size={18} stroke={1.5} color="white" />
+                <IconUserCheck size={20} stroke={1.5} color="white" />
               </Box>
               
               <Box visibleFrom="sm" style={{
@@ -200,14 +225,23 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                 <Text size="sm" fw={700} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
                   {hotelName}
                 </Text>
+                <Text size="10px" c="dimmed" tt="uppercase" fw={600}>Reception Desk</Text>
               </Box>
             </Group>
+
+            <Divider orientation="vertical" visibleFrom="md" mx="xs" style={{ height: 24 }} />
+
+            {/* DATE & GREETING */}
+            <Stack gap={0} visibleFrom="md" style={{ lineHeight: 1 }}>
+                <Text size="xs" c="dimmed" fw={500}>{currentDate}</Text>
+                <Text size="sm" fw={600} c="teal.7">{greeting}, {profile?.full_name?.split(' ')[0]}</Text>
+            </Stack>
           </Group>
 
-          {/* Tengah: Search Bar */}
-          <Box style={{ flex: 1, maxWidth: 500 }} visibleFrom="sm" mx="md">
+          {/* CENTER: Search */}
+          <Box style={{ flex: 1, maxWidth: 400 }} visibleFrom="sm" mx="md">
             <Autocomplete
-              placeholder="Cari menu atau fitur..."
+              placeholder="Search guest, reservation..."
               leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
               data={searchData.map(item => item.value)}
               value={searchQuery}
@@ -222,7 +256,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                     transition: 'all 0.2s ease',
                     '&:focus': {
                         backgroundColor: 'white',
-                        borderColor: '#14b8a6', // Teal Border
+                        borderColor: '#14b8a6', 
                         boxShadow: '0 0 0 1px #14b8a6', 
                     }
                 }
@@ -230,8 +264,8 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
             />
           </Box>
 
-          {/* Kanan: Notifikasi & Profil */}
-          <Group gap="sm" wrap="nowrap">
+          {/* RIGHT: Notifications & Profile */}
+          <Group gap="md" wrap="nowrap">
             <Popover width={320} position="bottom-end" withArrow shadow="md">
               <Popover.Target>
                 <Indicator inline label="" size={8} color="red" offset={4} processing>
@@ -242,7 +276,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
               </Popover.Target>
               <Popover.Dropdown p={0}>
                  <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
-                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifikasi FO</Text>
+                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifications</Text>
                  </Box>
                  <ScrollArea.Autosize mah={300}>
                     {mockNotifications.map((item) => (
@@ -261,30 +295,25 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                     ))}
                  </ScrollArea.Autosize>
                  <Box p={8} ta="center">
-                    <Button variant="subtle" size="xs" fullWidth color="teal">Lihat Semua</Button>
+                    <Button variant="subtle" size="xs" fullWidth color="teal">View All</Button>
                  </Box>
               </Popover.Dropdown>
             </Popover>
 
-            <Divider orientation="vertical" style={{ height: 24 }} />
-
             <Menu shadow="md" width={200} position="bottom-end">
               <Menu.Target>
                 <UnstyledButton>
-                  <Group gap={8}>
-                    <Avatar color="teal" radius="xl" size="sm">
-                      {profile?.full_name?.charAt(0) || 'F'}
-                    </Avatar>
-                    <Box visibleFrom="sm" style={{ lineHeight: 1 }}>
-                      <Text size="xs" fw={600}>{profile?.full_name}</Text>
-                      <Text size="10px" c="dimmed">{roleName}</Text>
-                    </Box>
-                    <IconChevronDown size={14} stroke={1.5} color="gray" />
-                  </Group>
+                  <Avatar color="teal" radius="xl" size="md">
+                    {profile?.full_name?.charAt(0) || 'F'}
+                  </Avatar>
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>Akun</Menu.Label>
+                <Box p="xs" pb="sm">
+                    <Text size="sm" fw={600}>{profile?.full_name}</Text>
+                    <Text size="xs" c="dimmed">{roleName}</Text>
+                </Box>
+                <Divider mb="xs" />
                 <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={handleLogout}>
                   Logout
                 </Menu.Item>
@@ -294,7 +323,6 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
         </Group>
       </AppShell.Header>
 
-      {/* --- NAVBAR --- */}
       <AppShell.Navbar
         p="xs"
         onMouseEnter={() => setIsNavbarExpanded(true)}
@@ -311,7 +339,7 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
         <AppShell.Section grow>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname.startsWith(item.href); // pathname sekarang sudah ada
             return (
               <NavLink
                 key={item.href}
@@ -330,10 +358,10 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
                     marginBottom: rem(2),
                     padding: `${rem(8)} ${rem(10)}`,
                     fontWeight: 500,
-                    color: isActive ? '#0d9488' : '#4b5563', // Teal active
+                    color: isActive ? '#0d9488' : '#4b5563',
                     backgroundColor: isActive ? 'rgba(20, 184, 166, 0.1)' : 'transparent',
                     '&:hover': {
-                      backgroundColor: 'rgba(20, 184, 166, 0.08)', // Teal hover
+                      backgroundColor: 'rgba(20, 184, 166, 0.08)',
                       color: '#0d9488',
                     },
                   },
@@ -350,7 +378,6 @@ function FoLayoutContent({ children }: { children: React.ReactNode }) {
           })}
         </AppShell.Section>
 
-        {/* Footer / Logout */}
         <AppShell.Section>
           <NavLink
             label={isNavbarExpanded ? 'Logout' : undefined}
