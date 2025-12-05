@@ -50,6 +50,7 @@ export interface Room {
   room_number: string;
   status: RoomStatus;
   created_at: string;
+  floor_number?: number;
 }
 
 export interface Guest {
