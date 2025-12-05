@@ -2,6 +2,7 @@
 
 import { MantineProvider, createTheme } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
+import { ModalsProvider } from '@mantine/modals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
@@ -11,7 +12,7 @@ const queryClient = new QueryClient();
 // Definisikan tema dasar untuk Mantine
 const theme = createTheme({
   fontFamily: 'Inter, sans-serif',
-  primaryColor: 'indigo', // sedikit lebih lembut dari 'blue'
+  primaryColor: 'indigo',
   radius: {
     md: '8px',
   },
@@ -49,7 +50,9 @@ export function AppProvider({ children }: AppProviderProps) {
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} defaultColorScheme="light">
         <Notifications position="top-right" zIndex={1000} />
-        {children}
+        <ModalsProvider>
+          {children}
+        </ModalsProvider>
       </MantineProvider>
     </QueryClientProvider>
   );

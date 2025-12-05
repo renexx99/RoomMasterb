@@ -273,7 +273,7 @@ export function QuickBookingPanel({
             label="Check-in"
             placeholder="Pilih tanggal"
             value={checkInDate}
-            onChange={setCheckInDate}
+            onChange={(date) => setCheckInDate(date as Date | null)}
             minDate={new Date()}
             required
           />
@@ -281,7 +281,7 @@ export function QuickBookingPanel({
             label="Check-out"
             placeholder="Pilih tanggal"
             value={checkOutDate}
-            onChange={setCheckOutDate}
+            onChange={(date) => setCheckOutDate(date as Date | null)}
             minDate={checkInDate || new Date()}
             required
           />
