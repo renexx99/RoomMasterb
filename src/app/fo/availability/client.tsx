@@ -3,31 +3,25 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Container, Title, Group, TextInput, Stack, Paper, ActionIcon, Text, 
-  Grid, MultiSelect, Box, ThemeIcon, Badge
+  TextInput, Paper, Select, Box, Badge, ScrollArea, Grid, MultiSelect, Text, Group
 } from '@mantine/core';
-import { IconArrowLeft, IconSearch, IconCalendarSearch, IconFilter } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
-import ReservationTapeChart from '@/components/ReservationChart/ReservationTapeChart';
-import { RoomType } from '@/core/types/database';
-import { RoomWithDetails, ReservationDetails } from './page';
+import { IconSearch, IconFilter } from '@tabler/icons-react';
+import { AvailabilityTimeline } from './components/AvailabilityTimeline';
+import { RoomStatusList } from './components/RoomStatusList';
 
 interface ClientProps {
-  initialRooms: RoomWithDetails[];
-  initialReservations: ReservationDetails[]; // Tambahan props
-  roomTypes: RoomType[];
+  initialRooms: any[];
+  initialReservations: any[];
+  roomTypes: any[];
 }
 
 export default function FoAvailabilityClient({ initialRooms, initialReservations, roomTypes }: ClientProps) {
-  const router = useRouter();
-  const MAX_WIDTH = 1400; // Perlebar container agar chart lebih lega
-
+  // State Filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string[]>([]);
+  const [filterType, setFilterType] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
 
-  // --- Filter Rooms Logic ---
-  // Chart resource hanya akan menampilkan kamar yang sesuai filter
+  // Filter Logic
   const filteredRooms = useMemo(() => {
     let result = [...initialRooms];
 
@@ -35,123 +29,119 @@ export default function FoAvailabilityClient({ initialRooms, initialReservations
       const lower = searchTerm.toLowerCase();
       result = result.filter((r) => r.room_number.toLowerCase().includes(lower));
     }
-    if (filterType.length > 0) {
-      result = result.filter((r) => filterType.includes(r.room_type_id));
+    if (filterType) {
+      result = result.filter((r) => r.room_type_id === filterType);
     }
     if (filterStatus.length > 0) {
-      result = result.filter((r) => filterStatus.includes(r.status));
+      result = result.filter((r) => {
+        if (filterStatus.includes('ready') && r.status === 'available' && r.cleaning_status === 'clean') return true;
+        if (filterStatus.includes('dirty') && r.status === 'available' && r.cleaning_status === 'dirty') return true;
+        if (filterStatus.includes('occupied') && r.status === 'occupied') return true;
+        if (filterStatus.includes('maintenance') && r.status === 'maintenance') return true;
+        return false;
+      });
     }
-    
     return result;
   }, [initialRooms, searchTerm, filterType, filterStatus]);
 
-  // Options
-  const roomTypeOptions = roomTypes.map((rt) => ({ value: rt.id, label: rt.name }));
-  const statusOptions = [
-    { value: 'available', label: 'Available (Tersedia)' },
-    { value: 'occupied', label: 'Occupied (Terisi)' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'dirty', label: 'Dirty (Kotor)' },
-  ];
-
-  const handleEventClick = (id: string) => {
-    // Navigasi ke detail reservasi (bisa juga buka modal di sini)
-    // router.push(`/fo/reservations?id=${id}`);
-    console.log("Klik event:", id);
-  };
+  // Statistik Cepat untuk Header Panel
+  const stats = useMemo(() => ({
+    total: filteredRooms.length,
+    dirty: filteredRooms.filter(r => r.cleaning_status === 'dirty' && r.status === 'available').length,
+    ready: filteredRooms.filter(r => r.cleaning_status === 'clean' && r.status === 'available').length
+  }), [filteredRooms]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', padding: '1rem 0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-        <Container fluid px="xl">
-          <Box maw={MAX_WIDTH} mx="auto">
-            <Group justify="space-between" align="center">
-              <Group gap="sm">
-                <ThemeIcon variant="white" color="teal" size="xl" radius="md">
-                  <IconCalendarSearch size={24} stroke={1.5} />
-                </ThemeIcon>
-                <div>
-                  <Title order={3} c="white">Ketersediaan & Timeline</Title>
-                  <Text c="teal.0" size="sm" opacity={0.9}>Monitoring okupansi kamar secara visual</Text>
-                </div>
-              </Group>
-              <ActionIcon variant="white" color="teal" size="lg" radius="md" onClick={() => router.push('/fo/dashboard')}>
-                <IconArrowLeft size={20} />
-              </ActionIcon>
-            </Group>
-          </Box>
-        </Container>
-      </div>
-
-      {/* Konten Utama */}
-      <Container fluid px="xl" py="lg">
-        <Box maw={MAX_WIDTH} mx="auto">
-          <Stack gap="lg">
-            
-            {/* Filter Bar (Di Atas Chart) */}
-            <Paper shadow="xs" p="md" radius="md" withBorder>
-              <Grid align="flex-end">
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <TextInput
-                    label="Cari Nomor Kamar"
-                    placeholder="Contoh: 101"
-                    leftSection={<IconSearch size={16} />}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.currentTarget.value)}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                  <MultiSelect
-                    label="Filter Tipe Kamar"
-                    placeholder="Semua Tipe"
-                    data={roomTypeOptions}
-                    value={filterType}
-                    onChange={setFilterType}
-                    clearable
-                    searchable
-                    leftSection={<IconFilter size={16} />}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                  <MultiSelect
-                    label="Status Fisik Kamar"
-                    placeholder="Semua Status"
-                    data={statusOptions}
-                    value={filterStatus}
-                    onChange={setFilterStatus}
-                    clearable
-                  />
-                </Grid.Col>
-              </Grid>
-            </Paper>
-
-            {/* Visual Chart */}
-            <Paper shadow="sm" p={0} radius="md" withBorder style={{ overflow: 'hidden' }}>
-               <Box p="md" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
-                  <Group justify="space-between">
-                      <Title order={5}>Timeline Kamar</Title>
-                      <Group gap="xs">
-                          <Badge color="teal" variant="dot">Paid</Badge>
-                          <Badge color="orange" variant="dot">Pending</Badge>
-                          <Badge color="red" variant="dot">Cancelled</Badge>
-                      </Group>
-                  </Group>
-               </Box>
-               
-               {/* Chart Component */}
-               <Box p="xs">
-                  <ReservationTapeChart 
-                    rooms={filteredRooms} 
-                    reservations={initialReservations}
-                    onEventClick={handleEventClick}
-                  />
-               </Box>
-            </Paper>
-
-          </Stack>
+    <Box style={{ height: 'calc(100vh - 60px)', display: 'flex', background: '#f8f9fa' }}>
+      
+      {/* --- LEFT PANEL: TIMELINE (60%) --- */}
+      <Box 
+        style={{ 
+          width: '60%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          borderRight: '1px solid #e9ecef',
+          backgroundColor: 'white'
+        }}
+      >
+        {/* Toolbar Kiri */}
+        <Box p="md" style={{ borderBottom: '1px solid #e9ecef' }}>
+          <Group justify="space-between" mb="xs">
+            <Text fw={600} size="lg">Timeline Ketersediaan</Text>
+            <Badge variant="light" color="blue">{stats.total} Kamar</Badge>
+          </Group>
+          <Grid gutter="xs">
+            <Grid.Col span={6}>
+              <TextInput
+                placeholder="Cari nomor kamar..."
+                leftSection={<IconSearch size={16} />}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                size="sm"
+              />
+            </Grid.Col>
+            <Grid.Col span={6}>
+              <Select
+                placeholder="Tipe Kamar"
+                data={roomTypes.map(rt => ({ value: rt.id, label: rt.name }))}
+                value={filterType}
+                onChange={setFilterType}
+                clearable
+                size="sm"
+              />
+            </Grid.Col>
+          </Grid>
         </Box>
-      </Container>
-    </div>
+
+        {/* Content Kiri */}
+        <ScrollArea style={{ flex: 1 }} p="md">
+          <AvailabilityTimeline 
+            rooms={filteredRooms} 
+            reservations={initialReservations} 
+          />
+        </ScrollArea>
+      </Box>
+
+      {/* --- RIGHT PANEL: STATUS LIST (40%) --- */}
+      <Box 
+        style={{ 
+          width: '40%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          backgroundColor: '#fafafa' // Sedikit beda warna untuk pemisah visual
+        }}
+      >
+        {/* Toolbar Kanan */}
+        <Box p="md" style={{ borderBottom: '1px solid #e9ecef', backgroundColor: 'white' }}>
+          <Group justify="space-between" mb="xs">
+            <Text fw={600} size="lg">Status Kebersihan</Text>
+            <Group gap="xs">
+                <Badge color="red" variant="dot" size="sm">{stats.dirty} Dirty</Badge>
+                <Badge color="teal" variant="dot" size="sm">{stats.ready} Ready</Badge>
+            </Group>
+          </Group>
+          <MultiSelect
+            placeholder="Filter Status (Ready, Dirty, Occupied...)"
+            data={[
+              { value: 'ready', label: 'Vacant Ready' },
+              { value: 'dirty', label: 'Vacant Dirty' },
+              { value: 'occupied', label: 'Occupied' },
+              { value: 'maintenance', label: 'Maintenance' },
+            ]}
+            value={filterStatus}
+            onChange={setFilterStatus}
+            leftSection={<IconFilter size={16} />}
+            clearable
+            size="sm"
+          />
+        </Box>
+
+        {/* Content Kanan */}
+        <ScrollArea style={{ flex: 1 }} p="md">
+          <RoomStatusList rooms={filteredRooms} />
+        </ScrollArea>
+      </Box>
+
+    </Box>
   );
 }
