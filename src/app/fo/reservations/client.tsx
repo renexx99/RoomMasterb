@@ -56,6 +56,8 @@ export default function FoReservationsClient({
   } | null>(null);
 
   // --- STYLE KHUSUS SEGMENTED CONTROL ---
+  // Kita gunakan inline styles untuk root & indicator, 
+  // tapi teks active ditangani oleh CSS class di bawah
   const gradientSegmentedStyles = {
     root: {
       backgroundColor: '#f8f9fa',
@@ -68,24 +70,8 @@ export default function FoReservationsClient({
     },
     label: {
       fontWeight: 500,
-      color: 'var(--mantine-color-gray-6)', // Warna default (saat mati)
+      color: 'var(--mantine-color-gray-6)', // Warna default (saat tidak aktif)
       transition: 'color 0.2s ease',
-      
-      // Saat AKITF: Paksa Putih
-      '&[data-active]': {
-        color: '#ffffff !important', 
-        fontWeight: 600,
-      },
-
-      // Efek Hover saat MATI
-      '&:hover': {
-        color: 'var(--mantine-color-gray-9)',
-      },
-
-      // Efek Hover saat AKTIF (Tetap Putih)
-      '&[data-active]:hover': {
-        color: '#ffffff !important',
-      }
     },
   };
 
@@ -155,6 +141,20 @@ export default function FoReservationsClient({
 
   return (
     <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1, weekendDays: [0] }}>
+      {/* Inject CSS Manual untuk menangani state Active */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .fo-segmented-control .mantine-SegmentedControl-label[data-active] {
+          color: #ffffff !important;
+          font-weight: 600;
+        }
+        .fo-segmented-control .mantine-SegmentedControl-label:hover {
+          color: var(--mantine-color-gray-9);
+        }
+        .fo-segmented-control .mantine-SegmentedControl-label[data-active]:hover {
+          color: #ffffff !important;
+        }
+      `}} />
+
       <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
         
         {/* Main Content Area - Split View */}
@@ -200,6 +200,7 @@ export default function FoReservationsClient({
                   <SegmentedControl
                     value={viewMode}
                     onChange={(val) => setViewMode(val as any)}
+                    className="fo-segmented-control" // Class khusus untuk CSS override
                     data={[
                       { 
                         label: (
@@ -226,7 +227,6 @@ export default function FoReservationsClient({
                     ]}
                     size="sm"
                     radius="md"
-                    // Hilangkan prop color="teal" agar styles kita yang menang
                     styles={gradientSegmentedStyles}
                   />
                 </Group>
@@ -332,6 +332,7 @@ export default function FoReservationsClient({
               <SegmentedControl
                 value={rightPanelMode}
                 onChange={(val) => setRightPanelMode(val as any)}
+                className="fo-segmented-control" // Class khusus untuk CSS override
                 data={[
                   { label: 'Quick Book', value: 'booking' },
                   { label: 'AI Co-Pilot', value: 'ai' }
@@ -339,7 +340,6 @@ export default function FoReservationsClient({
                 fullWidth
                 radius="md"
                 size="sm"
-                // Hilangkan prop color="teal"
                 styles={gradientSegmentedStyles}
               />
             </Box>
