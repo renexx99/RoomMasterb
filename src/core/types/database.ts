@@ -54,6 +54,11 @@ export interface Room {
 }
 
 export interface Guest {
+  total_stays: number;
+  total_spend: number;
+  last_visit_at: any;
+  loyalty_tier: string;
+  preferences: any;
   id: string;
   hotel_id: string;
   full_name: string;

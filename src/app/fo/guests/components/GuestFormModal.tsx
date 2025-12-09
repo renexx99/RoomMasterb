@@ -2,83 +2,77 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Stack, TextInput, Button, Group } from '@mantine/core';
+import { Modal, Stack, TextInput, Button, Group, Select, TagsInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { IconUser, IconMail, IconPhone } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { Guest } from '@/core/types/database';
-import { createGuest, updateGuest } from '../actions';
+import { createGuestAction, updateGuestAction } from '../actions';
 
 interface Props {
   opened: boolean;
   onClose: () => void;
+  guest: Guest | null;
   hotelId: string;
-  guestToEdit: Guest | null;
 }
 
-export function GuestFormModal({ opened, onClose, hotelId, guestToEdit }: Props) {
+export function GuestFormModal({ opened, onClose, guest, hotelId }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     initialValues: {
+      title: 'Mr.',
       full_name: '',
       email: '',
       phone_number: '',
+      loyalty_tier: 'Bronze',
+      preferences: [] as string[],
     },
     validate: {
-      full_name: (value) => (!value ? 'Nama lengkap wajib diisi' : null),
-      email: (value) => {
-        if (!value) return 'Email wajib diisi';
-        if (!/^\S+@\S+\.\S+$/.test(value)) return 'Format email tidak valid';
-        return null;
-      },
+      full_name: (v) => (!v ? 'Nama wajib diisi' : null),
+      email: (v) => (/^\S+@\S+$/.test(v) ? null : 'Email tidak valid'),
     },
   });
 
-  // Reset form saat modal dibuka/ditutup
   useEffect(() => {
     if (opened) {
-      if (guestToEdit) {
+      if (guest) {
         form.setValues({
-          full_name: guestToEdit.full_name,
-          email: guestToEdit.email,
-          phone_number: guestToEdit.phone_number || '',
+          title: guest.title || 'Mr.',
+          full_name: guest.full_name,
+          email: guest.email,
+          phone_number: guest.phone_number || '',
+          loyalty_tier: guest.loyalty_tier || 'Bronze',
+          preferences: (guest.preferences as any)?.tags || [],
         });
       } else {
         form.reset();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opened, guestToEdit]);
+  }, [opened, guest]);
 
   const handleSubmit = async (values: typeof form.values) => {
     setIsSubmitting(true);
     try {
-      const guestData = {
+      const payload = {
+        ...values,
         hotel_id: hotelId,
-        full_name: values.full_name,
-        email: values.email,
-        phone_number: values.phone_number || null,
       };
 
-      let result;
-      if (guestToEdit) {
-        result = await updateGuest(guestToEdit.id, guestData);
+      let res;
+      if (guest) {
+        res = await updateGuestAction(guest.id, payload);
       } else {
-        result = await createGuest(guestData);
+        res = await createGuestAction(payload);
       }
 
-      if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+      if (res.error) {
+        notifications.show({ title: 'Gagal', message: res.error, color: 'red' });
       } else {
-        notifications.show({ 
-          title: 'Sukses', 
-          message: `Tamu berhasil ${guestToEdit ? 'diperbarui' : 'ditambahkan'}`, 
-          color: 'green' 
-        });
+        notifications.show({ title: 'Sukses', message: 'Data tamu tersimpan', color: 'green' });
         onClose();
+        window.location.reload();
       }
-    } catch (error) {
+    } catch (e) {
       notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
     } finally {
       setIsSubmitting(false);
@@ -86,39 +80,46 @@ export function GuestFormModal({ opened, onClose, hotelId, guestToEdit }: Props)
   };
 
   return (
-    <Modal 
-      opened={opened} 
-      onClose={onClose} 
-      title={guestToEdit ? 'Edit Data Tamu' : 'Tambah Tamu Baru'} 
-      centered
-      radius="md"
-    >
+    <Modal opened={opened} onClose={onClose} title={guest ? 'Edit Tamu' : 'Tamu Baru'} centered>
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="md">
-          <TextInput 
-            label="Nama Lengkap" 
-            placeholder="Masukkan nama lengkap" 
-            required 
-            leftSection={<IconUser size={16} stroke={1.5} />} 
-            {...form.getInputProps('full_name')} 
+        <Stack gap="sm">
+          <Group grow>
+            <Select 
+                label="Title" 
+                data={['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']} 
+                {...form.getInputProps('title')} 
+                style={{ maxWidth: 80 }}
+            />
+            <TextInput label="Nama Lengkap" required {...form.getInputProps('full_name')} />
+          </Group>
+          
+          <TextInput label="Email" required {...form.getInputProps('email')} />
+          <TextInput label="No. Telepon" {...form.getInputProps('phone_number')} />
+          
+          <Select 
+            label="Loyalty Tier" 
+            data={['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']} 
+            {...form.getInputProps('loyalty_tier')} 
           />
-          <TextInput 
-            label="Email" 
-            placeholder="email@tamu.com" 
-            required 
-            leftSection={<IconMail size={16} stroke={1.5} />} 
-            {...form.getInputProps('email')} 
+
+          <TagsInput
+            label="Preferensi"
+            placeholder="Pilih atau ketik lalu Enter"
+            data={['Non-Smoking', 'High Floor', 'Quiet Room', 'Extra Pillow', 'Near Elevator']}
+            clearable
+            {...form.getInputProps('preferences')}
           />
-          <TextInput 
-            label="Nomor Telepon (Opsional)" 
-            placeholder="0812..." 
-            leftSection={<IconPhone size={16} stroke={1.5} />} 
-            {...form.getInputProps('phone_number')} 
-          />
+
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
-            <Button type="submit" color="teal" loading={isSubmitting}>
-              {guestToEdit ? 'Simpan Perubahan' : 'Tambah Tamu'}
+            {/* PERBAIKAN: Menggunakan variant gradient sesuai tema FO */}
+            <Button 
+                type="submit" 
+                loading={isSubmitting} 
+                variant="gradient"
+                gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
+            >
+                Simpan
             </Button>
           </Group>
         </Stack>

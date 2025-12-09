@@ -3,7 +3,6 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import GuestsClient from './client';
-import { Guest } from '@/core/types/database';
 
 export default async function FoGuestsPage() {
   const cookieStore = await cookies();
@@ -13,9 +12,8 @@ export default async function FoGuestsPage() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/auth/login');
 
-  // --- LOGIKA IMPERSONASI ---
+  // --- LOGIKA IMPERSONASI & ROLE ---
   let hotelId: string | null = null;
-
   const { data: userRoles } = await supabase
     .from('user_roles')
     .select('*, role:roles(name)')
@@ -24,12 +22,8 @@ export default async function FoGuestsPage() {
   const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
 
   if (isSuperAdmin) {
-    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
-    if (impersonatedId) {
-      hotelId = impersonatedId;
-    } else {
-      redirect('/super-admin/dashboard');
-    }
+    hotelId = cookieStore.get('impersonated_hotel_id')?.value || null;
+    if (!hotelId) redirect('/super-admin/dashboard');
   } else {
     const operationalRole = userRoles?.find((ur: any) => 
       ur.hotel_id && 
@@ -37,13 +31,13 @@ export default async function FoGuestsPage() {
     );
     hotelId = operationalRole?.hotel_id || null;
   }
-  // --- AKHIR LOGIKA IMPERSONASI ---
 
   if (!hotelId) {
-    return <GuestsClient initialGuests={[]} hotelId={null} />;
+    // Return empty state if no hotel assigned
+    return <GuestsClient initialGuests={[]} hotelId="" />;
   }
 
-  // 2. Fetch Guests
+  // Fetch Guests Real-time
   const { data: guests } = await supabase
     .from('guests')
     .select('*')
@@ -52,7 +46,7 @@ export default async function FoGuestsPage() {
 
   return (
     <GuestsClient 
-      initialGuests={(guests as Guest[]) || []}
+      initialGuests={guests || []}
       hotelId={hotelId}
     />
   );
