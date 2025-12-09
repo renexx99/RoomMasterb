@@ -51,6 +51,7 @@ export default async function AvailabilityPage() {
       initialRooms={rooms || []}
       initialReservations={reservations || []}
       roomTypes={roomTypes || []}
+      hotelId={hotelId}
     />
   );
 }

@@ -3,7 +3,6 @@
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -14,38 +13,32 @@ async function getSupabase() {
 export async function getAvailabilityData(hotelId: string, startDate: string, endDate: string) {
   const supabase = await getSupabase();
 
+  // 1. Ambil Kamar (Urutkan)
   const { data: rooms, error: roomError } = await supabase
     .from('rooms')
-    .select(`*, room_type:room_types(*)`)
+    .select(`
+      *,
+      room_type:room_types(*)
+    `)
     .eq('hotel_id', hotelId)
     .order('room_number', { ascending: true });
 
   if (roomError) throw new Error(roomError.message);
 
-  const { data: reservations, error: resError } = await supabase
+  // 2. Ambil Reservasi yang beririsan dengan range tanggal
+  // Logika: (CheckIn < EndDate) AND (CheckOut > StartDate)
+  const { data: reservations, error:QHError } = await supabase
     .from('reservations')
-    .select(`*, guest:guests(id, full_name, email)`)
+    .select(`
+      *,
+      guest:guests(id, full_name, email)
+    `)
     .eq('hotel_id', hotelId)
     .neq('payment_status', 'cancelled')
-    .or(`check_in_date.lte.${endDate},check_out_date.gte.${startDate}`);
+    .lt('check_in_date', endDate)
+    .gt('check_out_date', startDate);
 
-  if (resError) throw new Error(resError.message);
+  if (QHError) throw new Error(QHError.message);
 
   return { rooms, reservations };
-}
-
-export async function updateRoomStatus(
-  roomId: string, 
-  status: 'available' | 'occupied' | 'maintenance',
-  cleaningStatus: 'clean' | 'dirty'
-) {
-  const supabase = await getSupabase();
-  const { error } = await supabase
-    .from('rooms')
-    .update({ status: status, cleaning_status: cleaningStatus })
-    .eq('id', roomId);
-
-  if (error) return { error: error.message };
-  revalidatePath('/fo/availability');
-  return { success: true };
 }
