@@ -188,17 +188,19 @@ export function QuickBookingPanel({
         <Stack gap="sm">
           <Group grow mb="xs">
             <Button 
-              variant={guestMode === 'existing' ? 'filled' : 'default'} 
               onClick={() => setGuestMode('existing')} 
-              color="teal" 
+              // PERBAIKAN: Ubah warna tombol toggle ke gradient jika aktif
+              variant={guestMode === 'existing' ? 'gradient' : 'default'}
+              gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
               Tamu Lama
             </Button>
             <Button 
-              variant={guestMode === 'new' ? 'filled' : 'default'} 
               onClick={() => setGuestMode('new')} 
-              color="teal" 
+              // PERBAIKAN: Ubah warna tombol toggle ke gradient jika aktif
+              variant={guestMode === 'new' ? 'gradient' : 'default'}
+              gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
               Tamu Baru
@@ -312,6 +314,7 @@ export function QuickBookingPanel({
         </Stack>
       </Paper>
 
+      {/* PERBAIKAN: Ubah tombol Buat Reservasi menjadi Gradient */}
       <Button 
         fullWidth 
         size="md" 
@@ -319,8 +322,8 @@ export function QuickBookingPanel({
         onClick={handleQuickBook}
         loading={isSubmitting}
         disabled={!calculatedPrice}
-        gradient={{ from: 'teal', to: 'cyan', deg: 90 }}
         variant="gradient"
+        gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
       >
         Buat Reservasi
       </Button>

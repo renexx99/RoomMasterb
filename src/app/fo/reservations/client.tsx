@@ -3,14 +3,14 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Box, Group, TextInput, Select, Button, MultiSelect, Badge,
-  ScrollArea, Card, Avatar, Text, ActionIcon, Menu, SegmentedControl, Stack
+  Box, Group, TextInput, Button, MultiSelect, Badge,
+  ScrollArea, Card, Avatar, Text, ActionIcon, Menu, SegmentedControl, Stack, Center
 } from '@mantine/core';
 import { DatesProvider } from '@mantine/dates';
 import 'dayjs/locale/id';
 import '@mantine/dates/styles.css';
 import { 
-  IconSearch, IconCalendarEvent, IconList, IconTimeline,
+  IconSearch, IconList, IconTimeline,
   IconDots, IconArrowRight, IconPencil, IconTrash
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
@@ -55,6 +55,40 @@ export default function FoReservationsClient({
     check_out_date?: Date;
   } | null>(null);
 
+  // --- STYLE KHUSUS SEGMENTED CONTROL ---
+  const gradientSegmentedStyles = {
+    root: {
+      backgroundColor: '#f8f9fa',
+      border: '1px solid #e9ecef',
+    },
+    indicator: {
+      // Gradient Teal ke Biru
+      background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)',
+      boxShadow: '0 2px 4px rgba(20, 184, 166, 0.2)',
+    },
+    label: {
+      fontWeight: 500,
+      color: 'var(--mantine-color-gray-6)', // Warna default (saat mati)
+      transition: 'color 0.2s ease',
+      
+      // Saat AKITF: Paksa Putih
+      '&[data-active]': {
+        color: '#ffffff !important', 
+        fontWeight: 600,
+      },
+
+      // Efek Hover saat MATI
+      '&:hover': {
+        color: 'var(--mantine-color-gray-9)',
+      },
+
+      // Efek Hover saat AKTIF (Tetap Putih)
+      '&[data-active]:hover': {
+        color: '#ffffff !important',
+      }
+    },
+  };
+
   // Filtered reservations
   const filteredReservations = useMemo(() => {
     return initialReservations.filter(res => {
@@ -69,25 +103,19 @@ export default function FoReservationsClient({
     });
   }, [initialReservations, searchTerm, filterStatus]);
 
-  // Handle drag create from timeline
+  // Handlers
   const handleDragCreate = (roomId: string, startDate: Date, endDate: Date) => {
-    setPrefilledData({
-      room_id: roomId,
-      check_in_date: startDate,
-      check_out_date: endDate
-    });
+    setPrefilledData({ room_id: roomId, check_in_date: startDate, check_out_date: endDate });
     setReservationToEdit(null);
     setModalOpened(true);
   };
 
-  // Handle edit
   const handleEdit = (reservation: ReservationDetails) => {
     setReservationToEdit(reservation);
     setPrefilledData(null);
     setModalOpened(true);
   };
 
-  // Handle delete
   const handleDelete = (reservation: ReservationDetails) => {
     modals.openConfirmModal({
       title: 'Hapus Reservasi',
@@ -101,31 +129,21 @@ export default function FoReservationsClient({
       onConfirm: async () => {
         const result = await deleteReservation(reservation.id);
         if (result.error) {
-          notifications.show({
-            title: 'Gagal',
-            message: result.error,
-            color: 'red'
-          });
+          notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
         } else {
-          notifications.show({
-            title: 'Berhasil',
-            message: 'Reservasi berhasil dihapus',
-            color: 'green'
-          });
+          notifications.show({ title: 'Berhasil', message: 'Reservasi berhasil dihapus', color: 'green' });
           router.refresh();
         }
       }
     });
   };
 
-  // Handle modal close
   const handleModalClose = () => {
     setModalOpened(false);
     setReservationToEdit(null);
     setPrefilledData(null);
   };
 
-  // Handle booking success
   const handleBookingSuccess = () => {
     router.refresh();
   };
@@ -178,36 +196,47 @@ export default function FoReservationsClient({
                     clearable
                   />
 
+                  {/* UPDATE: Segmented Control - Timeline/List */}
                   <SegmentedControl
                     value={viewMode}
                     onChange={(val) => setViewMode(val as any)}
                     data={[
                       { 
                         label: (
-                          <Group gap={4}>
-                            <IconTimeline size={14} />
-                            <span>Timeline</span>
-                          </Group>
+                          <Center>
+                            <Group gap={6} wrap="nowrap">
+                              <IconTimeline size={16} />
+                              <span>Timeline</span>
+                            </Group>
+                          </Center>
                         ), 
                         value: 'timeline' 
                       },
                       { 
                         label: (
-                          <Group gap={4}>
-                            <IconList size={14} />
-                            <span>List</span>
-                          </Group>
+                          <Center>
+                            <Group gap={6} wrap="nowrap">
+                              <IconList size={16} />
+                              <span>List</span>
+                            </Group>
+                          </Center>
                         ), 
                         value: 'list' 
                       }
                     ]}
-                    size="xs"
-                    color="teal"
+                    size="sm"
+                    radius="md"
+                    // Hilangkan prop color="teal" agar styles kita yang menang
+                    styles={gradientSegmentedStyles}
                   />
                 </Group>
                 
                 <Group gap="xs">
-                  <Badge color="teal" variant="filled" size="sm">
+                  <Badge 
+                    size="sm" 
+                    variant="gradient" 
+                    gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
+                  >
                     {availableRoomsCount} Kamar Tersedia
                   </Badge>
                   <Badge color="blue" variant="light" size="sm">
@@ -298,7 +327,7 @@ export default function FoReservationsClient({
           {/* RIGHT PANEL - Action & AI Panel (32%) */}
           <Box style={{ width: '32%', display: 'flex', flexDirection: 'column', background: '#fafafa' }}>
             
-            {/* Panel Mode Switcher */}
+            {/* Panel Mode Switcher - Quick Book / AI */}
             <Box p="md" style={{ borderBottom: '1px solid #e9ecef' }}>
               <SegmentedControl
                 value={rightPanelMode}
@@ -308,7 +337,10 @@ export default function FoReservationsClient({
                   { label: 'AI Co-Pilot', value: 'ai' }
                 ]}
                 fullWidth
-                color="teal"
+                radius="md"
+                size="sm"
+                // Hilangkan prop color="teal"
+                styles={gradientSegmentedStyles}
               />
             </Box>
 

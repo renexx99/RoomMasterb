@@ -1,4 +1,3 @@
-// src/app/fo/reservations/components/ReservationFormModal.tsx
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -174,7 +173,7 @@ export function ReservationFormModal({
       } else {
         notifications.show({ title: 'Sukses', message: 'Reservasi berhasil disimpan', color: 'green' });
         onClose();
-        window.location.reload(); // Refresh page to show updated data
+        window.location.reload(); 
       }
     } catch (error) {
       notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
@@ -206,18 +205,19 @@ export function ReservationFormModal({
         <Stack gap="md">
           <Divider label="Data Tamu" labelPosition="center" />
           <Group grow>
+            {/* PERBAIKAN: Menghapus properti duplicate 'variant' */}
             <Button 
-              variant={guestSelectionMode === 'select' ? 'filled' : 'default'} 
               onClick={() => setGuestSelectionMode('select')} 
-              color="teal" 
+              variant={guestSelectionMode === 'select' ? 'gradient' : 'default'}
+              gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
               Pilih Tamu Lama
             </Button>
             <Button 
-              variant={guestSelectionMode === 'new' ? 'filled' : 'default'} 
               onClick={() => setGuestSelectionMode('new')} 
-              color="teal" 
+              variant={guestSelectionMode === 'new' ? 'gradient' : 'default'}
+              gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
               Input Tamu Baru
@@ -325,7 +325,8 @@ export function ReservationFormModal({
             </Button>
             <Button 
               type="submit" 
-              color="teal" 
+              variant="gradient"
+              gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               loading={isSubmitting} 
               disabled={!calculatedPrice && !reservationToEdit}
             >
