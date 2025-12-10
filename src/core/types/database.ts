@@ -1,57 +1,97 @@
 // src/core/types/database.ts
 
-// Existing types (adjusted where needed)
-// export type UserRole = 'super_admin' | 'hotel_admin'; // Keep for legacy reference? Or remove? Let's remove for clarity with new system.
+// --- Existing Simple Types ---
 export type RoomStatus = 'available' | 'occupied' | 'maintenance';
 export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
+
+// --- NEW TYPES (Added) ---
+export type BedType = 'Single' | 'Twin' | 'Double' | 'Queen' | 'King' | 'Super King';
+export type ViewType = 'City View' | 'Sea View' | 'Garden View' | 'Pool View' | 'Mountain View' | 'No View';
+export type WingType = 'North Wing' | 'South Wing' | 'East Wing' | 'West Wing' | 'Central';
+export type FurnitureCondition = 'excellent' | 'good' | 'fair' | 'needs_replacement';
+
+// --- Interfaces ---
 
 export interface Hotel {
   id: string;
   name: string;
   address: string;
-  // Field baru
   code?: string | null;
   status: 'active' | 'maintenance' | 'suspended';
   image_url?: string | null;
   created_at: string;
 }
 
-// Helper type untuk data hotel + statistik (untuk UI)
 export interface HotelWithStats extends Hotel {
   total_rooms: number;
   total_staff: number;
-  active_residents: number; // Field Baru untuk UI
-  total_revenue: number;    // Field Baru untuk UI
+  active_residents: number;
+  total_revenue: number;
 }
 
 export interface Profile {
   id: string; // Corresponds to auth.users.id
   email: string;
   full_name: string;
-  role: string | null; // Old role column, now nullable/less significant
-  hotel_id: string | null; // Old hotel_id column, now nullable/less significant
+  role: string | null;
+  hotel_id: string | null;
   created_at: string;
 }
 
+// --- UPDATED RoomType Interface ---
 export interface RoomType {
-  [x: string]: string;
   id: string;
   hotel_id: string;
   name: string;
-  price_per_night: number; // Keep as number, Supabase handles numeric
+  
+  // Pricing & Capacity
+  price_per_night: number;
+  base_price: number; // New
   capacity: number;
+  
+  // Detailed Information (New)
+  description?: string;
+  size_sqm?: number;
+  bed_type?: BedType;
+  bed_count?: number;
+  view_type?: ViewType;
+  smoking_allowed?: boolean;
+  
+  // Amenities & Images (New)
+  amenities?: string[]; // Array of amenity names
+  images?: string[]; // Array of image URLs
+  
+  // Timestamps
   created_at: string;
+  updated_at?: string; // New
 }
 
+// --- UPDATED Room Interface ---
 export interface Room {
   id: string;
   hotel_id: string;
   room_type_id: string;
   room_number: string;
-  status: RoomStatus;
-  created_at: string;
+  
+  // Status
+  status: RoomStatus; // Uses 'available' | 'occupied' | 'maintenance'
+  cleaning_status: 'clean' | 'dirty' | 'cleaning' | 'inspected'; // Updated/New statuses
+  
+  // Location & Details (New)
   floor_number?: number;
-  cleaning_status?: 'clean' | 'dirty' | 'inspected' | 'pickup' | string;
+  wing?: WingType;
+  
+  // Maintenance & Condition (New)
+  furniture_condition?: FurnitureCondition;
+  last_renovation_date?: string; // ISO date string
+  special_notes?: string;
+  
+  // Timestamps
+  created_at: string;
+  updated_at?: string; // New
+  
+  // Relations (for queries with joins)
+  room_type?: RoomType;
 }
 
 export interface Guest {
@@ -74,25 +114,25 @@ export interface Reservation {
   hotel_id: string;
   guest_id: string;
   room_id: string;
-  check_in_date: string; // Keep as string (date format)
-  check_out_date: string; // Keep as string (date format)
-  total_price: number; // Keep as number
+  check_in_date: string;
+  check_out_date: string;
+  total_price: number;
   payment_status: PaymentStatus;
   created_at: string;
 }
 
-// --- New Interfaces based on Refactored Schema ---
+// --- RBAC Interfaces (Unchanged) ---
 
 export interface Role {
     id: string;
-    name: string; // e.g., 'Super Admin', 'Hotel Manager', 'Front Office'
+    name: string;
     description: string | null;
     created_at: string;
 }
 
 export interface Permission {
     id: string;
-    action: string; // e.g., 'manage_users', 'create_reservation', 'view_reports'
+    action: string;
     description: string | null;
     created_at: string;
 }
@@ -104,15 +144,40 @@ export interface RolePermission {
 }
 
 export interface UserRoleAssignment {
-    id: string; // Unique ID for the assignment itself
-    user_id: string; // Foreign key to profiles.id
-    role_id: string; // Foreign key to roles.id
-    hotel_id: string | null; // Foreign key to hotels.id (null for global roles like Super Admin)
+    id: string;
+    user_id: string;
+    role_id: string;
+    hotel_id: string | null;
     created_at: string;
 }
 
+// --- NEW Helper Types for Forms ---
 
-// --- Supabase Database Definition (Updated) ---
+export interface RoomTypeFormValues {
+  name: string;
+  description: string;
+  price_per_night: number;
+  capacity: number;
+  size_sqm: number;
+  bed_type: BedType | '';
+  bed_count: number;
+  view_type: ViewType | '';
+  smoking_allowed: boolean;
+  amenities: string[];
+}
+
+export interface RoomFormValues {
+  room_number: string;
+  room_type_id: string;
+  status: RoomStatus;
+  floor_number: number;
+  wing: WingType | '';
+  furniture_condition: FurnitureCondition;
+  special_notes: string;
+}
+
+
+// --- Supabase Database Definition ---
 
 export interface Database {
   public: {
@@ -124,18 +189,18 @@ export interface Database {
       };
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, 'created_at'>; // ID comes from auth.users
+        Insert: Omit<Profile, 'created_at'>;
         Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
       };
       room_types: {
         Row: RoomType;
-        Insert: Omit<RoomType, 'id' | 'created_at'>;
+        Insert: Omit<RoomType, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<RoomType, 'id' | 'created_at' | 'hotel_id'>>;
       };
       rooms: {
         Row: Room;
-        Insert: Omit<Room, 'id' | 'created_at'>;
-        Update: Partial<Omit<Room, 'id' | 'created_at' | 'hotel_id'>>;
+        Insert: Omit<Room, 'id' | 'created_at' | 'updated_at' | 'room_type'>; // Exclude relations and auto-fields
+        Update: Partial<Omit<Room, 'id' | 'created_at' | 'hotel_id' | 'room_type'>>;
       };
       guests: {
         Row: Guest;
@@ -147,7 +212,6 @@ export interface Database {
         Insert: Omit<Reservation, 'id' | 'created_at'>;
         Update: Partial<Omit<Reservation, 'id' | 'created_at' | 'hotel_id'>>;
       };
-      // New Tables
       roles: {
         Row: Role;
         Insert: Omit<Role, 'id' | 'created_at'>;
@@ -161,22 +225,75 @@ export interface Database {
       role_permissions: {
         Row: RolePermission;
         Insert: Omit<RolePermission, 'created_at'>;
-        Update: Partial<Omit<RolePermission, 'created_at'>>; // Usually not updated, but added for completeness
+        Update: Partial<Omit<RolePermission, 'created_at'>>;
       };
       user_roles: {
         Row: UserRoleAssignment;
         Insert: Omit<UserRoleAssignment, 'id' | 'created_at'>;
-        Update: Partial<Omit<UserRoleAssignment, 'id' | 'created_at' | 'user_id'>>; // User ID unlikely to change
+        Update: Partial<Omit<UserRoleAssignment, 'id' | 'created_at' | 'user_id'>>;
       };
     };
-    // Functions, Views, etc. can be added here if needed
     Functions: {
-        [_ in never]: never // Placeholder for functions if you generate types from Supabase CLI
+        [_ in never]: never
     }
   };
 }
 
-// Helper type for joins - Supabase doesn't auto-generate these perfectly
 export type UserRoleAssignmentWithRole = UserRoleAssignment & {
-    roles: Pick<Role, 'name'> | null // Or just Role if selecting '*'
+    roles: Pick<Role, 'name'> | null
 }
+
+// --- NEW Constants (Dropdown Options) ---
+
+export const BED_TYPES: { value: BedType; label: string }[] = [
+  { value: 'Single', label: 'Single Bed (90cm)' },
+  { value: 'Twin', label: 'Twin Beds (2x 90cm)' },
+  { value: 'Double', label: 'Double Bed (140cm)' },
+  { value: 'Queen', label: 'Queen Bed (160cm)' },
+  { value: 'King', label: 'King Bed (180cm)' },
+  { value: 'Super King', label: 'Super King Bed (200cm)' },
+];
+
+export const VIEW_TYPES: { value: ViewType; label: string }[] = [
+  { value: 'City View', label: 'City View' },
+  { value: 'Sea View', label: 'Sea View' },
+  { value: 'Garden View', label: 'Garden View' },
+  { value: 'Pool View', label: 'Pool View' },
+  { value: 'Mountain View', label: 'Mountain View' },
+  { value: 'No View', label: 'No View' },
+];
+
+export const WING_TYPES: { value: WingType; label: string }[] = [
+  { value: 'North Wing', label: 'North Wing' },
+  { value: 'South Wing', label: 'South Wing' },
+  { value: 'East Wing', label: 'East Wing' },
+  { value: 'West Wing', label: 'West Wing' },
+  { value: 'Central', label: 'Central Building' },
+];
+
+export const FURNITURE_CONDITIONS: { value: FurnitureCondition; label: string }[] = [
+  { value: 'excellent', label: 'Excellent' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+  { value: 'needs_replacement', label: 'Needs Replacement' },
+];
+
+export const COMMON_AMENITIES = [
+  'AC',
+  'TV LED',
+  'WiFi Gratis',
+  'Mini Bar',
+  'Coffee Maker',
+  'Safe Box',
+  'Shower',
+  'Bathtub',
+  'Hair Dryer',
+  'Iron & Ironing Board',
+  'Telephone',
+  'Work Desk',
+  'Sofa',
+  'Balcony',
+  'Kitchenette',
+  'Microwave',
+  'Refrigerator',
+];
