@@ -6,8 +6,9 @@ import {
   TextInput, Select, Box, Badge, ScrollArea, Grid, MultiSelect, Text, Group, Button, Loader, Center, ActionIcon, Popover
 } from '@mantine/core';
 // Pastikan import ini benar
-import { DatePicker } from '@mantine/dates'; 
 import '@mantine/dates/styles.css'; 
+import { DatePicker } from '@mantine/dates'; 
+
 
 import { IconSearch, IconFilter, IconCalendar, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import 'dayjs/locale/id'; 

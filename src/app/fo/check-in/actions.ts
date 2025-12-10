@@ -1,4 +1,3 @@
-// src/app/fo/check-in/actions.ts
 'use server';
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
@@ -13,44 +12,57 @@ async function getSupabase() {
 
 export async function checkInGuest(reservationId: string, roomId: string) {
   const supabase = await getSupabase();
+  const now = new Date().toISOString();
 
-  // 1. Update Reservasi: Set status jadi 'paid' (Asumsi MVP: Check-in = Lunas/Deposit OK)
-  // Anda bisa menambahkan logika status 'checked_in' jika kolom status ada di tabel reservasi
+  // 1. Update Reservation: Set timestamp & status
   const { error: resError } = await supabase
     .from('reservations')
-    .update({ payment_status: 'paid' }) 
+    .update({ 
+      checked_in_at: now,
+      // Optional: Force status to 'paid' or keep existing logic
+      // payment_status: 'paid' 
+    }) 
     .eq('id', reservationId);
 
-  if (resError) return { error: `Gagal update reservasi: ${resError.message}` };
+  if (resError) return { error: `Failed to update reservation: ${resError.message}` };
 
-  // 2. Update Kamar: Set status jadi 'occupied'
+  // 2. Update Room: Set status to 'occupied'
   const { error: roomError } = await supabase
     .from('rooms')
     .update({ status: 'occupied' })
     .eq('id', roomId);
 
-  if (roomError) return { error: `Gagal update kamar: ${roomError.message}` };
+  if (roomError) return { error: `Failed to update room status: ${roomError.message}` };
 
   revalidatePath('/fo/check-in');
-  revalidatePath('/fo/dashboard'); // Update dashboard juga agar sinkron
+  revalidatePath('/fo/dashboard');
   revalidatePath('/fo/availability');
   return { success: true };
 }
 
 export async function checkOutGuest(reservationId: string, roomId: string) {
   const supabase = await getSupabase();
+  const now = new Date().toISOString();
 
-  // 1. Update Kamar: Set status jadi 'maintenance' (Perlu dibersihkan)
-  // Housekeeping nanti akan mengubahnya jadi 'available' setelah bersih
+  // 1. Update Room: Set status to 'maintenance' (or available but dirty)
+  // Logic: Guest leaves -> Room becomes Dirty
   const { error: roomError } = await supabase
     .from('rooms')
-    .update({ status: 'maintenance' })
+    .update({ 
+      status: 'available', // Room is physically available, but...
+      cleaning_status: 'dirty' // ...it needs cleaning
+    })
     .eq('id', roomId);
 
-  if (roomError) return { error: `Gagal update kamar: ${roomError.message}` };
+  if (roomError) return { error: `Failed to update room status: ${roomError.message}` };
 
-  // 2. (Opsional) Update Reservasi jika ada kolom status check-out
-  // ...
+  // 2. Update Reservation: Set checkout timestamp
+  const { error: resError } = await supabase
+    .from('reservations')
+    .update({ checked_out_at: now })
+    .eq('id', reservationId);
+
+  if (resError) return { error: `Failed to update reservation: ${resError.message}` };
 
   revalidatePath('/fo/check-in');
   revalidatePath('/fo/dashboard');

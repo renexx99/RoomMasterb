@@ -51,6 +51,7 @@ export interface Room {
   status: RoomStatus;
   created_at: string;
   floor_number?: number;
+  cleaning_status?: 'clean' | 'dirty' | 'inspected' | 'pickup' | string;
 }
 
 export interface Guest {
