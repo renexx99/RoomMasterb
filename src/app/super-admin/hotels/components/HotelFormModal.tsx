@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Stack, TextInput, Button, Group, Select, Grid, FileInput } from '@mantine/core';
+import { Modal, Stack, TextInput, Button, Group, Select, Grid, FileInput, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconUpload } from '@tabler/icons-react';
@@ -26,9 +26,9 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
       image: null as File | null,
     },
     validate: {
-      name: (value) => (!value ? 'Nama hotel wajib diisi' : null),
-      code: (value) => (!value ? 'Kode hotel wajib diisi' : null),
-      address: (value) => (!value ? 'Alamat wajib diisi' : null),
+      name: (value) => (!value ? 'Hotel name is required' : null),
+      code: (value) => (!value ? 'Hotel code is required' : null),
+      address: (value) => (!value ? 'Address is required' : null),
     },
   });
 
@@ -40,7 +40,7 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
           code: itemToEdit.code || '',
           address: itemToEdit.address,
           status: itemToEdit.status as string,
-          image: null, // Reset file input saat edit
+          image: null, 
         });
       } else {
         form.reset();
@@ -69,13 +69,13 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
       }
 
       if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+        notifications.show({ title: 'Failed', message: result.error, color: 'red' });
       } else {
-        notifications.show({ title: 'Sukses', message: 'Data hotel berhasil disimpan', color: 'green' });
+        notifications.show({ title: 'Success', message: 'Hotel data saved successfully', color: 'teal' });
         onClose();
       }
     } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+      notifications.show({ title: 'Error', message: 'System error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
@@ -85,50 +85,54 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
     <Modal 
         opened={opened} 
         onClose={onClose} 
-        title={itemToEdit ? 'Edit Hotel' : 'Tambah Hotel Baru'} 
+        title={<Text fw={700}>{itemToEdit ? 'Edit Hotel Data' : 'Add New Hotel'}</Text>} 
         centered
         size="lg"
+        radius="md"
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <Grid>
+          <Grid gutter="md">
              <Grid.Col span={8}>
-                <TextInput label="Nama Hotel" placeholder="Contoh: Grand Hotel" required {...form.getInputProps('name')} />
+                <TextInput label="Hotel Name" placeholder="e.g., Grand Hotel Surabaya" required radius="md" {...form.getInputProps('name')} />
              </Grid.Col>
              <Grid.Col span={4}>
-                <TextInput label="Kode" placeholder="H-01" required {...form.getInputProps('code')} />
+                <TextInput label="Unique Code" placeholder="H-001" required radius="md" {...form.getInputProps('code')} />
              </Grid.Col>
           </Grid>
 
-          <TextInput label="Alamat" placeholder="Alamat lengkap" required {...form.getInputProps('address')} />
+          <TextInput label="Full Address" placeholder="Main Street..." required radius="md" {...form.getInputProps('address')} />
 
-          <Grid>
+          <Grid gutter="md">
             <Grid.Col span={6}>
                 <Select
-                    label="Status Operasional"
+                    label="Operational Status"
                     data={[
-                        { value: 'active', label: 'Active (Buka)' },
+                        { value: 'active', label: 'Active (Open)' },
                         { value: 'maintenance', label: 'Maintenance' },
                         { value: 'suspended', label: 'Suspended' },
                     ]}
                     required
+                    radius="md"
                     {...form.getInputProps('status')}
                 />
             </Grid.Col>
             <Grid.Col span={6}>
                 <FileInput 
-                    label="Upload Foto Hotel"
-                    placeholder={itemToEdit?.image_url ? "Ganti foto..." : "Pilih foto..."}
-                    leftSection={<IconUpload size={14} />}
+                    label="Hotel Photo"
+                    placeholder={itemToEdit?.image_url ? "Change photo..." : "Upload photo..."}
+                    leftSection={<IconUpload size={16} />}
                     accept="image/png,image/jpeg"
+                    radius="md"
+                    clearable
                     {...form.getInputProps('image')}
                 />
             </Grid.Col>
           </Grid>
           
           <Group justify="flex-end" mt="lg">
-            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
-            <Button type="submit" color="indigo" loading={isSubmitting}>Simpan Hotel</Button>
+            <Button variant="default" onClick={onClose} disabled={isSubmitting} radius="md">Cancel</Button>
+            <Button type="submit" color="indigo" loading={isSubmitting} radius="md">Save</Button>
           </Group>
         </Stack>
       </form>
