@@ -7,7 +7,6 @@ interface Props {
 }
 
 export function HotelDistributionChart({ totalHotels }: Props) {
-  // Simulasi data distribusi paket langganan
   const distributionData = [
     { category: 'Enterprise', count: Math.floor(totalHotels * 0.25), percentage: 25, color: 'violet' },
     { category: 'Pro Plan', count: Math.floor(totalHotels * 0.45), percentage: 45, color: 'indigo' },
@@ -16,14 +15,14 @@ export function HotelDistributionChart({ totalHotels }: Props) {
   ];
 
   return (
-    <Card shadow="sm" padding="md" radius="md" withBorder style={{ height: 320 }}>
+    <Card shadow="sm" padding="md" radius="md" withBorder style={{ height: 280 }}>
       <Group justify="space-between" mb="md">
         <div>
-          <Text size="sm" fw={700}>Paket Langganan</Text>
-          <Text size="xs" c="dimmed">Distribusi tipe akun hotel</Text>
+          <Text size="sm" fw={700}>Statistic</Text>
+          <Text size="xs" c="dimmed">Hotel Distribution</Text>
         </div>
         <RingProgress
-          size={80}
+          size={70}
           thickness={8}
           roundCaps
           sections={distributionData.map(item => ({
@@ -39,10 +38,10 @@ export function HotelDistributionChart({ totalHotels }: Props) {
         />
       </Group>
 
-      <Stack gap={10}>
+      <Stack gap={8}>
         {distributionData.map((item) => (
           <Box key={item.category}>
-            <Group justify="space-between" mb={4}>
+            <Group justify="space-between" mb={2}>
               <Group gap={6}>
                 <Box
                   style={{
@@ -50,11 +49,11 @@ export function HotelDistributionChart({ totalHotels }: Props) {
                     backgroundColor: `var(--mantine-color-${item.color}-6)`,
                   }}
                 />
-                <Text size="sm" fw={500} c="dark.6">
+                <Text size="xs" fw={500} c="dark.6">
                   {item.category}
                 </Text>
               </Group>
-              <Text size="sm" fw={700} c="dimmed">
+              <Text size="xs" fw={700} c="dimmed">
                 {item.count}
               </Text>
             </Group>
@@ -69,9 +68,9 @@ export function HotelDistributionChart({ totalHotels }: Props) {
         ))}
       </Stack>
 
-      <Group justify="center" pt="md" mt="auto" style={{ borderTop: '1px solid #e9ecef' }}>
+      <Group justify="center" pt="sm" mt="auto" style={{ borderTop: '1px solid #e9ecef' }}>
         <Text size="xs" c="indigo" fw={600} style={{ cursor: 'pointer' }}>
-            Lihat Laporan Langganan →
+            Full view →
         </Text>
       </Group>
     </Card>

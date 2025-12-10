@@ -15,12 +15,12 @@ export default async function DashboardPage() {
   const { count: hotelCount } = await supabase.from('hotels').select('*', { count: 'exact', head: true });
   const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
   
-  // Data dummy yang disesuaikan untuk bisnis
+  // Data dummy yang disesuaikan untuk bisnis SaaS
   const stats = {
     totalHotels: hotelCount || 0,
     totalUsers: userCount || 0,
-    totalRevenue: 'Rp 4.2M', // Ganti Active Sessions dengan Revenue
-    growthRate: '+12%'       // Ganti System Health dengan Growth
+    totalRevenue: 'Rp 4.2M', // Metrik bisnis
+    growthRate: '+12%'       // Metrik pertumbuhan
   };
 
   return <SuperAdminDashboardClient stats={stats} />;

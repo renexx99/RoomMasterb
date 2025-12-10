@@ -13,45 +13,45 @@ interface Props {
 export function SuperAdminStats({ totalHotels, totalUsers, totalRevenue, growthRate }: Props) {
   const kpiData = [
     {
-      title: 'Total Properti',
+      title: 'Properties',
       value: totalHotels.toString(),
       change: '+3.2%',
       trend: 'up',
       icon: IconBuildingSkyscraper,
-      color: 'violet', // Tema Ungu
+      color: 'violet', // Tema Super Admin
       progress: 85,
     },
     {
-      title: 'Total Pengguna',
+      title: 'Users',
       value: totalUsers.toString(),
       change: '+12%',
       trend: 'up',
       icon: IconUsers,
-      color: 'indigo', // Tema Indigo
+      color: 'indigo',
       progress: 72,
     },
     {
-      title: 'Total Pendapatan',
+      title: 'Total Revenue',
       value: totalRevenue,
       change: '+24%',
       trend: 'up',
       icon: IconCash,
-      color: 'grape', // Tema Anggur/Ungu Tua
+      color: 'grape',
       progress: 92,
     },
     {
-      title: 'Pertumbuhan Bisnis',
+      title: 'Growth Rate',
       value: growthRate,
       change: 'MoM',
       trend: 'up',
       icon: IconChartBar,
-      color: 'blue', // Aksen Biru
+      color: 'blue',
       progress: 68,
     },
   ];
 
   return (
-    <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
+    <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm">
       {kpiData.map((kpi) => (
         <Paper key={kpi.title} p="md" radius="md" withBorder style={{ borderColor: '#e9ecef' }}>
           <Group justify="space-between" align="flex-start" wrap="nowrap">

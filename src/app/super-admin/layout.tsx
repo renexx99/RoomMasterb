@@ -50,8 +50,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/super-admin/dashboard' },
-  { label: 'Manajemen Hotel', icon: IconBuilding, href: '/super-admin/hotels' },
-  { label: 'Manajemen User', icon: IconUsers, href: '/super-admin/users' },
+  { label: 'Manage Properties', icon: IconBuilding, href: '/super-admin/hotels' },
+  { label: 'Manage Users', icon: IconUsers, href: '/super-admin/users' },
 ];
 
 // Data Dummy Notifikasi
@@ -85,8 +85,8 @@ const mockNotifications = [
 // Data untuk Autocomplete Search
 const searchData = [
   { value: 'Dashboard', href: '/super-admin/dashboard' },
-  { value: 'Manajemen Hotel', href: '/super-admin/hotels' },
-  { value: 'Manajemen User', href: '/super-admin/users' },
+  { value: 'Manage Properties', href: '/super-admin/hotels' },
+  { value: 'Manage Users', href: '/super-admin/users' },
 ];
 
 const NAVBAR_WIDTH_COLLAPSED = rem(80);
