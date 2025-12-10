@@ -1,7 +1,15 @@
 'use client';
 
-import { SimpleGrid, Card, Group, Text, ThemeIcon } from '@mantine/core';
-import { IconBed, IconCalendarCheck, IconClock, IconUsers } from '@tabler/icons-react';
+import { SimpleGrid, Paper, Group, Text, Title, Badge, ThemeIcon, Progress } from '@mantine/core';
+import { 
+  IconBed, 
+  IconCalendarCheck, 
+  IconClock, 
+  IconUsers, 
+  IconTrendingUp, 
+  IconTrendingDown,
+  IconMinus
+} from '@tabler/icons-react';
 
 interface StatsProps {
   stats: {
@@ -13,51 +21,78 @@ interface StatsProps {
 }
 
 export function DashboardStats({ stats }: StatsProps) {
-  const dashboardItems = [
+  // Data admin dipetakan ke format visual Manajer
+  const statData = [
     {
       title: 'Kamar Tersedia',
       value: stats.availableRooms.toString(),
-      icon: <IconBed size={24} />,
-      color: 'green',
+      change: '-2 Kamar', // Dummy trend
+      trend: 'down',
+      icon: IconBed,
+      color: 'teal',
+      progress: 45, // Dummy progress visual
     },
     {
       title: 'Check-in Hari Ini',
       value: stats.todayCheckIns.toString(),
-      icon: <IconCalendarCheck size={24} />,
+      change: 'On Track',
+      trend: 'neutral',
+      icon: IconCalendarCheck,
       color: 'blue',
+      progress: 75,
     },
     {
       title: 'Tamu In-House',
       value: stats.activeReservations.toString(),
-      icon: <IconClock size={24} />,
-      color: 'orange',
+      change: '+12%',
+      trend: 'up',
+      icon: IconClock,
+      color: 'indigo',
+      progress: 62,
     },
     {
-      title: 'Total Tamu',
+      title: 'Total Database Tamu',
       value: stats.totalGuests.toString(),
-      icon: <IconUsers size={24} />,
+      change: '+5 Baru',
+      trend: 'up',
+      icon: IconUsers,
       color: 'violet',
+      progress: 88,
     },
   ];
 
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-      {dashboardItems.map((item) => (
-        <Card key={item.title} shadow="sm" padding="lg" radius="md" withBorder>
-          <Group justify="space-between" align="flex-start">
-            <div>
-              <Text c="dimmed" size="sm" fw={500}>
+    <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm">
+      {statData.map((item) => (
+        <Paper key={item.title} p="md" radius="md" withBorder style={{ borderColor: '#e9ecef' }}>
+          <Group justify="space-between" align="flex-start" wrap="nowrap">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} style={{ letterSpacing: '0.5px' }}>
                 {item.title}
               </Text>
-              <Text size="xl" fw={700} c={item.color}>
+              <Title order={2} style={{ fontSize: '1.75rem', fontWeight: 700, marginTop: 4 }}>
                 {item.value}
-              </Text>
+              </Title>
+              <Badge
+                size="sm"
+                variant="light"
+                color={item.trend === 'up' ? 'teal' : item.trend === 'down' ? 'red' : 'gray'}
+                leftSection={
+                  item.trend === 'up' ? <IconTrendingUp size={12} /> : 
+                  item.trend === 'down' ? <IconTrendingDown size={12} /> : 
+                  <IconMinus size={12} />
+                }
+                style={{ marginTop: 4 }}
+              >
+                {item.change}
+              </Badge>
             </div>
-            <ThemeIcon color={item.color} variant="light" size={48} radius="md">
-              {item.icon}
+            <ThemeIcon size={40} radius="md" variant="light" color={item.color}>
+              <item.icon size={20} stroke={1.5} />
             </ThemeIcon>
           </Group>
-        </Card>
+          <Progress value={item.progress} size="sm" radius="xl" color={item.color} mt={8} />
+        </Paper>
       ))}
     </SimpleGrid>
   );

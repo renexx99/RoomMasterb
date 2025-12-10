@@ -2,16 +2,19 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Container, Title, Button, Group, Paper, TextInput,
-  Select, ActionIcon, Text, Grid, Modal, Stack, Table, Badge, Avatar, Menu, ThemeIcon
+  Container, Button, Group, Paper, TextInput,
+  Select, ActionIcon, Text, Grid, Modal, Stack, Table, Badge, Avatar, Menu, ThemeIcon, Box
 } from '@mantine/core';
-import { IconPlus, IconSearch, IconUsers, IconDots, IconEdit, IconTrash, IconFilter } from '@tabler/icons-react';
+import { 
+  IconPlus, IconSearch, IconUsers, IconDots, IconEdit, IconTrash, 
+  IconFilter, IconUserShield 
+} from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { UserFormModal } from './components/UserFormModal';
 import { deleteUserAction } from './actions';
 import { Profile, Role, Hotel } from '@/core/types/database';
 
-// --- DEFINISI TIPE LOKAL ---
+// --- TYPE DEFINITIONS ---
 interface UserRoleJoin {
   role_id: string;
   hotel_id: string | null;
@@ -40,12 +43,9 @@ export default function UsersManagementClient({ initialUsers, hotels, roles }: C
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
 
-  // Data untuk Select
+  // Data for Selects
   const hotelSelectData = hotels.map(h => ({ value: h.id, label: h.name }));
-  // const roleSelectData = roles.map(r => ({ value: r.id, label: r.name.replace(/_/g, ' ').toUpperCase() })); // Hapus format ini agar sesuai value aslinya
-  const roleSelectData = roles.map(r => ({ value: r.id, label: r.name })); // Gunakan nama asli dari DB
-  
-  // Opsi Filter Role
+  const roleSelectData = roles.map(r => ({ value: r.id, label: r.name }));
   const roleFilterData = roles.map(r => ({ value: r.name, label: r.name }));
 
   const filteredUsers = useMemo(() => {
@@ -74,116 +74,101 @@ export default function UsersManagementClient({ initialUsers, hotels, roles }: C
     setIsSubmitting(false);
     
     if (res.error) {
-        notifications.show({ title: 'Gagal', message: res.error, color: 'red' });
+        notifications.show({ title: 'Failed', message: res.error, color: 'red' });
     } else {
-        notifications.show({ title: 'Sukses', message: 'User dihapus', color: 'green' });
+        notifications.show({ title: 'Success', message: 'User deleted successfully', color: 'teal' });
         setDeleteModalOpened(false);
     }
   };
 
-  // --- [UPDATE] Helper Warna Badge Role yang Lebih Lengkap ---
   const getRoleColor = (roleName: string | undefined) => {
       if (!roleName) return 'gray';
-      
       const lower = roleName.toLowerCase();
-      
-      if (lower.includes('super')) return 'violet';           // Super Admin
-      if (lower.includes('hotel admin')) return 'indigo';     // Hotel Admin
-      if (lower.includes('manager')) return 'blue';           // Hotel Manager
-      if (lower.includes('front')) return 'teal';             // Front Office
-      if (lower.includes('housekeeping')) return 'orange';    // Housekeeping
-      if (lower.includes('finance')) return 'green';          // Finance (Future proof)
-      
+      if (lower.includes('super')) return 'violet';
+      if (lower.includes('hotel admin')) return 'indigo';
+      if (lower.includes('manager')) return 'blue';
+      if (lower.includes('front')) return 'cyan';
+      if (lower.includes('housekeeping')) return 'orange';
       return 'gray';
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header Ramping */}
-      <div style={{ 
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', 
-          padding: '0.75rem 0',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-      }}>
-        <Container size="lg">
-          <Group justify="space-between" align="center">
-            <Group gap="xs">
-                <ThemeIcon variant="light" color="white" size="lg" radius="md" style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}>
-                    <IconUsers size={20} stroke={1.5} />
-                </ThemeIcon>
-                <div>
-                    <Title order={4} c="white" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.2 }}>
-                        Manajemen User
-                    </Title>
-                    <Text c="white" opacity={0.8} size="xs" mt={2}>
-                        Kelola akses user via RBAC
-                    </Text>
-                </div>
-            </Group>
-            <Button 
-                leftSection={<IconPlus size={16} />} 
-                onClick={handleCreate} 
-                variant="white" 
-                color="indigo" 
-                size="xs"
-                fw={600}
-            >
-              Tambah User
-            </Button>
-          </Group>
-        </Container>
-      </div>
+    <Box style={{ minHeight: '100vh', background: '#f8f9fa', paddingBottom: '2rem' }}>
+      <Container size="xl" py="lg">
+        
+        {/* Clean Toolbar (No Header Text) */}
+        <Paper p="md" radius="md" withBorder mb="lg" shadow="sm">
+            <Grid align="center" gutter="sm">
+              {/* Search Input */}
+              <Grid.Col span={{ base: 12, sm: 5 }}>
+                <TextInput
+                  placeholder="Search name or email..."
+                  leftSection={<IconSearch size={16} stroke={1.5} />}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                  radius="md"
+                />
+              </Grid.Col>
+              
+              {/* Filter Select */}
+              <Grid.Col span={{ base: 6, sm: 3 }}>
+                 <Select 
+                   placeholder="Filter by Role"
+                   data={roleFilterData}
+                   clearable
+                   leftSection={<IconFilter size={16} stroke={1.5}/>}
+                   value={roleFilter}
+                   onChange={setRoleFilter}
+                   radius="md"
+                 />
+              </Grid.Col>
 
-      {/* Content */}
-      <Container size="lg" py="md">
-        {/* Filter Bar */}
-        <Paper shadow="xs" p="sm" radius="md" withBorder mb="md">
-          <Grid gutter="xs">
-            <Grid.Col span={{ base: 12, sm: 6 }}>
-              <TextInput
-                placeholder="Cari nama atau email..."
-                leftSection={<IconSearch size={14} />}
-                size="xs"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.currentTarget.value)}
-              />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, sm: 6 }}>
-               <Select 
-                 placeholder="Filter Role"
-                 data={roleFilterData}
-                 clearable
-                 leftSection={<IconFilter size={14}/>}
-                 size="xs"
-                 value={roleFilter}
-                 onChange={setRoleFilter}
-               />
-            </Grid.Col>
-          </Grid>
+              {/* Actions */}
+              <Grid.Col span={{ base: 6, sm: 4 }}>
+                <Group justify="flex-end" gap="sm">
+                    <Text size="sm" c="dimmed" visibleFrom="md" style={{ whiteSpace: 'nowrap' }}>
+                        Total: <Text span fw={700} c="dark">{filteredUsers.length}</Text> Users
+                    </Text>
+                    <Button 
+                        leftSection={<IconPlus size={18} />} 
+                        onClick={handleCreate} 
+                        style={{
+                          background: 'linear-gradient(180deg, #8b5cf6 0%, #6366f1 100%)',
+                          color: 'white'
+                        }}
+                        radius="md"
+                    >
+                      Add User
+                    </Button>
+                </Group>
+              </Grid.Col>
+            </Grid>
         </Paper>
 
-        {/* Table */}
+        {/* Users Table */}
         <Paper shadow="sm" radius="md" withBorder style={{ overflow: 'hidden' }}>
-            <Table striped highlightOnHover verticalSpacing="xs">
+            <Table striped highlightOnHover verticalSpacing="sm">
               <Table.Thead bg="gray.0">
                 <Table.Tr>
-                  <Table.Th>User</Table.Th>
+                  <Table.Th>User Profile</Table.Th>
                   <Table.Th>Role</Table.Th>
-                  <Table.Th>Hotel</Table.Th>
-                  <Table.Th ta="right">Aksi</Table.Th>
+                  <Table.Th>Assigned Hotel</Table.Th>
+                  <Table.Th ta="right">Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {filteredUsers.length > 0 ? filteredUsers.map((user) => {
                   const activeRole = user.user_roles?.[0]; 
                   const roleName = activeRole?.roles?.name || 'No Role';
-                  const hotelName = activeRole?.hotels?.name || '-';
+                  const hotelName = activeRole?.hotels?.name || 'Global Access';
 
                   return (
                     <Table.Tr key={user.id}>
                         <Table.Td>
                             <Group gap="sm">
-                                <Avatar color="initials" name={user.full_name} radius="xl" size="sm" />
+                                <Avatar color="indigo" radius="xl" size="sm" name={user.full_name}>
+                                    {user.full_name?.charAt(0)}
+                                </Avatar>
                                 <div>
                                     <Text size="sm" fw={500}>{user.full_name}</Text>
                                     <Text size="xs" c="dimmed">{user.email}</Text>
@@ -191,7 +176,6 @@ export default function UsersManagementClient({ initialUsers, hotels, roles }: C
                             </Group>
                         </Table.Td>
                         <Table.Td>
-                            {/* --- [UPDATE] Badge dengan Warna Tema --- */}
                             <Badge 
                                 size="sm" 
                                 variant="light" 
@@ -202,33 +186,40 @@ export default function UsersManagementClient({ initialUsers, hotels, roles }: C
                             </Badge>
                         </Table.Td>
                         <Table.Td>
-                            <Text size="sm" c={hotelName === '-' ? 'dimmed' : 'dark'}>{hotelName}</Text>
+                            <Group gap={6}>
+                                <ThemeIcon variant="transparent" color="gray" size="xs">
+                                    {hotelName === 'Global Access' ? <IconUserShield size={14}/> : <IconUsers size={14}/>}
+                                </ThemeIcon>
+                                <Text size="sm" c={hotelName === 'Global Access' ? 'dimmed' : 'dark'}>
+                                    {hotelName}
+                                </Text>
+                            </Group>
                         </Table.Td>
                         <Table.Td>
-                        <Group gap={0} justify="flex-end">
-                            <Menu position="bottom-end" shadow="sm">
-                                <Menu.Target>
-                                    <ActionIcon variant="subtle" color="gray" size="sm">
-                                        <IconDots size={16} />
-                                    </ActionIcon>
-                                </Menu.Target>
-                                <Menu.Dropdown>
-                                    <Menu.Item leftSection={<IconEdit size={14}/>} onClick={() => handleEdit(user)}>
-                                        Edit Role & Hotel
-                                    </Menu.Item>
-                                    <Menu.Item color="red" leftSection={<IconTrash size={14}/>} onClick={() => handleDelete(user)}>
-                                        Hapus User
-                                    </Menu.Item>
-                                </Menu.Dropdown>
-                            </Menu>
-                        </Group>
+                            <Group gap={0} justify="flex-end">
+                                <Menu position="bottom-end" shadow="md" withArrow>
+                                    <Menu.Target>
+                                        <ActionIcon variant="subtle" color="gray" size="sm">
+                                            <IconDots size={16} />
+                                        </ActionIcon>
+                                    </Menu.Target>
+                                    <Menu.Dropdown>
+                                        <Menu.Item leftSection={<IconEdit size={14}/>} onClick={() => handleEdit(user)}>
+                                            Edit Details
+                                        </Menu.Item>
+                                        <Menu.Item color="red" leftSection={<IconTrash size={14}/>} onClick={() => handleDelete(user)}>
+                                            Delete User
+                                        </Menu.Item>
+                                    </Menu.Dropdown>
+                                </Menu>
+                            </Group>
                         </Table.Td>
                     </Table.Tr>
                   );
                 }) : (
                     <Table.Tr>
                         <Table.Td colSpan={4} ta="center" py="xl" c="dimmed">
-                            Tidak ada data user ditemukan.
+                            No users found matching your filters.
                         </Table.Td>
                     </Table.Tr>
                 )}
@@ -246,16 +237,24 @@ export default function UsersManagementClient({ initialUsers, hotels, roles }: C
         roles={roleSelectData}
       />
 
-      <Modal opened={deleteModalOpened} onClose={() => setDeleteModalOpened(false)} title="Konfirmasi Hapus" centered size="sm">
+      <Modal 
+        opened={deleteModalOpened} 
+        onClose={() => setDeleteModalOpened(false)} 
+        title="Confirm Deletion" 
+        centered 
+        radius="md"
+      >
          <Stack gap="sm">
-            <Text size="sm">Yakin ingin menghapus user <strong>{deleteTarget?.full_name}</strong>?</Text>
-            <Text size="xs" c="red">Akses login dan semua data relasi user ini akan dihapus.</Text>
+            <Text size="sm">Are you sure you want to delete user <strong>{deleteTarget?.full_name}</strong>?</Text>
+            <Paper p="xs" bg="red.0" c="red.9" withBorder style={{ borderColor: 'var(--mantine-color-red-2)' }}>
+                <Text size="xs">⚠️ This will revoke their access immediately and remove all role associations.</Text>
+            </Paper>
             <Group justify="flex-end" mt="sm">
-                <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)}>Batal</Button>
-                <Button color="red" size="xs" loading={isSubmitting} onClick={confirmDelete}>Hapus</Button>
+                <Button variant="default" onClick={() => setDeleteModalOpened(false)}>Cancel</Button>
+                <Button color="red" loading={isSubmitting} onClick={confirmDelete}>Delete User</Button>
             </Group>
          </Stack>
       </Modal>
-    </div>
+    </Box>
   );
 }

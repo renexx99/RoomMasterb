@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Stack, TextInput, Button, Group, Select, PasswordInput } from '@mantine/core';
+import { Modal, Stack, TextInput, Button, Group, Select, PasswordInput, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { createUserAction, updateUserAction, UserFormData } from '../actions';
-import { UserWithRoles } from '../client'; // Import tipe lokal
+import { UserWithRoles } from '../client';
 
 interface Props {
   opened: boolean;
   onClose: () => void;
-  itemToEdit: UserWithRoles | null; // Gunakan tipe yang benar
+  itemToEdit: UserWithRoles | null;
   hotels: { label: string; value: string }[];
   roles: { label: string; value: string }[];
 }
@@ -27,24 +27,22 @@ export function UserFormModal({ opened, onClose, itemToEdit, hotels, roles }: Pr
       password: '',
     },
     validate: {
-      email: (val) => (/^\S+@\S+$/.test(val) ? null : 'Email tidak valid'),
-      full_name: (val) => (val.length < 3 ? 'Nama terlalu pendek' : null),
-      role_id: (val) => (!val ? 'Role harus dipilih' : null),
+      email: (val) => (/^\S+@\S+$/.test(val) ? null : 'Invalid email address'),
+      full_name: (val) => (val.length < 3 ? 'Name is too short' : null),
+      role_id: (val) => (!val ? 'Role selection is required' : null),
+      password: (val) => (!itemToEdit && val && val.length < 6 ? 'Password must be at least 6 characters' : null),
     },
   });
 
   useEffect(() => {
     if (opened) {
       if (itemToEdit) {
-        // --- LOGIC PENTING: Ambil ID dari array user_roles ---
         const activeAssignment = itemToEdit.user_roles?.[0];
         
         form.setValues({
           email: itemToEdit.email,
           full_name: itemToEdit.full_name,
-          // Ambil role_id dari relasi, bukan dari profiles
           role_id: activeAssignment?.role_id || '', 
-          // Ambil hotel_id dari relasi
           hotel_id: activeAssignment?.hotel_id || '', 
           password: '',
         });
@@ -52,7 +50,6 @@ export function UserFormModal({ opened, onClose, itemToEdit, hotels, roles }: Pr
         form.reset();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, itemToEdit]);
 
   const handleSubmit = async (values: UserFormData) => {
@@ -66,13 +63,13 @@ export function UserFormModal({ opened, onClose, itemToEdit, hotels, roles }: Pr
       }
 
       if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+        notifications.show({ title: 'Failed', message: result.error, color: 'red' });
       } else {
-        notifications.show({ title: 'Sukses', message: 'Data user berhasil disimpan', color: 'green' });
+        notifications.show({ title: 'Success', message: 'User saved successfully', color: 'teal' });
         onClose();
       }
     } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+      notifications.show({ title: 'Error', message: 'An unexpected error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
@@ -82,40 +79,72 @@ export function UserFormModal({ opened, onClose, itemToEdit, hotels, roles }: Pr
     <Modal 
         opened={opened} 
         onClose={onClose} 
-        title={itemToEdit ? 'Edit User & Role' : 'Tambah User Baru'} 
+        title={<Text fw={700}>{itemToEdit ? 'Edit User' : 'Add New User'}</Text>} 
         centered
+        radius="md"
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="sm">
-          <TextInput label="Nama Lengkap" placeholder="John Doe" required {...form.getInputProps('full_name')} />
-          <TextInput label="Email" placeholder="john@example.com" required disabled={!!itemToEdit} {...form.getInputProps('email')} />
+        <Stack gap="md">
+          <TextInput 
+            label="Full Name" 
+            placeholder="e.g. John Doe" 
+            required 
+            radius="md"
+            {...form.getInputProps('full_name')} 
+          />
+          <TextInput 
+            label="Email Address" 
+            placeholder="john@example.com" 
+            required 
+            disabled={!!itemToEdit} 
+            radius="md"
+            {...form.getInputProps('email')} 
+          />
           
           {!itemToEdit && (
-            <PasswordInput label="Password" placeholder="Rahasia..." required {...form.getInputProps('password')} />
+            <PasswordInput 
+              label="Password" 
+              placeholder="Set initial password" 
+              required 
+              radius="md"
+              {...form.getInputProps('password')} 
+            />
           )}
 
           <Select 
-            label="Role / Jabatan"
-            placeholder="Pilih Role"
+            label="System Role"
+            placeholder="Select Role"
             data={roles}
             searchable
             required
+            radius="md"
             {...form.getInputProps('role_id')}
           />
 
           <Select 
-            label="Penempatan Hotel"
-            placeholder="Pilih hotel (Opsional)"
+            label="Assigned Hotel"
+            placeholder="Select Hotel (Optional)"
             data={hotels}
             searchable
             clearable
-            description="Kosongkan jika role adalah Super Admin"
+            radius="md"
+            description="Leave empty if assigning a Global/Super Admin role"
             {...form.getInputProps('hotel_id')}
           />
           
-          <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
-            <Button type="submit" color="indigo" loading={isSubmitting}>Simpan</Button>
+          <Group justify="flex-end" mt="lg">
+            <Button variant="default" onClick={onClose} disabled={isSubmitting} radius="md">Cancel</Button>
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              radius="md"
+              style={{
+                background: 'linear-gradient(180deg, #8b5cf6 0%, #6366f1 100%)',
+                color: 'white'
+              }}
+            >
+              Save User
+            </Button>
           </Group>
         </Stack>
       </form>
