@@ -1,57 +1,57 @@
 'use client';
 
 import { SimpleGrid, Paper, Group, Text, Title, Badge, ThemeIcon, Progress } from '@mantine/core';
-import { IconBuildingSkyscraper, IconUsers, IconActivity, IconServer, IconTrendingUp, IconTrendingDown } from '@tabler/icons-react';
+import { IconBuildingSkyscraper, IconUsers, IconCash, IconTrendingUp, IconChartBar } from '@tabler/icons-react';
 
 interface Props {
   totalHotels: number;
   totalUsers: number;
-  activeSessions: number;
-  systemHealth: string;
+  totalRevenue: string;
+  growthRate: string;
 }
 
-export function SuperAdminStats({ totalHotels, totalUsers, activeSessions, systemHealth }: Props) {
+export function SuperAdminStats({ totalHotels, totalUsers, totalRevenue, growthRate }: Props) {
   const kpiData = [
     {
       title: 'Total Properti',
       value: totalHotels.toString(),
-      change: '+12.0%',
+      change: '+3.2%',
       trend: 'up',
       icon: IconBuildingSkyscraper,
-      color: 'indigo',
+      color: 'violet', // Tema Ungu
       progress: 85,
     },
     {
       title: 'Total Pengguna',
       value: totalUsers.toString(),
-      change: '+5.3%',
+      change: '+12%',
       trend: 'up',
       icon: IconUsers,
-      color: 'teal',
+      color: 'indigo', // Tema Indigo
       progress: 72,
     },
     {
-      title: 'Sesi Aktif',
-      value: activeSessions.toString(),
-      change: '-2.1%',
-      trend: 'down',
-      icon: IconActivity,
-      color: 'violet',
-      progress: 58,
+      title: 'Total Pendapatan',
+      value: totalRevenue,
+      change: '+24%',
+      trend: 'up',
+      icon: IconCash,
+      color: 'grape', // Tema Anggur/Ungu Tua
+      progress: 92,
     },
     {
-      title: 'Kesehatan Sistem',
-      value: systemHealth,
-      change: 'Optimal',
-      trend: 'neutral',
-      icon: IconServer,
-      color: 'green',
-      progress: 98,
+      title: 'Pertumbuhan Bisnis',
+      value: growthRate,
+      change: 'MoM',
+      trend: 'up',
+      icon: IconChartBar,
+      color: 'blue', // Aksen Biru
+      progress: 68,
     },
   ];
 
   return (
-    <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm">
+    <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
       {kpiData.map((kpi) => (
         <Paper key={kpi.title} p="md" radius="md" withBorder style={{ borderColor: '#e9ecef' }}>
           <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -65,8 +65,8 @@ export function SuperAdminStats({ totalHotels, totalUsers, activeSessions, syste
               <Badge
                 size="sm"
                 variant="light"
-                color={kpi.trend === 'up' ? 'teal' : kpi.trend === 'down' ? 'red' : 'gray'}
-                leftSection={kpi.trend === 'up' ? <IconTrendingUp size={12} /> : kpi.trend === 'down' ? <IconTrendingDown size={12} /> : null}
+                color={kpi.color}
+                leftSection={<IconTrendingUp size={12} />}
                 style={{ marginTop: 4 }}
               >
                 {kpi.change}

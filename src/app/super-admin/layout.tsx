@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   AppShell,
@@ -21,6 +21,7 @@ import {
   ThemeIcon,
   Divider,
   Button,
+  Stack, // Tambahkan Stack
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -100,6 +101,34 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // --- STATE UNTUK WAKTU & GREETING (Sama seperti Manager) ---
+  const [currentDate, setCurrentDate] = useState('');
+  const [greeting, setGreeting] = useState('');
+
+  // --- EFEK WAKTU (Sama seperti Manager) ---
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      
+      const dateOptions: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      };
+      setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
+
+      const hour = now.getHours();
+      if (hour < 12) setGreeting('Good Morning');
+      else if (hour < 18) setGreeting('Good Afternoon');
+      else setGreeting('Good Evening');
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -116,13 +145,13 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
     const target = searchData.find((item) => item.value === value);
     if (target) {
       router.push(target.href);
-      setSearchQuery(''); // Reset search setelah navigasi
+      setSearchQuery(''); 
     }
   };
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 70 }} // Sedikit dipertinggi agar lebih lega (sama seperti Manager)
       navbar={{
         width: isNavbarExpanded ? NAVBAR_WIDTH_EXPANDED : NAVBAR_WIDTH_COLLAPSED,
         breakpoint: 'sm',
@@ -133,7 +162,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         main: {
           background: '#f5f6fa',
           transition: 'padding-left 0.25s ease',
-          paddingTop: '60px',
+          paddingTop: '70px',
         },
       }}
     >
@@ -147,43 +176,52 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
       >
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           
-          {/* BAGIAN KIRI: Logo & Burger */}
+          {/* BAGIAN KIRI: Logo, Brand & GREETING */}
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Group gap="xs" wrap="nowrap">
               <Box
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '6px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  width: 36,
+                  height: 36,
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', // Gradien Ungu Super Admin
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)',
                 }}
               >
-                <IconBuildingSkyscraper size={18} stroke={1.5} color="white" />
+                <IconBuildingSkyscraper size={20} stroke={1.5} color="white" />
               </Box>
               
-              <Box style={{
+              <Box visibleFrom="sm" style={{
                   opacity: isNavbarExpanded ? 1 : 0,
                   width: isNavbarExpanded ? 'auto' : 0,
                   overflow: 'hidden',
-                  transition: 'opacity 0.2s ease, width 0.2s ease',
+                  transition: 'all 0.2s ease',
                   display: opened ? 'block' : 'initial'
-              }}
-               visibleFrom="sm" 
-              >
+              }}>
                 <Text size="sm" fw={700} style={{ color: '#1e293b', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
                   RoomMaster
                 </Text>
+                <Text size="10px" c="dimmed" tt="uppercase" fw={600}>Super Admin</Text>
               </Box>
             </Group>
+
+            {/* DIVIDER & GREETING TEXT (Baru Ditambahkan) */}
+            <Divider orientation="vertical" visibleFrom="md" mx="xs" style={{ height: 24 }} />
+
+            <Stack gap={0} visibleFrom="md" style={{ lineHeight: 1 }}>
+                <Text size="xs" c="dimmed" fw={500}>{currentDate}</Text>
+                {/* Menggunakan warna indigo/ungu untuk Super Admin */}
+                <Text size="sm" fw={600} c="indigo.7">{greeting}, {profile?.full_name?.split(' ')[0] || 'Admin'}</Text>
+            </Stack>
           </Group>
 
           {/* BAGIAN TENGAH: Global Search */}
-          <Box style={{ flex: 1, maxWidth: 480 }} visibleFrom="xs" mx="md">
+          <Box style={{ flex: 1, maxWidth: 480 }} visibleFrom="sm" mx="md">
             <Autocomplete
               placeholder="Cari..."
               leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
@@ -195,11 +233,11 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
               radius="md"
               styles={{
                 input: {
-                    backgroundColor: 'var(--mantine-color-gray-2)', 
+                    backgroundColor: 'var(--mantine-color-gray-1)', 
                     border: '1px solid var(--mantine-color-gray-3)',
                     color: 'var(--mantine-color-gray-9)',
                     transition: 'all 0.2s ease',
-                    '&::placeholder': {
+                    '&:placeholder': {
                         color: 'var(--mantine-color-gray-6)',
                     },
                     '&:focus': {
@@ -256,7 +294,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                  </ScrollArea.Autosize>
                  
                  <Box p={8} ta="center">
-                    <Button variant="subtle" size="xs" fullWidth>Lihat Semua</Button>
+                    <Button variant="subtle" size="xs" fullWidth color="violet">Lihat Semua</Button>
                  </Box>
               </Popover.Dropdown>
             </Popover>
@@ -301,7 +339,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           boxShadow: '2px 0 4px rgba(0, 0, 0, 0.03)',
           transition: 'width 0.25s ease-in-out',
           display: 'flex',
-          flexDirection: 'column', // Pastikan layout kolom untuk footer di bawah
+          flexDirection: 'column', 
         }}
       >
         {/* Bagian Menu Utama */}
@@ -329,16 +367,12 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
                     padding: `${rem(8)} ${rem(10)}`,
                     fontSize: rem(13),
                     fontWeight: 500,
-                    color: isActive ? '#4f46e5' : '#4b5563',
+                    color: isActive ? '#6366f1' : '#4b5563', // Indigo active text
+                    backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent', // Indigo active bg
                     
                     '&:hover': {
                       background: 'rgba(99, 102, 241, 0.08)',
-                      color: '#4f46e5',
-                    },
-                    "&[dataActive]": {
-                      background: 'rgba(99, 102, 241, 0.1)',
-                      color: '#4f46e5',
-                      fontWeight: 600,
+                      color: '#6366f1',
                     },
                   },
                   label: {
@@ -354,7 +388,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           })}
         </AppShell.Section>
 
-        {/* Bagian Logout (Ditambahkan di bawah) */}
+        {/* Bagian Logout */}
         <AppShell.Section>
           <NavLink
             label={isNavbarExpanded ? 'Logout' : undefined}
@@ -363,11 +397,11 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
             styles={(theme) => ({
               root: {
                 borderRadius: rem(6),
-                marginTop: rem(2), // Sedikit margin di atas
+                marginTop: rem(2), 
                 padding: `${rem(8)} ${rem(10)}`,
                 fontSize: rem(13),
                 fontWeight: 500,
-                color: '#ef4444', // Warna merah untuk logout
+                color: '#ef4444', 
                 
                 '&:hover': {
                   background: 'rgba(239, 68, 68, 0.08)',

@@ -7,65 +7,72 @@ interface Props {
 }
 
 export function HotelDistributionChart({ totalHotels }: Props) {
+  // Simulasi data distribusi paket langganan
   const distributionData = [
-    { category: 'Active', count: Math.floor(totalHotels * 0.82), percentage: 82, color: 'teal' },
-    { category: 'Pending', count: Math.floor(totalHotels * 0.12), percentage: 12, color: 'yellow' },
-    { category: 'Inactive', count: Math.floor(totalHotels * 0.06), percentage: 6, color: 'red' },
+    { category: 'Enterprise', count: Math.floor(totalHotels * 0.25), percentage: 25, color: 'violet' },
+    { category: 'Pro Plan', count: Math.floor(totalHotels * 0.45), percentage: 45, color: 'indigo' },
+    { category: 'Basic', count: Math.floor(totalHotels * 0.20), percentage: 20, color: 'blue' },
+    { category: 'Trial', count: Math.floor(totalHotels * 0.10), percentage: 10, color: 'gray' },
   ];
 
   return (
-    <Card shadow="sm" padding="md" radius="md" withBorder style={{ height: 280 }}>
+    <Card shadow="sm" padding="md" radius="md" withBorder style={{ height: 320 }}>
       <Group justify="space-between" mb="md">
         <div>
-          <Text size="sm" fw={700}>Hotel Status</Text>
-          <Text size="xs" c="dimmed">Distribution breakdown</Text>
+          <Text size="sm" fw={700}>Paket Langganan</Text>
+          <Text size="xs" c="dimmed">Distribusi tipe akun hotel</Text>
         </div>
         <RingProgress
-          size={70}
+          size={80}
           thickness={8}
+          roundCaps
           sections={distributionData.map(item => ({
             value: item.percentage,
             color: item.color,
+            tooltip: `${item.category}: ${item.count}`
           }))}
           label={
-            <Text size="xs" ta="center" fw={700}>
-              {totalHotels}
+            <Text size="xs" ta="center" fw={700} c="dimmed">
+              Total<br/>{totalHotels}
             </Text>
           }
         />
       </Group>
 
-      <Stack gap={8}>
+      <Stack gap={10}>
         {distributionData.map((item) => (
           <Box key={item.category}>
             <Group justify="space-between" mb={4}>
               <Group gap={6}>
                 <Box
                   style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    background: item.color === 'teal' ? '#20c997' : item.color === 'yellow' ? '#fab005' : '#fa5252',
+                    width: 8, height: 8, borderRadius: '50%',
+                    backgroundColor: `var(--mantine-color-${item.color}-6)`,
                   }}
                 />
-                <Text size="sm" fw={500}>
+                <Text size="sm" fw={500} c="dark.6">
                   {item.category}
                 </Text>
               </Group>
-              <Text size="sm" fw={700}>
-                {item.count} Hotels
+              <Text size="sm" fw={700} c="dimmed">
+                {item.count}
               </Text>
             </Group>
-            <Progress value={item.percentage} size="sm" radius="xl" color={item.color} />
+            <Progress 
+                value={item.percentage} 
+                size="sm" 
+                radius="xl" 
+                color={item.color} 
+                style={{ opacity: 0.8 }}
+            />
           </Box>
         ))}
       </Stack>
 
-      <Group justify="space-between" pt="md" mt="md" style={{ borderTop: '1px solid #e9ecef' }}>
-        <Text size="xs" c="dimmed">Active Rate</Text>
-        <Badge size="sm" variant="light" color="teal">
-          {distributionData[0].percentage}%
-        </Badge>
+      <Group justify="center" pt="md" mt="auto" style={{ borderTop: '1px solid #e9ecef' }}>
+        <Text size="xs" c="indigo" fw={600} style={{ cursor: 'pointer' }}>
+            Lihat Laporan Langganan →
+        </Text>
       </Group>
     </Card>
   );

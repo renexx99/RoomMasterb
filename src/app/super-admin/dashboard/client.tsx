@@ -3,7 +3,7 @@
 import React from 'react';
 import { Box, Container, Grid, Stack } from '@mantine/core';
 import { SuperAdminStats } from './components/SuperAdminStats';
-import { SystemHealthChart } from './components/SystemHealthChart';
+import { GlobalRevenueChart } from './components/GlobalRevenueChart';
 import { HotelDistributionChart } from './components/HotelDistributionChart';
 import { RecentActivities } from './components/RecentActivities';
 
@@ -11,8 +11,8 @@ interface DashboardProps {
   stats: {
     totalHotels: number;
     totalUsers: number;
-    activeSessions: number;
-    systemHealth: string;
+    totalRevenue: string;
+    growthRate: string;
   };
 }
 
@@ -20,22 +20,24 @@ export default function SuperAdminDashboardClient({ stats }: DashboardProps) {
   return (
     <Box style={{ minHeight: '100vh', background: '#f8f9fa' }}>
       <Container fluid px="md" py="lg">
-        <Stack gap="sm">
+        <Stack gap="md">
           
-          {/* 1. KPI Stats Cards */}
+          {/* 1. KPI Stats Cards (Ungu/Biru Theme) */}
           <SuperAdminStats 
             totalHotels={stats.totalHotels}
             totalUsers={stats.totalUsers}
-            activeSessions={stats.activeSessions}
-            systemHealth={stats.systemHealth}
+            totalRevenue={stats.totalRevenue}
+            growthRate={stats.growthRate}
           />
 
           {/* 2. Charts Row */}
-          <Grid gutter="sm">
-            <Grid.Col span={{ base: 12, md: 6 }}>
-              <SystemHealthChart />
+          <Grid gutter="md">
+            <Grid.Col span={{ base: 12, md: 7 }}>
+              {/* Menggantikan SystemHealthChart */}
+              <GlobalRevenueChart />
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6 }}>
+            <Grid.Col span={{ base: 12, md: 5 }}>
+              {/* Updated Logic */}
               <HotelDistributionChart totalHotels={stats.totalHotels} />
             </Grid.Col>
           </Grid>
