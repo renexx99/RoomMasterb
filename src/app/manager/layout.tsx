@@ -57,13 +57,13 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/manager/dashboard' },
-  { label: 'Laporan', icon: IconReportAnalytics, href: '/manager/reports' },
-  { label: 'Manajemen Shift', icon: IconCalendarTime, href: '/manager/shifts' },
-  { label: 'Persetujuan', icon: IconChecks, href: '/manager/approvals' },
-  { label: 'Tipe Kamar', icon: IconCategory, href: '/manager/room-types' },
-  { label: 'Manajemen Kamar', icon: IconBed, href: '/manager/rooms' },
-  { label: 'Reservasi', icon: IconCalendarEvent, href: '/manager/reservations' },
-  { label: 'Buku Tamu', icon: IconUsersGroup, href: '/manager/guests' },
+  { label: 'Reports', icon: IconReportAnalytics, href: '/manager/reports' },
+  { label: 'Shift', icon: IconCalendarTime, href: '/manager/shifts' },
+  { label: 'Approvals', icon: IconChecks, href: '/manager/approvals' },
+  { label: 'Room Type', icon: IconCategory, href: '/manager/room-types' },
+  { label: 'Manage Rooms', icon: IconBed, href: '/manager/rooms' },
+  { label: 'Reservations', icon: IconCalendarEvent, href: '/manager/reservations' },
+  { label: 'Guest Folio', icon: IconUsersGroup, href: '/manager/guests' },
 ];
 
 // --- Mock Data Notifikasi & Search ---
@@ -75,9 +75,9 @@ const mockNotifications = [
 
 const searchData = [
   { value: 'Dashboard', href: '/manager/dashboard' },
-  { value: 'Laporan', href: '/manager/reports' },
-  { value: 'Cek Shift Staff', href: '/manager/shifts' },
-  { value: 'Approval', href: '/manager/approvals' },
+  { value: 'Reports', href: '/manager/reports' },
+  { value: 'Shift', href: '/manager/shifts' },
+  { value: 'Approvals', href: '/manager/approvals' },
 ];
 
 const NAVBAR_WIDTH_COLLAPSED = rem(80);

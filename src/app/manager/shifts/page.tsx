@@ -1,7 +1,7 @@
 // src/app/manager/shifts/page.tsx
 'use client';
 
-import { useState } from 'react'; // Hapus useEffect
+import { useState, useMemo } from 'react';
 import {
   Container,
   Title,
@@ -9,336 +9,418 @@ import {
   Paper,
   Stack,
   Group,
-  Center,
-  Loader,
   ActionIcon,
   Button,
   Table,
   Modal,
   Select,
-  // Hapus LoadingOverlay jika tidak perlu simulasi
+  ThemeIcon,
+  Badge,
+  Avatar,
+  Grid,
+  TextInput,
+  Center
 } from '@mantine/core';
-import { DatePicker, DateTimePicker, DatesProvider } from '@mantine/dates';
-import 'dayjs/locale/id'; // Impor lokalisasi
-import '@mantine/dates/styles.css';
+import { DatePickerInput, TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import {
-  IconArrowLeft,
-  IconCalendarPlus,
+  IconPlus,
+  IconSearch,
+  IconCalendarTime,
   IconTrash,
+  IconClock,
+  IconUser,
+  IconFilter,
+  IconCalendar
 } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
-// Hapus import supabase, useAuth, notifications
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { notifications } from '@mantine/notifications';
+import 'dayjs/locale/id'; // Opsional, sesuaikan dengan locale project
 
-// --- DATA DUMMY (MOCK DATA) ---
-// Interface untuk data shift
-interface MockShift {
+// --- TYPES ---
+interface ShiftItem {
   id: string;
-  profile: {
-    full_name: string;
-  };
-  user_roles: {
-    role_name: string;
-  };
-  start_time: string;
-  end_time: string;
+  staffName: string;
+  role: string;
+  date: Date;
+  startTime: string; // "07:00"
+  endTime: string;   // "15:00"
+  status: 'active' | 'upcoming' | 'completed';
+  avatarColor: string;
 }
 
-// Interface untuk daftar staf (untuk Select)
-interface StaffMember {
-  value: string; // user_id
-  label: string; // full_name (Role)
-  role: string; // role_name
-}
-
-// Data dummy untuk staf
-const mockStaffList: StaffMember[] = [
-  { value: 'user_1', label: 'Andi (Front Office)', role: 'Front Office' },
-  { value: 'user_2', label: 'Citra (Front Office)', role: 'Front Office' },
-  {
-    value: 'user_3',
-    label: 'Budi (Housekeeping)',
-    role: 'Housekeeping Supervisor',
-  },
-  {
-    value: 'user_4',
-    label: 'Dewi (Housekeeping)',
-    role: 'Housekeeping Supervisor',
-  },
-];
-
-// Data dummy untuk shift (gunakan tanggal hari ini)
+// --- MOCK DATA ---
 const today = new Date();
-const mockShifts: MockShift[] = [
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+
+const mockShifts: ShiftItem[] = [
   {
-    id: 'shift_1',
-    profile: { full_name: 'Andi' },
-    user_roles: { role_name: 'Front Office' },
-    start_time: new Date(today.setHours(7, 0, 0, 0)).toISOString(),
-    end_time: new Date(today.setHours(15, 0, 0, 0)).toISOString(),
+    id: 'sh_1',
+    staffName: 'Sarah Jenkins',
+    role: 'Front Desk Agent',
+    date: today,
+    startTime: '07:00',
+    endTime: '15:00',
+    status: 'active',
+    avatarColor: 'cyan',
   },
   {
-    id: 'shift_2',
-    profile: { full_name: 'Budi' },
-    user_roles: { role_name: 'Housekeeping' },
-    start_time: new Date(today.setHours(9, 0, 0, 0)).toISOString(),
-    end_time: new Date(today.setHours(17, 0, 0, 0)).toISOString(),
+    id: 'sh_2',
+    staffName: 'Michael Wong',
+    role: 'Housekeeping',
+    date: today,
+    startTime: '08:00',
+    endTime: '16:00',
+    status: 'active',
+    avatarColor: 'orange',
   },
   {
-    id: 'shift_3',
-    profile: { full_name: 'Citra' },
-    user_roles: { role_name: 'Front Office' },
-    start_time: new Date(today.setHours(15, 0, 0, 0)).toISOString(),
-    end_time: new Date(today.setHours(23, 0, 0, 0)).toISOString(),
+    id: 'sh_3',
+    staffName: 'David Chen',
+    role: 'Concierge',
+    date: today,
+    startTime: '09:00',
+    endTime: '17:00',
+    status: 'active',
+    avatarColor: 'blue',
+  },
+  {
+    id: 'sh_4',
+    staffName: 'Jessica Lee',
+    role: 'Front Desk Agent',
+    date: today,
+    startTime: '15:00',
+    endTime: '23:00',
+    status: 'upcoming',
+    avatarColor: 'pink',
+  },
+  {
+    id: 'sh_5',
+    staffName: 'Robert Smith',
+    role: 'Security',
+    date: tomorrow,
+    startTime: '23:00',
+    endTime: '07:00',
+    status: 'upcoming',
+    avatarColor: 'gray',
   },
 ];
-// --- AKHIR DATA DUMMY ---
+
+const ROLES = ['Front Desk Agent', 'Housekeeping', 'Concierge', 'Security', 'Manager'];
 
 function ShiftsContent() {
-  const router = useRouter();
-  // State loading untuk simulasi
-  const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [modalOpened, { open: openModal, close: closeModal }] =
-    useDisclosure(false);
+  const MAX_WIDTH = 1200;
 
-  // Form untuk menambah shift baru
-  const form = useForm({
+  // State
+  const [shifts, setShifts] = useState<ShiftItem[]>(mockShifts);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<string | null>(null);
+  const [filterDate, setFilterDate] = useState<Date | null>(today);
+  const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form
+  const form = useForm<{
+    staffName: string;
+    role: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+  }>({
     initialValues: {
-      user_id: '',
-      start_time: new Date(),
-      end_time: new Date(new Date().getTime() + 8 * 60 * 60 * 1000), // Default 8 jam
+      staffName: '',
+      role: '',
+      date: new Date(),
+      startTime: '',
+      endTime: '',
     },
     validate: {
-      user_id: (value) => (value ? null : 'Staf harus dipilih'),
-      start_time: (value) => (value ? null : 'Waktu mulai harus diisi'),
-      end_time: (value, values) =>
-        value > values.start_time
-          ? null
-          : 'Waktu selesai harus setelah waktu mulai',
+      staffName: (val) => (val ? null : 'Staff name is required'),
+      role: (val) => (val ? null : 'Role is required'),
+      date: (val) => (val ? null : 'Date is required'),
+      startTime: (val) => (val ? null : 'Start time required'),
+      endTime: (val) => (val ? null : 'End time required'),
     },
   });
 
-  // Handler DUMMY untuk menambah shift
+  // Filter Logic
+  const filteredShifts = useMemo(() => {
+    return shifts.filter((shift) => {
+      const matchSearch = shift.staffName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchRole = filterRole ? shift.role === filterRole : true;
+      const matchDate = filterDate 
+        ? shift.date.toDateString() === filterDate.toDateString() 
+        : true;
+
+      return matchSearch && matchRole && matchDate;
+    });
+  }, [shifts, searchTerm, filterRole, filterDate]);
+
+  // Handlers
   const handleAddShift = (values: typeof form.values) => {
-    setLoading(true);
-    console.log('Dummy Add Shift:', values);
-    // Simulasi loading
+    setIsSubmitting(true);
+    // Simulate API delay
     setTimeout(() => {
-      setLoading(false);
+      const newShift: ShiftItem = {
+        id: Math.random().toString(),
+        staffName: values.staffName,
+        role: values.role,
+        date: values.date,
+        startTime: values.startTime,
+        endTime: values.endTime,
+        status: 'upcoming',
+        avatarColor: 'blue', // Default
+      };
+      
+      setShifts((prev) => [newShift, ...prev]);
+      notifications.show({ title: 'Success', message: 'Shift added successfully', color: 'green' });
+      setIsSubmitting(false);
       closeModal();
       form.reset();
-      // Di aplikasi nyata, kita akan refresh data di sini
-    }, 750);
+    }, 600);
   };
 
-  // Handler DUMMY untuk menghapus shift
-  const handleDeleteShift = (shiftId: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus shift ini? (Demo)')) {
-      return;
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to remove this shift?')) {
+      setShifts((prev) => prev.filter((s) => s.id !== id));
+      notifications.show({ title: 'Deleted', message: 'Shift removed', color: 'gray' });
     }
-    setLoading(true);
-    console.log('Dummy Delete Shift:', shiftId);
-    // Simulasi loading
-    setTimeout(() => {
-      setLoading(false);
-      // Di aplikasi nyata, kita akan refresh data di sini
-    }, 750);
   };
 
-  // Render baris tabel dari data dummy
-  // Filter shift berdasarkan tanggal yang dipilih (simulasi)
-  const shiftRows = mockShifts
-    .filter((shift) => {
-      if (!selectedDate) return false;
-      const shiftDate = new Date(shift.start_time);
-      return (
-        shiftDate.getDate() === selectedDate.getDate() &&
-        shiftDate.getMonth() === selectedDate.getMonth() &&
-        shiftDate.getFullYear() === selectedDate.getFullYear()
-      );
-    })
-    .map((shift) => (
-      <Table.Tr key={shift.id}>
-        <Table.Td>{shift.profile?.full_name || 'Nama Staf'}</Table.Td>
-        <Table.Td>{shift.user_roles?.role_name || 'Posisi'}</Table.Td>
-        <Table.Td>
-          {new Date(shift.start_time).toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Jakarta',
-          })}
-        </Table.Td>
-        <Table.Td>
-          {new Date(shift.end_time).toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Jakarta',
-          })}
-        </Table.Td>
-        <Table.Td>
-          <ActionIcon
-            color="red"
-            variant="light"
-            onClick={() => handleDeleteShift(shift.id)}
-            loading={loading}
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
-        </Table.Td>
-      </Table.Tr>
-    ));
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active': return { color: 'green', label: 'Active Now' };
+      case 'upcoming': return { color: 'blue', label: 'Upcoming' };
+      case 'completed': return { color: 'gray', label: 'Completed' };
+      default: return { color: 'gray', label: status };
+    }
+  };
 
   return (
-    // Bungkus dengan DatesProvider untuk lokalisasi kalender
-    <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1, weekendDays: [0] }}>
-      {/* Modal Tambah Shift */}
-      <Modal
-        opened={modalOpened}
-        onClose={closeModal}
-        title="Tambah Shift Baru"
+    <div style={{ minHeight: '100vh', background: '#f8f9fa', paddingBottom: '2rem' }}>
+      
+      {/* 1. Header (Clean Style) */}
+      <div style={{ 
+        background: 'white', 
+        borderBottom: '1px solid #e9ecef', 
+        padding: '1rem 0' 
+      }}>
+        <Container size="xl" maw={MAX_WIDTH}>
+          <Group justify="space-between">
+            <Group gap="sm">
+              <ThemeIcon variant="light" color="indigo" size="lg" radius="md">
+                <IconCalendarTime size={20} stroke={1.5} />
+              </ThemeIcon>
+              <div>
+                <Title order={4} c="dark.8">Staff Shifts</Title>
+                <Text size="xs" c="dimmed">Manage daily schedules and rosters</Text>
+              </div>
+            </Group>
+            <Button 
+              leftSection={<IconPlus size={16} />} 
+              onClick={openModal}
+              color="indigo"
+              size="sm"
+              radius="md"
+            >
+              Add Shift
+            </Button>
+          </Group>
+        </Container>
+      </div>
+
+      {/* 2. Content */}
+      <Container size="xl" maw={MAX_WIDTH} mt="lg">
+        <Stack gap="md">
+          
+          {/* Filters Panel */}
+          <Paper p="sm" radius="md" withBorder shadow="sm">
+            <Grid align="flex-end" gutter="sm">
+              <Grid.Col span={{ base: 12, sm: 4 }}>
+                <TextInput
+                  label="Search Staff"
+                  placeholder="Name..."
+                  leftSection={<IconSearch size={16} />}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 3 }}>
+                <Select
+                  label="Role"
+                  placeholder="All Roles"
+                  data={ROLES}
+                  value={filterRole}
+                  onChange={setFilterRole}
+                  clearable
+                  leftSection={<IconFilter size={16} />}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 3 }}>
+                <DatePickerInput
+                  type="default"
+                  value={filterDate}
+                  onChange={(val) => setFilterDate(val)}
+                  label="Date"
+                  placeholder="Filter by date"
+                  clearable
+                  leftSection={<IconCalendar size={16} />}
+                  valueFormat="DD MMM YYYY"
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 2 }}>
+                <Button 
+                  variant="light" 
+                  color="gray" 
+                  fullWidth 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterRole(null);
+                    setFilterDate(today);
+                  }}
+                >
+                  Reset
+                </Button>
+              </Grid.Col>
+            </Grid>
+          </Paper>
+
+          {/* Data Table */}
+          <Paper shadow="sm" radius="md" withBorder>
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead bg="gray.0">
+                <Table.Tr>
+                  <Table.Th>Staff Member</Table.Th>
+                  <Table.Th>Role</Table.Th>
+                  <Table.Th>Shift Time</Table.Th>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th ta="center" style={{ width: 80 }}>Action</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredShifts.length > 0 ? filteredShifts.map((shift) => {
+                  const statusInfo = getStatusBadge(shift.status);
+                  return (
+                    <Table.Tr key={shift.id}>
+                      <Table.Td>
+                        <Group gap="sm">
+                          <Avatar color={shift.avatarColor} radius="xl" size="sm">
+                            {shift.staffName.charAt(0)}
+                          </Avatar>
+                          <Text fw={500} size="sm">{shift.staffName}</Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="outline" color="gray" size="sm" radius="sm">
+                          {shift.role}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap={6}>
+                          <IconClock size={14} color="gray" />
+                          <Text size="sm">{shift.startTime} - {shift.endTime}</Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                         <Text size="sm" c="dimmed">
+                            {shift.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                         </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={statusInfo.color} variant="light" size="sm">
+                          {statusInfo.label}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <ActionIcon 
+                          color="red" 
+                          variant="subtle" 
+                          onClick={() => handleDelete(shift.id)}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                }) : (
+                  <Table.Tr>
+                    <Table.Td colSpan={6}>
+                      <Center py="xl">
+                         <Stack align="center" gap="xs">
+                            <IconCalendarTime size={40} stroke={1.5} color="var(--mantine-color-gray-5)" />
+                            <Text size="sm" c="dimmed">No shifts found for this criteria.</Text>
+                         </Stack>
+                      </Center>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+
+        </Stack>
+      </Container>
+
+      {/* 3. Modal Form */}
+      <Modal 
+        opened={modalOpened} 
+        onClose={closeModal} 
+        title="Add New Shift" 
         centered
+        radius="md"
       >
         <form onSubmit={form.onSubmit(handleAddShift)}>
-          <Stack>
+          <Stack gap="md">
+            <TextInput
+              label="Staff Name"
+              placeholder="e.g. John Doe"
+              leftSection={<IconUser size={16} />}
+              required
+              {...form.getInputProps('staffName')}
+            />
             <Select
-              label="Staf"
-              placeholder="Pilih staf"
-              data={mockStaffList} // Menggunakan data dummy
-              searchable
-              nothingFoundMessage="Staf tidak ditemukan"
-              {...form.getInputProps('user_id')}
+              label="Role"
+              placeholder="Select role"
+              data={ROLES}
+              required
+              {...form.getInputProps('role')}
             />
-            <DateTimePicker
-              locale="id"
-              label="Waktu Mulai"
-              placeholder="Pilih waktu mulai"
-              {...form.getInputProps('start_time')}
+            <DatePickerInput
+              label="Date"
+              placeholder="Select date"
+              minDate={new Date()}
+              required
+              leftSection={<IconCalendar size={16} />}
+              {...form.getInputProps('date')}
             />
-            <DateTimePicker
-              locale="id"
-              label="Waktu Selesai"
-              placeholder="Pilih waktu selesai"
-              {...form.getInputProps('end_time')}
-            />
-            <Button type="submit" loading={loading} mt="md">
-              Simpan Shift
-            </Button>
+            <Group grow>
+              <TimeInput 
+                label="Start Time" 
+                required 
+                {...form.getInputProps('startTime')} 
+              />
+              <TimeInput 
+                label="End Time" 
+                required 
+                {...form.getInputProps('endTime')} 
+              />
+            </Group>
+            
+            <Group justify="flex-end" mt="sm">
+              <Button variant="default" onClick={closeModal} disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" color="indigo" loading={isSubmitting}>Create Shift</Button>
+            </Group>
           </Stack>
         </form>
       </Modal>
 
-      {/* Konten Halaman Utama */}
-      <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-        {/* Header */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-            padding: '2rem 0',
-            marginBottom: '2rem',
-          }}
-        >
-          <Container size="lg">
-            <Group justify="space-between" align="center">
-              <div>
-                <Group mb="xs">
-                  <ActionIcon
-                    variant="transparent"
-                    color="white"
-                    onClick={() => router.push('/manager/dashboard')}
-                    aria-label="Kembali ke Dashboard Manager"
-                  >
-                    <IconArrowLeft size={20} />
-                  </ActionIcon>
-                  <Title order={1} c="white">
-                    Manajemen Shift
-                  </Title>
-                </Group>
-                <Text c="white" opacity={0.9} pl={{ base: 0, xs: 36 }}>
-                  Atur jadwal kerja staf Front Office dan Housekeeping.
-                </Text>
-              </div>
-            </Group>
-          </Container>
-        </div>
-
-        {/* Konten */}
-        <Container size="lg" pb="xl">
-          <Paper shadow="sm" p="lg" radius="md" withBorder>
-            <Stack>
-              <Group justify="space-between">
-                <Title order={3}>Jadwal Shift</Title>
-                <Button
-                  leftSection={<IconCalendarPlus size={16} />}
-                  onClick={openModal}
-                  disabled={!selectedDate}
-                >
-                  Tambah Shift
-                </Button>
-              </Group>
-
-              <Group align="flex-start" gap="xl">
-                <DatePicker
-                  value={selectedDate}
-                  // onChange={setSelectedDate} // Baris ini MASIH SALAH
-                  allowDeselect={false}
-                  locale="id" // Gunakan lokalisasi
-                />
-
-                <Paper
-                  withBorder
-                  radius="md"
-                  p="md"
-                  style={{ flex: 1, position: 'relative' }}
-                >
-                  <Title order={4} mb="md">
-                    Shift untuk:{' '}
-                    {selectedDate
-                      ? selectedDate.toLocaleDateString('id-ID', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : '...'}
-                  </Title>
-                  <Table striped highlightOnHover verticalSpacing="sm">
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Nama Staf</Table.Th>
-                        <Table.Th>Posisi</Table.Th>
-                        <Table.Th>Mulai</Table.Th>
-                        <Table.Th>Selesai</Table.Th>
-                        <Table.Th>Aksi</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {shiftRows.length > 0 ? (
-                        shiftRows
-                      ) : (
-                        <Table.Tr>
-                          <Table.Td colSpan={5}>
-                            <Text c="dimmed" ta="center" py="lg">
-                              Tidak ada shift pada tanggal ini.
-                            </Text>
-                          </Table.Td>
-                        </Table.Tr>
-                      )}
-                    </Table.Tbody>
-                  </Table>
-                </Paper>
-              </Group>
-            </Stack>
-          </Paper>
-        </Container>
-      </div>
-    </DatesProvider>
+    </div>
   );
 }
 
-// Bungkus dengan ProtectedRoute
 export default function ManagerShiftsPage() {
   return (
     <ProtectedRoute requiredRoleName="Hotel Manager">
