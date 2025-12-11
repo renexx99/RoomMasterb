@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Stack, TextInput, Select, NumberInput, Textarea, Group, Button, Tabs, Grid } from '@mantine/core';
+import { Modal, Stack, TextInput, Select, NumberInput, Textarea, Group, Button, Tabs, Grid, Text } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import '@mantine/dates/styles.css';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { RoomType, RoomStatus, WingType, FurnitureCondition } from '@/core/types/database';
 import { createRoomAction, updateRoomAction } from '../actions';
-import { RoomWithDetails } from '../page'; // Import interface dari page parent atau definisikan sendiri
+import { RoomWithDetails } from '../page';
 
-// Constants untuk Dropdown
+// Constants
 const WING_TYPES = [
   { value: 'North Wing', label: 'North Wing' },
   { value: 'South Wing', label: 'South Wing' },
@@ -27,8 +27,8 @@ const FURNITURE_CONDITIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: 'available', label: 'Tersedia' },
-  { value: 'occupied', label: 'Terisi' },
+  { value: 'available', label: 'Available' },
+  { value: 'occupied', label: 'Occupied' },
   { value: 'maintenance', label: 'Maintenance' },
 ];
 
@@ -45,7 +45,7 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
 
   const roomTypeOptions = useMemo(() => roomTypes.map(rt => ({
     value: rt.id,
-    label: `${rt.name} - Rp ${rt.price_per_night.toLocaleString('id-ID')}/malam`,
+    label: `${rt.name} - Rp ${rt.price_per_night.toLocaleString('id-ID')}/night`,
   })), [roomTypes]);
 
   const form = useForm({
@@ -60,14 +60,13 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
       special_notes: '',
     },
     validate: {
-      room_number: (v) => (!v ? 'Nomor kamar harus diisi' : null),
-      room_type_id: (v) => (!v ? 'Tipe kamar harus dipilih' : null),
-      status: (v) => (!v ? 'Status harus dipilih' : null),
-      floor_number: (v) => (v < 1 ? 'Lantai minimal 1' : null),
+      room_number: (v) => (!v ? 'Room number is required' : null),
+      room_type_id: (v) => (!v ? 'Room type is required' : null),
+      status: (v) => (!v ? 'Status is required' : null),
+      floor_number: (v) => (v < 1 ? 'Minimum floor is 1' : null),
     },
   });
 
-  // Reset form saat modal dibuka/ganti item
   useEffect(() => {
     if (opened) {
       if (itemToEdit) {
@@ -85,7 +84,6 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
         form.reset();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, itemToEdit]);
 
   const handleSubmit = async (values: typeof form.values) => {
@@ -111,17 +109,17 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
       }
 
       if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+        notifications.show({ title: 'Failed', message: result.error, color: 'red' });
       } else {
         notifications.show({ 
-          title: 'Sukses', 
-          message: `Kamar berhasil ${itemToEdit ? 'diperbarui' : 'ditambahkan'}`, 
+          title: 'Success', 
+          message: `Room ${itemToEdit ? 'updated' : 'created'} successfully`, 
           color: 'green' 
         });
         onClose();
       }
     } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+      notifications.show({ title: 'Error', message: 'System error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
@@ -131,35 +129,35 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
     <Modal
       opened={opened}
       onClose={onClose}
-      title={itemToEdit ? 'Edit Kamar' : 'Tambah Kamar'}
+      title={<Text fw={700}>{itemToEdit ? 'Edit Room' : 'Add New Room'}</Text>}
       size="lg"
       centered
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Tabs defaultValue="basic">
           <Tabs.List>
-            <Tabs.Tab value="basic">Info Dasar</Tabs.Tab>
-            <Tabs.Tab value="details">Detail Fisik & Kondisi</Tabs.Tab>
+            <Tabs.Tab value="basic">Basic Info</Tabs.Tab>
+            <Tabs.Tab value="details">Physical Details</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="basic" pt="md">
             <Stack gap="md">
               <TextInput
-                label="Nomor Kamar"
-                placeholder="101, 202, A-15..."
+                label="Room Number"
+                placeholder="e.g. 101, A-15"
                 required
                 {...form.getInputProps('room_number')}
               />
               <Select
-                label="Tipe Kamar"
-                placeholder="Pilih tipe"
+                label="Room Type"
+                placeholder="Select type"
                 data={roomTypeOptions}
                 required
                 searchable
                 {...form.getInputProps('room_type_id')}
               />
               <Select
-                label="Status Operasional"
+                label="Current Status"
                 data={STATUS_OPTIONS}
                 required
                 {...form.getInputProps('status')}
@@ -172,15 +170,15 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
               <Grid>
                 <Grid.Col span={6}>
                   <NumberInput
-                    label="Lantai"
+                    label="Floor Number"
                     min={1}
                     {...form.getInputProps('floor_number')}
                   />
                 </Grid.Col>
                 <Grid.Col span={6}>
                   <Select
-                    label="Wing/Lokasi"
-                    placeholder="Pilih"
+                    label="Wing/Location"
+                    placeholder="Select wing"
                     data={WING_TYPES}
                     clearable
                     {...form.getInputProps('wing')}
@@ -188,20 +186,20 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
                 </Grid.Col>
               </Grid>
               <Select
-                label="Kondisi Furniture"
+                label="Furniture Condition"
                 data={FURNITURE_CONDITIONS}
                 {...form.getInputProps('furniture_condition')}
               />
               <DateInput
-                label="Tanggal Renovasi Terakhir"
-                placeholder="Pilih tanggal"
+                label="Last Renovation"
+                placeholder="Select date"
                 valueFormat="DD MMMM YYYY"
                 clearable
                 {...form.getInputProps('last_renovation_date')}
               />
               <Textarea
-                label="Catatan Khusus"
-                placeholder="Catatan tambahan..."
+                label="Special Notes"
+                placeholder="Any issues or features..."
                 minRows={2}
                 {...form.getInputProps('special_notes')}
               />
@@ -211,10 +209,15 @@ export function RoomFormModal({ opened, onClose, hotelId, itemToEdit, roomTypes 
 
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onClose} disabled={isSubmitting}>
-            Batal
+            Cancel
           </Button>
-          <Button type="submit" loading={isSubmitting}>
-            {itemToEdit ? 'Update' : 'Simpan'}
+          <Button 
+            type="submit" 
+            loading={isSubmitting}
+            variant="gradient"
+            gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
+          >
+            Save Room
           </Button>
         </Group>
       </form>
