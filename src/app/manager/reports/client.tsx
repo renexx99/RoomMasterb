@@ -1,14 +1,34 @@
-// src/app/manager/reports/client.tsx
 'use client';
 
 import {
-  Container, Title, Text, Paper, Stack, Grid, Group,
-  ThemeIcon, SimpleGrid, Card, RingProgress, Box, Divider,
-  Center
+  Container,
+  Title,
+  Text,
+  Paper,
+  Stack,
+  Group,
+  ThemeIcon,
+  SimpleGrid,
+  Card,
+  RingProgress,
+  Box,
+  Button,
+  Grid,
+  Badge,
+  Progress,
+  ActionIcon
 } from '@mantine/core';
 import {
-  IconReportAnalytics, IconPercentage, IconBed, IconBedOff,
-  IconCalendarCheck, IconCalendarEvent, IconCash, IconTools
+  IconReportAnalytics,
+  IconBed,
+  IconCalendarEvent,
+  IconCash,
+  IconDownload,
+  IconPrinter,
+  IconHotelService,
+  IconLogin,
+  IconLogout,
+  IconTools
 } from '@tabler/icons-react';
 import { ReportStats } from './page';
 
@@ -19,155 +39,250 @@ interface ClientProps {
 export default function ManagerReportsClient({ stats }: ClientProps) {
   const MAX_WIDTH = 1200;
 
-  // Konfigurasi Ring Chart
+  // --- Derived Data for Charts ---
   const roomStatusData = [
-    { value: stats.availableRooms, color: 'teal', tooltip: 'Tersedia' },
-    { value: stats.occupiedRooms, color: 'blue', tooltip: 'Terisi' },
-    { value: stats.maintenanceRooms, color: 'orange', tooltip: 'Maintenance' },
+    { value: stats.availableRooms, color: 'teal', label: 'Available' },
+    { value: stats.occupiedRooms, color: 'blue', label: 'Occupied' },
+    { value: stats.maintenanceRooms, color: 'orange', label: 'Maintenance' },
   ];
   
-  // Normalisasi data untuk RingProgress (total harus 100%)
+  // Normalize for RingProgress (total 100%)
   const ringSections = stats.totalRooms > 0 
     ? roomStatusData.map(item => ({ 
         value: (item.value / stats.totalRooms) * 100, 
         color: item.color, 
-        tooltip: `${item.tooltip}: ${item.value}` 
+        tooltip: `${item.label}: ${item.value}` 
       }))
     : [{ value: 100, color: 'gray', tooltip: 'No Data' }];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header Ramping */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
-        padding: '0.75rem 0',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
-      }}>
+    <Box style={{ minHeight: '100vh', background: '#f8f9fa', paddingBottom: '2rem' }}>
+      
+      {/* 1. CLEAN TOOLBAR */}
+      <Box style={{ background: 'white', borderBottom: '1px solid #e9ecef', padding: '1rem 0' }}>
         <Container fluid px="lg">
           <Box maw={MAX_WIDTH} mx="auto">
-            <Group gap="xs">
-              <ThemeIcon variant="light" color="white" size={34} radius="md" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
-                <IconReportAnalytics size={18} stroke={1.5} />
-              </ThemeIcon>
-              <div style={{ lineHeight: 1 }}>
-                <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>Laporan Operasional</Title>
-                <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>
-                  {stats.hotelName} &bull; Ringkasan Performa
-                </Text>
-              </div>
+            <Group justify="space-between" align="center">
+              <Group gap="sm">
+                <ThemeIcon variant="light" color="violet" size="lg" radius="md">
+                  <IconReportAnalytics size={20} stroke={1.5} />
+                </ThemeIcon>
+                <div>
+                  <Title order={4} c="dark.8">Operational Report</Title>
+                  <Text size="xs" c="dimmed">{stats.hotelName} • {new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}</Text>
+                </div>
+              </Group>
+
+              <Group gap="xs">
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  leftSection={<IconPrinter size={16} />}
+                >
+                  Print
+                </Button>
+                <Button 
+                  variant="filled" 
+                  color="violet" 
+                  size="sm" 
+                  leftSection={<IconDownload size={16} />}
+                >
+                  Export
+                </Button>
+              </Group>
             </Group>
           </Box>
         </Container>
-      </div>
+      </Box>
 
-      {/* Konten Utama */}
-      <Container fluid px="lg" py="md">
+      {/* 2. MAIN CONTENT */}
+      <Container fluid px="lg" py="lg">
         <Box maw={MAX_WIDTH} mx="auto">
           <Stack gap="lg">
             
-            {/* Summary Cards */}
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
-              {/* Okupansi */}
-              <Card padding="md" radius="md" shadow="xs" withBorder>
-                <Group justify="space-between" mb="xs">
-                  <Text size="xs" c="dimmed" fw={700} tt="uppercase">Okupansi</Text>
-                  <IconPercentage size={18} stroke={1.5} color="var(--mantine-color-blue-6)" />
+            {/* KPI CARDS ROW */}
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+              {/* Revenue Card */}
+              <Paper p="md" radius="md" withBorder shadow="sm">
+                <Group justify="space-between" align="flex-start">
+                    <Stack gap={0}>
+                        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Daily Revenue</Text>
+                        <Title order={3} c="violet.7">
+                            Rp {stats.revenueToday.toLocaleString('id-ID')}
+                        </Title>
+                    </Stack>
+                    <ThemeIcon variant="light" color="violet" radius="md">
+                        <IconCash size={18} />
+                    </ThemeIcon>
                 </Group>
-                <Group align="flex-end" gap="xs">
-                  <Text size="xl" fw={700} c="blue">{stats.occupancyRate.toFixed(1)}%</Text>
-                  <Text size="xs" c="dimmed" mb={4}>
-                    ({stats.occupiedRooms}/{stats.totalRooms} Kamar)
-                  </Text>
-                </Group>
-              </Card>
+                <Text size="xs" c="teal" fw={500} mt="xs">
+                    +12.5% <Text span c="dimmed" fw={400}>vs yesterday</Text>
+                </Text>
+              </Paper>
 
-              {/* Check-in */}
-              <Card padding="md" radius="md" shadow="xs" withBorder>
-                <Group justify="space-between" mb="xs">
-                  <Text size="xs" c="dimmed" fw={700} tt="uppercase">Check-in Hari Ini</Text>
-                  <IconCalendarCheck size={18} stroke={1.5} color="var(--mantine-color-teal-6)" />
+              {/* Occupancy Card */}
+              <Paper p="md" radius="md" withBorder shadow="sm">
+                <Group justify="space-between" align="flex-start">
+                    <Stack gap={0}>
+                        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Occupancy</Text>
+                        <Title order={3} c="blue.7">
+                            {stats.occupancyRate.toFixed(1)}%
+                        </Title>
+                    </Stack>
+                    <ThemeIcon variant="light" color="blue" radius="md">
+                        <IconHotelService size={18} />
+                    </ThemeIcon>
                 </Group>
-                <Text size="xl" fw={700} c="teal">{stats.todayCheckIns}</Text>
-              </Card>
+                <Progress value={stats.occupancyRate} size="sm" mt="sm" color="blue" radius="xl" />
+              </Paper>
 
-              {/* Check-out */}
-              <Card padding="md" radius="md" shadow="xs" withBorder>
-                <Group justify="space-between" mb="xs">
-                  <Text size="xs" c="dimmed" fw={700} tt="uppercase">Check-out Hari Ini</Text>
-                  <IconCalendarEvent size={18} stroke={1.5} color="var(--mantine-color-orange-6)" />
+              {/* Arrivals Card */}
+              <Paper p="md" radius="md" withBorder shadow="sm">
+                <Group justify="space-between" align="flex-start">
+                    <Stack gap={0}>
+                        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Expected Arrivals</Text>
+                        <Title order={3} c="teal.7">
+                            {stats.todayCheckIns}
+                        </Title>
+                    </Stack>
+                    <ThemeIcon variant="light" color="teal" radius="md">
+                        <IconLogin size={18} />
+                    </ThemeIcon>
                 </Group>
-                <Text size="xl" fw={700} c="orange">{stats.todayCheckOuts}</Text>
-              </Card>
+                <Text size="xs" c="dimmed" mt="xs">Guests checking in today</Text>
+              </Paper>
 
-              {/* Revenue */}
-              <Card padding="md" radius="md" shadow="xs" withBorder>
-                <Group justify="space-between" mb="xs">
-                  <Text size="xs" c="dimmed" fw={700} tt="uppercase">Pendapatan Hari Ini</Text>
-                  <IconCash size={18} stroke={1.5} color="var(--mantine-color-violet-6)" />
+              {/* Departures Card */}
+              <Paper p="md" radius="md" withBorder shadow="sm">
+                 <Group justify="space-between" align="flex-start">
+                    <Stack gap={0}>
+                        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Expected Departures</Text>
+                        <Title order={3} c="orange.7">
+                            {stats.todayCheckOuts}
+                        </Title>
+                    </Stack>
+                    <ThemeIcon variant="light" color="orange" radius="md">
+                        <IconLogout size={18} />
+                    </ThemeIcon>
                 </Group>
-                <Text size="xl" fw={700} c="violet">Rp {stats.revenueToday.toLocaleString('id-ID')}</Text>
-              </Card>
+                <Text size="xs" c="dimmed" mt="xs">Guests checking out today</Text>
+              </Paper>
             </SimpleGrid>
 
-            {/* Detail Status Kamar */}
-            <Paper shadow="sm" radius="md" withBorder p="md">
-              <Title order={5} mb="md">Distribusi Status Kamar</Title>
-              <Grid align="center" gutter="xl">
-                <Grid.Col span={{ base: 12, sm: 4 }}>
-                  <Center>
-                    <RingProgress
-                      size={160}
-                      thickness={16}
-                      sections={ringSections}
-                      label={
-                        <Stack align="center" gap={0}>
-                          <Text size="xs" c="dimmed" ta="center">Total</Text>
-                          <Text fw={700} size="xl" ta="center">{stats.totalRooms}</Text>
-                        </Stack>
-                      }
-                    />
-                  </Center>
-                </Grid.Col>
-                
-                <Grid.Col span={{ base: 12, sm: 8 }}>
-                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-                    <Paper withBorder p="xs" radius="sm" bg="teal.0">
-                      <Group gap="xs">
-                        <ThemeIcon color="teal" variant="light" size="md"><IconBed size={16}/></ThemeIcon>
-                        <Box>
-                          <Text size="xs" c="dimmed">Tersedia</Text>
-                          <Text fw={700} c="teal.9">{stats.availableRooms}</Text>
-                        </Box>
-                      </Group>
-                    </Paper>
-                    
-                    <Paper withBorder p="xs" radius="sm" bg="blue.0">
-                      <Group gap="xs">
-                        <ThemeIcon color="blue" variant="light" size="md"><IconBedOff size={16}/></ThemeIcon>
-                        <Box>
-                          <Text size="xs" c="dimmed">Terisi</Text>
-                          <Text fw={700} c="blue.9">{stats.occupiedRooms}</Text>
-                        </Box>
-                      </Group>
-                    </Paper>
+            {/* DETAILED SECTIONS */}
+            <Grid gutter="md">
+                {/* Left: Room Status Distribution */}
+                <Grid.Col span={{ base: 12, md: 8 }}>
+                    <Card radius="md" withBorder padding="lg">
+                        <Group justify="space-between" mb="lg">
+                            <Group gap="xs">
+                                <IconBed size={20} stroke={1.5} color="gray" />
+                                <Text fw={600} size="lg">Room Status Distribution</Text>
+                            </Group>
+                            <Badge variant="light" color="gray" size="lg">{stats.totalRooms} Total Rooms</Badge>
+                        </Group>
 
-                    <Paper withBorder p="xs" radius="sm" bg="orange.0">
-                      <Group gap="xs">
-                        <ThemeIcon color="orange" variant="light" size="md"><IconTools size={16}/></ThemeIcon>
-                        <Box>
-                          <Text size="xs" c="dimmed">Maintenance</Text>
-                          <Text fw={700} c="orange.9">{stats.maintenanceRooms}</Text>
-                        </Box>
-                      </Group>
-                    </Paper>
-                  </SimpleGrid>
+                        <Grid align="center">
+                            <Grid.Col span={{ base: 12, sm: 4 }}>
+                                <Group justify="center">
+                                    <RingProgress 
+                                        size={160} 
+                                        thickness={12} 
+                                        roundCaps 
+                                        sections={ringSections} 
+                                        label={
+                                            <Stack align="center" gap={0}>
+                                                <Text fw={700} size="xl">{stats.occupiedRooms}</Text>
+                                                <Text size="xs" c="dimmed">Sold</Text>
+                                            </Stack>
+                                        }
+                                    />
+                                </Group>
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, sm: 8 }}>
+                                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
+                                    <Box p="sm" style={{ border: '1px solid #f1f3f5', borderRadius: 8 }}>
+                                        <Group justify="space-between" mb={4}>
+                                            <Group gap="xs">
+                                                <Badge size="xs" circle color="teal" />
+                                                <Text size="sm" c="dimmed">Available</Text>
+                                            </Group>
+                                            <Text fw={600}>{stats.availableRooms}</Text>
+                                        </Group>
+                                        <Progress value={(stats.availableRooms / stats.totalRooms) * 100} size="xs" color="teal" />
+                                    </Box>
+
+                                    <Box p="sm" style={{ border: '1px solid #f1f3f5', borderRadius: 8 }}>
+                                        <Group justify="space-between" mb={4}>
+                                            <Group gap="xs">
+                                                <Badge size="xs" circle color="blue" />
+                                                <Text size="sm" c="dimmed">Occupied</Text>
+                                            </Group>
+                                            <Text fw={600}>{stats.occupiedRooms}</Text>
+                                        </Group>
+                                        <Progress value={(stats.occupiedRooms / stats.totalRooms) * 100} size="xs" color="blue" />
+                                    </Box>
+
+                                    <Box p="sm" style={{ border: '1px solid #f1f3f5', borderRadius: 8 }}>
+                                        <Group justify="space-between" mb={4}>
+                                            <Group gap="xs">
+                                                <Badge size="xs" circle color="orange" />
+                                                <Text size="sm" c="dimmed">Maintenance</Text>
+                                            </Group>
+                                            <Text fw={600}>{stats.maintenanceRooms}</Text>
+                                        </Group>
+                                        <Progress value={(stats.maintenanceRooms / stats.totalRooms) * 100} size="xs" color="orange" />
+                                    </Box>
+                                </SimpleGrid>
+                            </Grid.Col>
+                        </Grid>
+                    </Card>
                 </Grid.Col>
-              </Grid>
-            </Paper>
+
+                {/* Right: Quick Activity Summary */}
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Card radius="md" withBorder padding="lg" h="100%">
+                        <Group gap="xs" mb="lg">
+                            <IconCalendarEvent size={20} stroke={1.5} color="gray" />
+                            <Text fw={600} size="lg">Today's Activity</Text>
+                        </Group>
+                        
+                        <Stack gap="sm">
+                            <Group justify="space-between" p="sm" bg="gray.0" style={{ borderRadius: 8 }}>
+                                <Group gap="sm">
+                                    <ThemeIcon color="teal" variant="white" size="md"><IconLogin size={16}/></ThemeIcon>
+                                    <Text size="sm" fw={500}>Check-ins</Text>
+                                </Group>
+                                <Text fw={700}>{stats.todayCheckIns}</Text>
+                            </Group>
+
+                            <Group justify="space-between" p="sm" bg="gray.0" style={{ borderRadius: 8 }}>
+                                <Group gap="sm">
+                                    <ThemeIcon color="orange" variant="white" size="md"><IconLogout size={16}/></ThemeIcon>
+                                    <Text size="sm" fw={500}>Check-outs</Text>
+                                </Group>
+                                <Text fw={700}>{stats.todayCheckOuts}</Text>
+                            </Group>
+
+                             <Group justify="space-between" p="sm" bg="gray.0" style={{ borderRadius: 8 }}>
+                                <Group gap="sm">
+                                    <ThemeIcon color="gray" variant="white" size="md"><IconTools size={16}/></ThemeIcon>
+                                    <Text size="sm" fw={500}>OOO Rooms</Text>
+                                </Group>
+                                <Text fw={700}>{stats.maintenanceRooms}</Text>
+                            </Group>
+
+                            <Button variant="light" color="violet" fullWidth mt="md">
+                                View Detailed Logs
+                            </Button>
+                        </Stack>
+                    </Card>
+                </Grid.Col>
+            </Grid>
 
           </Stack>
         </Box>
       </Container>
-    </div>
+    </Box>
   );
 }
