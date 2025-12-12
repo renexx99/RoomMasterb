@@ -8,11 +8,11 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { 
   IconUser, IconPhone, IconMail, IconBed, IconCalendarEvent, IconCheck, IconCreditCard 
-} from '@tabler/icons-react';
+} from '@tabler/icons-react'; // Tambahkan IconCreditCard
 import { notifications } from '@mantine/notifications';
 import { GuestOption, RoomWithDetails } from '../page';
 import { createReservation, createGuestForReservation } from '../actions';
-import { PaymentMethod } from '@/core/types/database';
+import { PaymentMethod } from '@/core/types/database'; // Import tipe jika diperlukan
 
 interface QuickBookingPanelProps {
   hotelId: string;
@@ -38,7 +38,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   
-  // State Payment Method
+  // [BARU] State Payment Method
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,29 +46,18 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
   useEffect(() => {
     if (prefilledData) {
       setSelectedRoom(prefilledData.room_id || null);
-      // Pastikan konversi ke Date object jika data masuk sebagai string
-      setCheckInDate(prefilledData.check_in_date ? new Date(prefilledData.check_in_date) : null);
-      setCheckOutDate(prefilledData.check_out_date ? new Date(prefilledData.check_out_date) : null);
+      setCheckInDate(prefilledData.check_in_date || null);
+      setCheckOutDate(prefilledData.check_out_date || null);
     }
   }, [prefilledData]);
 
-  // --- PERBAIKAN DI SINI: Kalkulasi Harga ---
   useEffect(() => {
-    if (checkInDate && checkOutDate && selectedRoom) {
-      // Defensif: Pastikan variabel adalah Date object yang valid
-      const start = new Date(checkInDate);
-      const end = new Date(checkOutDate);
-
-      // Cek validitas tanggal dan pastikan checkout > checkin
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
-        const room = rooms.find(r => r.id === selectedRoom);
-        if (room?.room_type) {
-          const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-          const price = nights * room.room_type.price_per_night;
-          setCalculatedPrice(price);
-        }
-      } else {
-        setCalculatedPrice(null);
+    if (checkInDate && checkOutDate && selectedRoom && checkOutDate > checkInDate) {
+      const room = rooms.find(r => r.id === selectedRoom);
+      if (room?.room_type) {
+        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24));
+        const price = nights * room.room_type.price_per_night;
+        setCalculatedPrice(price);
       }
     } else {
       setCalculatedPrice(null);
@@ -107,7 +96,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
 
         if (guestResult.error || !guestResult.guestId) {
           notifications.show({ title: 'Gagal Buat Tamu', message: guestResult.error, color: 'red' });
-          setIsSubmitting(false); 
+          setIsSubmitting(false); // Stop loading jika gagal
           return;
         }
         finalGuestId = guestResult.guestId;
@@ -122,7 +111,8 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         check_out_date: checkOutDate,
         total_price: calculatedPrice || 0,
         payment_status: 'pending', // Default pending untuk quick booking
-        payment_method: (paymentMethod as PaymentMethod) || null,
+        // [BARU] Sertakan payment_method
+        payment_method: (paymentMethod as PaymentMethod) || null, 
       });
 
       if (result.error) {
@@ -136,7 +126,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         setGuestName(''); setGuestPhone(''); setGuestEmail('');
         setCheckInDate(null); setCheckOutDate(null); setSelectedRoom(null); 
         setCalculatedPrice(null);
-        setPaymentMethod(null);
+        setPaymentMethod(null); // Reset payment method
 
         onSuccess();
       }
@@ -265,7 +255,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
           
           <Divider my="xs" />
 
-          {/* Input Payment Method */}
+          {/* [BARU] Input Payment Method */}
           <Select
             label="Metode Pembayaran (Opsional)"
             placeholder="Pilih metode"

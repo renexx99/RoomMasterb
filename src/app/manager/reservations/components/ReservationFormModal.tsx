@@ -9,11 +9,10 @@ import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { 
   IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash, 
-  IconMaximize, IconArmchair, IconEye, IconBuildingSkyscraper, IconAirConditioning,
-  IconCreditCard
+  IconMaximize, IconArmchair, IconEye, IconBuildingSkyscraper, IconAirConditioning 
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { PaymentStatus, PaymentMethod } from '@/core/types/database';
+import { PaymentStatus } from '@/core/types/database';
 import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
 import { createReservation, updateReservation, createGuestForReservation } from '../actions';
 
@@ -49,8 +48,6 @@ export function ReservationFormModal({
       check_out_date: null as Date | null,
       total_price: 0,
       payment_status: 'pending' as PaymentStatus,
-      // [BARU] Initial value untuk payment method
-      payment_method: null as PaymentMethod | null,
     },
     validate: {
       guest_id: (value) => (guestSelectionMode === 'select' && !value ? 'Pilih tamu' : null),
@@ -63,11 +60,6 @@ export function ReservationFormModal({
         if (values.check_in_date && value <= values.check_in_date) return 'Harus setelah check-in';
         return null;
       },
-      // Validasi Opsional: Jika status 'paid', metode pembayaran harus diisi
-      payment_method: (value, values) => {
-        if (values.payment_status === 'paid' && !value) return 'Pilih metode pembayaran';
-        return null;
-      }
     },
   });
 
@@ -89,8 +81,6 @@ export function ReservationFormModal({
           check_out_date: new Date(reservationToEdit.check_out_date),
           total_price: reservationToEdit.total_price,
           payment_status: reservationToEdit.payment_status,
-          // [BARU] Set value payment method saat edit
-          payment_method: reservationToEdit.payment_method || null,
           new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setCalculatedPrice(reservationToEdit.total_price);
@@ -102,7 +92,6 @@ export function ReservationFormModal({
           check_out_date: prefilledData.check_out_date || null,
           total_price: 0,
           payment_status: 'pending',
-          payment_method: null,
           guest_id: '', new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setGuestSelectionMode('select');
@@ -172,8 +161,6 @@ export function ReservationFormModal({
         check_out_date: values.check_out_date!,
         total_price: calculatedPrice || 0,
         payment_status: values.payment_status,
-        // [BARU] Kirim data payment method
-        payment_method: values.payment_method || null,
       };
 
       let result;
@@ -317,7 +304,7 @@ export function ReservationFormModal({
             {...form.getInputProps('room_id')} 
           />
 
-          {/* ROOM DETAILS CARD */}
+          {/* --- NEW: ROOM DETAILS CARD --- */}
           {selectedRoomDetail && selectedRoomDetail.room_type && (
             <Paper p="sm" bg="blue.0" radius="md" withBorder style={{ borderColor: 'var(--mantine-color-blue-2)' }}>
                 <Group justify="space-between" mb={4}>
@@ -366,6 +353,7 @@ export function ReservationFormModal({
                     </Grid.Col>
                 </Grid>
 
+                {/* Facilities List */}
                 {getAmenities(selectedRoomDetail).length > 0 && (
                      <Group gap={4} mt="xs">
                         {getAmenities(selectedRoomDetail).slice(0, 4).map((am: string, i: number) => (
@@ -405,40 +393,17 @@ export function ReservationFormModal({
               </Text>
             </Group>
           </Paper>
-          
-          {/* [BARU] Grid Status & Metode Pembayaran */}
-          <Grid>
-             <Grid.Col span={6}>
-                <Select 
-                    label="Status Pembayaran" 
-                    data={[
-                    { value: 'pending', label: 'Pending (Belum Lunas)' },
-                    { value: 'paid', label: 'Paid (Lunas)' }
-                    ]} 
-                    required 
-                    leftSection={<IconCash size={16} />} 
-                    {...form.getInputProps('payment_status')} 
-                />
-             </Grid.Col>
-             <Grid.Col span={6}>
-                 <Select
-                    label="Metode Pembayaran"
-                    placeholder="Pilih metode"
-                    data={[
-                        { value: 'cash', label: 'Cash' },
-                        { value: 'transfer', label: 'Bank Transfer' },
-                        { value: 'qris', label: 'QRIS' },
-                        { value: 'credit_card', label: 'Credit Card' },
-                        { value: 'other', label: 'Lainnya' },
-                    ]}
-                    clearable
-                    // Disable jika status 'pending' (opsional, tergantung kebijakan)
-                    // disabled={form.values.payment_status === 'pending'}
-                    leftSection={<IconCreditCard size={16} />}
-                    {...form.getInputProps('payment_method')}
-                 />
-             </Grid.Col>
-          </Grid>
+
+          <Select 
+            label="Status Pembayaran" 
+            data={[
+              { value: 'pending', label: 'Pending (Belum Lunas)' },
+              { value: 'paid', label: 'Paid (Lunas)' }
+            ]} 
+            required 
+            leftSection={<IconCash size={16} />} 
+            {...form.getInputProps('payment_status')} 
+          />
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose} disabled={isSubmitting}>

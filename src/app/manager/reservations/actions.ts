@@ -20,7 +20,6 @@ export interface ReservationData {
   check_out_date: Date;
   total_price: number;
   payment_status: PaymentStatus;
-  // [BARU] Tambahkan field payment_method
   payment_method?: PaymentMethod | null;
 }
 
@@ -28,14 +27,33 @@ export interface ReservationData {
 export async function createReservation(data: ReservationData) {
   const supabase = await getSupabase();
 
-  const { error } = await supabase
+  // 1. Insert Reservasi
+  const { data: insertedId, error: insertError } = await supabase
     .from('reservations')
-    .insert(data);
+    .insert(data)
+    .select('id')
+    .single();
 
-  if (error) return { error: error.message };
+  if (insertError) return { error: insertError.message };
+
+  // 2. Fetch Data Lengkap untuk Invoice (Join Guest & Room)
+  const { data: fullReservation, error: fetchError } = await supabase
+    .from('reservations')
+    .select(`
+      *,
+      guest:guests(id, full_name, email, phone_number),
+      room:rooms(id, room_number, 
+        room_type:room_types(id, name, price_per_night)
+      )
+    `)
+    .eq('id', insertedId.id)
+    .single();
+
+  if (fetchError) return { error: "Reservasi dibuat tapi gagal memuat data invoice." };
 
   revalidatePath('/manager/reservations');
-  return { success: true };
+  // Kembalikan data lengkap
+  return { success: true, data: fullReservation };
 }
 
 // --- UPDATE ---
