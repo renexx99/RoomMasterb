@@ -9,6 +9,7 @@ export type BedType = 'Single' | 'Twin' | 'Double' | 'Queen' | 'King' | 'Super K
 export type ViewType = 'City View' | 'Sea View' | 'Garden View' | 'Pool View' | 'Mountain View' | 'No View';
 export type WingType = 'North Wing' | 'South Wing' | 'East Wing' | 'West Wing' | 'Central';
 export type FurnitureCondition = 'excellent' | 'good' | 'fair' | 'needs_replacement';
+export type PaymentMethod = 'cash' | 'transfer' | 'qris' | 'credit_card' | 'other';
 
 // --- Interfaces ---
 
@@ -118,6 +119,7 @@ export interface Reservation {
   check_out_date: string;
   total_price: number;
   payment_status: PaymentStatus;
+  payment_method?: PaymentMethod | null;
   created_at: string;
 }
 
