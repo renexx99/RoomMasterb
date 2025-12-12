@@ -4,7 +4,7 @@
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { PaymentStatus } from '@/core/types/database';
+import { PaymentStatus, PaymentMethod } from '@/core/types/database';
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -20,6 +20,8 @@ export interface ReservationData {
   check_out_date: Date;
   total_price: number;
   payment_status: PaymentStatus;
+  // [BARU] Tambahkan field payment_method
+  payment_method?: PaymentMethod | null;
 }
 
 // --- CREATE ---

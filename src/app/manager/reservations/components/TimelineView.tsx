@@ -12,9 +12,11 @@ interface TimelineViewProps {
   rooms: RoomWithDetails[];
   reservations: ReservationDetails[];
   onDragCreate: (roomId: string, startDate: Date, endDate: Date) => void;
+  // [BARU] Prop untuk handle klik
+  onReservationClick: (reservation: ReservationDetails) => void;
 }
 
-export function TimelineView({ rooms, reservations, onDragCreate }: TimelineViewProps) {
+export function TimelineView({ rooms, reservations, onDragCreate, onReservationClick }: TimelineViewProps) {
   const [scrollDays, setScrollDays] = useState(0);
   const [dragStart, setDragStart] = useState<{ roomId: string; dateIndex: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
@@ -200,6 +202,7 @@ export function TimelineView({ rooms, reservations, onDragCreate }: TimelineView
                             <Text size="xs" fw={600}>{reservation.guest?.full_name}</Text>
                             <Text size="xs">{new Date(reservation.check_in_date).toLocaleDateString('id')} - {new Date(reservation.check_out_date).toLocaleDateString('id')}</Text>
                             <Text size="xs">Rp {reservation.total_price?.toLocaleString('id-ID')}</Text>
+                            <Text size="xs" c="dimmed" fs="italic">Klik untuk detail</Text>
                           </Stack>
                         }
                       >
@@ -214,7 +217,14 @@ export function TimelineView({ rooms, reservations, onDragCreate }: TimelineView
                                        reservation.payment_status === 'pending' ? '#f59e0b' : '#6b7280',
                             border: '1px solid #dee2e6', borderRadius: 4,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            zIndex: 1, overflow: 'hidden'
+                            zIndex: 1, overflow: 'hidden',
+                            cursor: 'pointer' // Ubah kursor jadi pointer
+                          }}
+                          // [BARU] Tambahkan handler klik
+                          onMouseDown={(e) => e.stopPropagation()} // Mencegah drag saat klik reservasi
+                          onClick={(e) => {
+                             e.stopPropagation();
+                             onReservationClick(reservation);
                           }}
                         >
                           <Text size="xs" c="white" fw={600} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 8px' }}>

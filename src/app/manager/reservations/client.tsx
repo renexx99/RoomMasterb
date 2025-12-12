@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Box, Group, TextInput, Button, MultiSelect, Badge,
+  Box, Group, TextInput, MultiSelect, Badge,
   ScrollArea, Card, Avatar, Text, ActionIcon, Menu, SegmentedControl, Stack, Center
 } from '@mantine/core';
 import { DatesProvider } from '@mantine/dates';
@@ -22,6 +22,7 @@ import { TimelineView } from './components/TimelineView';
 import { QuickBookingPanel } from './components/QuickBookingPanel';
 import { AISuggestionsPanel, AICoPilotPanel } from './components/AISuggestionsPanel';
 import { ReservationFormModal } from './components/ReservationFormModal';
+import { ReservationInvoiceModal } from './components/ReservationInvoiceModal'; // [BARU] Import Invoice Modal
 import { deleteReservation } from './actions';
 
 interface ClientProps {
@@ -53,14 +54,16 @@ export default function ManagerReservationsClient({
     check_out_date?: Date;
   } | null>(null);
 
-  // --- STYLE KHUSUS SEGMENTED CONTROL (TEMA BIRU MANAGER) ---
+  // [BARU] State untuk Invoice Modal
+  const [invoiceModalOpened, setInvoiceModalOpened] = useState(false);
+  const [selectedInvoiceReservation, setSelectedInvoiceReservation] = useState<ReservationDetails | null>(null);
+
   const gradientSegmentedStyles = {
     root: {
       backgroundColor: '#f8f9fa',
       border: '1px solid #e9ecef',
     },
     indicator: {
-      // Gradient Blue (Manager Theme)
       background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
       boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)',
     },
@@ -94,6 +97,12 @@ export default function ManagerReservationsClient({
     setReservationToEdit(reservation);
     setPrefilledData(null);
     setModalOpened(true);
+  };
+
+  // [BARU] Handler klik reservasi di timeline
+  const handleReservationClick = (reservation: ReservationDetails) => {
+    setSelectedInvoiceReservation(reservation);
+    setInvoiceModalOpened(true);
   };
 
   const handleDelete = (reservation: ReservationDetails) => {
@@ -151,7 +160,7 @@ export default function ManagerReservationsClient({
         
         <Box style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           
-          {/* LEFT PANEL - Main View (68%) */}
+          {/* LEFT PANEL */}
           <Box style={{ 
             width: '68%', 
             borderRight: '1px solid #e9ecef',
@@ -225,7 +234,7 @@ export default function ManagerReservationsClient({
                   <Badge 
                     size="sm" 
                     variant="gradient" 
-                    gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }} // Blue Gradient
+                    gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
                   >
                     {availableRoomsCount} Kamar Tersedia
                   </Badge>
@@ -243,6 +252,8 @@ export default function ManagerReservationsClient({
                   rooms={rooms}
                   reservations={filteredReservations}
                   onDragCreate={handleDragCreate}
+                  // [BARU] Pass handler ke TimelineView
+                  onReservationClick={handleReservationClick} 
                 />
               </ScrollArea>
             )}
@@ -314,7 +325,7 @@ export default function ManagerReservationsClient({
             )}
           </Box>
 
-          {/* RIGHT PANEL - Action & AI Panel (32%) */}
+          {/* RIGHT PANEL */}
           <Box style={{ width: '32%', display: 'flex', flexDirection: 'column', background: '#fafafa' }}>
             
             <Box p="md" style={{ borderBottom: '1px solid #e9ecef' }}>
@@ -353,7 +364,7 @@ export default function ManagerReservationsClient({
         </Box>
       </Box>
 
-      {/* Reservation Form Modal */}
+      {/* Reservation Form Modal (Edit/Create) */}
       <ReservationFormModal
         opened={modalOpened}
         onClose={handleModalClose}
@@ -362,6 +373,13 @@ export default function ManagerReservationsClient({
         prefilledData={prefilledData}
         guests={guests}
         availableRooms={rooms}
+      />
+
+      {/* [BARU] Reservation Invoice Modal (Detail) */}
+      <ReservationInvoiceModal 
+        opened={invoiceModalOpened}
+        onClose={() => setInvoiceModalOpened(false)}
+        reservation={selectedInvoiceReservation}
       />
     </DatesProvider>
   );
