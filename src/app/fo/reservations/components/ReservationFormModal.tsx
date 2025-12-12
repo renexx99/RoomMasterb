@@ -219,7 +219,7 @@ export function ReservationFormModal({
     <Modal 
       opened={opened} 
       onClose={onClose} 
-      title={reservationToEdit ? 'Edit Reservasi' : 'Buat Reservasi Baru'} 
+      title={reservationToEdit ? 'Edit Reservation' : 'Make New Reservation'} 
       centered 
       size="lg" 
       radius="md"
@@ -227,7 +227,7 @@ export function ReservationFormModal({
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           {/* Section Tamu */}
-          <Divider label="Informasi Tamu" labelPosition="center" />
+          <Divider label="Guest Information" labelPosition="center" />
           <Group grow>
             <Button 
               onClick={() => setGuestSelectionMode('select')} 
@@ -235,7 +235,7 @@ export function ReservationFormModal({
               gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
-              Pilih Tamu Lama
+              Select Exist Guest
             </Button>
             <Button 
               onClick={() => setGuestSelectionMode('new')} 
@@ -243,17 +243,17 @@ export function ReservationFormModal({
               gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
-              Input Tamu Baru
+              Input New Guest
             </Button>
           </Group>
 
           {guestSelectionMode === 'select' ? (
             <Select 
-              label="Cari Tamu" 
-              placeholder="Ketik nama..." 
+              label="Find Guest" 
+              placeholder="Type name..." 
               data={guestOptions} 
               searchable 
-              nothingFoundMessage="Tamu tidak ditemukan" 
+              nothingFoundMessage="Guest not found" 
               {...form.getInputProps('guest_id')} 
             />
           ) : (
@@ -267,8 +267,8 @@ export function ReservationFormModal({
                     {...form.getInputProps('new_guest_title')}
                   />
                   <TextInput 
-                    label="Nama Lengkap" 
-                    placeholder="Nama tamu" 
+                    label="Full Name" 
+                    placeholder="Guest Name" 
                     required 
                     leftSection={<IconUser size={16} />} 
                     {...form.getInputProps('new_guest_name')} 
@@ -282,7 +282,7 @@ export function ReservationFormModal({
                 {...form.getInputProps('new_guest_email')} 
               />
               <TextInput 
-                label="No. HP" 
+                label="Phone Number" 
                 placeholder="0812..." 
                 leftSection={<IconPhone size={16} />} 
                 {...form.getInputProps('new_guest_phone')} 
@@ -291,10 +291,10 @@ export function ReservationFormModal({
           )}
 
           {/* Section Detail Kamar */}
-          <Divider label="Detail Kamar & Waktu" labelPosition="center" mt="xs" />
+          <Divider label="Room Detail and Date" labelPosition="center" mt="xs" />
           <Select 
-            label="Pilih Kamar" 
-            placeholder="Pilih kamar" 
+            label="Select Room" 
+            placeholder="Select Room" 
             data={roomOptions} 
             searchable 
             required 
@@ -348,13 +348,13 @@ export function ReservationFormModal({
           <Group grow>
             <DatePickerInput 
               label="Check-in" 
-              placeholder="Pilih tanggal" 
+              placeholder="Select Date" 
               leftSection={<IconCalendar size={16} />} 
               {...form.getInputProps('check_in_date')} 
             />
             <DatePickerInput 
               label="Check-out" 
-              placeholder="Pilih tanggal" 
+              placeholder="Select Date" 
               minDate={form.values.check_in_date || new Date()} 
               leftSection={<IconCalendar size={16} />} 
               {...form.getInputProps('check_out_date')} 
@@ -363,7 +363,7 @@ export function ReservationFormModal({
 
           <Paper p="sm" bg="gray.0" radius="md" withBorder>
             <Group justify="space-between">
-              <Text size="sm" fw={500}>Estimasi Total:</Text>
+              <Text size="sm" fw={500}>Total Estimation: </Text>
               <Text size="xl" fw={700} c="teal.9">
                 {calculatedPrice ? `Rp ${calculatedPrice.toLocaleString('id-ID')}` : '-'}
               </Text>
@@ -371,7 +371,7 @@ export function ReservationFormModal({
           </Paper>
 
           <Select 
-            label="Status Pembayaran" 
+            label="Payment Status" 
             data={[
               { value: 'pending', label: 'Pending' },
               { value: 'paid', label: 'Paid' }
@@ -382,7 +382,7 @@ export function ReservationFormModal({
           />
 
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
+            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
             <Button 
                 type="submit" 
                 variant="gradient"
