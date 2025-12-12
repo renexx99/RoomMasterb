@@ -1,17 +1,35 @@
+// src/app/manager/dashboard/components/RecentReservations.tsx
 'use client';
 
 import { Card, Group, Text, Button, Stack, Paper, Avatar, Badge } from '@mantine/core';
 import { IconClockHour4 } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 
-const recentReservations = [
-  { id: 'RES-2401', guest: 'Andi Wijaya', room: '205', checkIn: 'Today 14:00', status: 'confirmed', amount: 'Rp 950K' },
-  { id: 'RES-2402', guest: 'Sarah Chen', room: '312', checkIn: 'Today 16:30', status: 'checked-in', amount: 'Rp 1.5M' },
-  { id: 'RES-2403', guest: 'Budi Hartono', room: '401', checkIn: 'Tomorrow 15:00', status: 'confirmed', amount: 'Rp 3.2M' },
-  { id: 'RES-2404', guest: 'Linda Kusuma', room: '108', checkIn: 'Tomorrow 12:00', status: 'pending', amount: 'Rp 650K' },
-  { id: 'RES-2405', guest: 'David Tan', room: '220', checkIn: 'Dec 03 14:00', status: 'confirmed', amount: 'Rp 900K' },
-];
+// Interface untuk data yang masuk
+interface RecentReservationItem {
+  id: string;
+  guest_name: string;
+  room_number: string;
+  check_in_date: string;
+  status: string;
+  total_price: number;
+}
 
-export function RecentReservations() {
+interface Props {
+  data: RecentReservationItem[];
+}
+
+export function RecentReservations({ data }: Props) {
+  const router = useRouter();
+
+  if (data.length === 0) {
+    return (
+      <Card shadow="sm" padding="md" radius="md" withBorder>
+        <Text c="dimmed" ta="center" size="sm">Belum ada reservasi terbaru.</Text>
+      </Card>
+    );
+  }
+
   return (
     <Card shadow="sm" padding="md" radius="md" withBorder>
       <Group justify="space-between" mb="md">
@@ -19,13 +37,18 @@ export function RecentReservations() {
           <Text size="sm" fw={700}>Recent Reservations</Text>
           <Text size="xs" c="dimmed">Latest bookings and check-ins</Text>
         </div>
-        <Button variant="light" color="indigo" size="sm">
+        <Button 
+          variant="light" 
+          color="indigo" 
+          size="sm"
+          onClick={() => router.push('/manager/reservations')}
+        >
           View All
         </Button>
       </Group>
 
       <Stack gap={6}>
-        {recentReservations.map((res) => (
+        {data.map((res) => (
           <Paper
             key={res.id}
             p="sm"
@@ -35,19 +58,19 @@ export function RecentReservations() {
             <Group justify="space-between" wrap="nowrap">
               <Group gap="sm" style={{ flex: 1, minWidth: 0 }}>
                 <Avatar size={36} radius="md" color="indigo">
-                  {res.guest.split(' ').map(n => n[0]).join('')}
+                  {res.guest_name.charAt(0).toUpperCase()}
                 </Avatar>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Text size="sm" fw={600} truncate>
-                    {res.guest}
+                    {res.guest_name}
                   </Text>
                   <Group gap={6}>
                     <Text size="xs" c="dimmed">
-                      {res.id}
+                      #{res.id.substring(0, 8)}
                     </Text>
                     <Text size="xs" c="dimmed">•</Text>
                     <Text size="xs" c="dimmed">
-                      Room {res.room}
+                      Room {res.room_number}
                     </Text>
                   </Group>
                 </div>
@@ -57,18 +80,19 @@ export function RecentReservations() {
                 <div style={{ textAlign: 'right' }}>
                   <Text size="xs" c="dimmed" style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
                     <IconClockHour4 size={12} />
-                    {res.checkIn}
+                    {new Date(res.check_in_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                   </Text>
                   <Text size="sm" fw={700}>
-                    {res.amount}
+                    Rp {res.total_price.toLocaleString('id-ID')}
                   </Text>
                 </div>
                 <Badge
                   size="sm"
                   variant="light"
                   color={
-                    res.status === 'checked-in' ? 'teal' :
+                    res.status === 'paid' ? 'teal' :
                     res.status === 'confirmed' ? 'blue' :
+                    res.status === 'cancelled' ? 'red' :
                     'yellow'
                   }
                 >

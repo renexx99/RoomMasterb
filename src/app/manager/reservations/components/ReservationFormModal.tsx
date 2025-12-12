@@ -1,7 +1,6 @@
 // src/app/manager/reservations/components/ReservationFormModal.tsx
 'use client';
 
-// ... imports (sama seperti sebelumnya) ...
 import { useEffect, useState, useMemo } from 'react';
 import { 
   Modal, Stack, TextInput, Button, Group, Select, Paper, Text, Divider, 
@@ -11,10 +10,10 @@ import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { 
   IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash, 
-  IconMaximize, IconArmchair, IconEye, IconBuildingSkyscraper, IconAirConditioning 
+  IconMaximize, IconArmchair, IconEye, IconAirConditioning, IconCreditCard 
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { PaymentStatus } from '@/core/types/database';
+import { PaymentStatus, PaymentMethod } from '@/core/types/database';
 import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
 import { createReservation, updateReservation, createGuestForReservation } from '../actions';
 
@@ -26,14 +25,12 @@ interface Props {
   prefilledData?: { room_id?: string; check_in_date?: Date; check_out_date?: Date; } | null;
   guests: GuestOption[];
   availableRooms: RoomWithDetails[];
-  // [BARU] Callback onSuccess yang menerima data reservasi lengkap
   onSuccess?: (reservation: ReservationDetails) => void;
 }
 
 export function ReservationFormModal({ 
   opened, onClose, hotelId, reservationToEdit, prefilledData, guests, availableRooms, onSuccess 
 }: Props) {
-  // ... state dan form setup (sama seperti sebelumnya) ...
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [guestSelectionMode, setGuestSelectionMode] = useState<'select' | 'new'>('select');
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
@@ -42,7 +39,6 @@ export function ReservationFormModal({
   useEffect(() => { setGuestList(guests); }, [guests]);
 
   const form = useForm({
-     // ... initialValues dan validate sama ...
     initialValues: {
       guest_id: '',
       new_guest_title: 'Mr.' as string,
@@ -54,6 +50,7 @@ export function ReservationFormModal({
       check_out_date: null as Date | null,
       total_price: 0,
       payment_status: 'pending' as PaymentStatus,
+      payment_method: '' as PaymentMethod | '', // [BARU] Field Payment Method
     },
     validate: {
       guest_id: (value) => (guestSelectionMode === 'select' && !value ? 'Select Guest' : null),
@@ -69,14 +66,13 @@ export function ReservationFormModal({
     },
   });
 
-  // ... useEffect logic untuk reset form dan hitung harga (sama seperti sebelumnya) ...
-  
   // LOGIC: Selected Room Details
   const selectedRoomDetail = useMemo(() => {
     if (!form.values.room_id) return null;
     return availableRooms.find(r => r.id === form.values.room_id);
   }, [form.values.room_id, availableRooms]);
 
+  // Effect: Reset Form & Populate Data
   useEffect(() => {
     if (opened) {
       if (reservationToEdit) {
@@ -88,6 +84,7 @@ export function ReservationFormModal({
           check_out_date: new Date(reservationToEdit.check_out_date),
           total_price: reservationToEdit.total_price,
           payment_status: reservationToEdit.payment_status,
+          payment_method: reservationToEdit.payment_method || '', // [BARU] Populate payment method
           new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setCalculatedPrice(reservationToEdit.total_price);
@@ -99,6 +96,7 @@ export function ReservationFormModal({
           check_out_date: prefilledData.check_out_date || null,
           total_price: 0,
           payment_status: 'pending',
+          payment_method: '',
           guest_id: '', new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setGuestSelectionMode('select');
@@ -109,8 +107,10 @@ export function ReservationFormModal({
         setCalculatedPrice(null);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, reservationToEdit, prefilledData]);
 
+  // Effect: Calculate Price
   useEffect(() => {
     const { check_in_date, check_out_date, room_id } = form.values;
     let pricePerNight = 0;
@@ -167,30 +167,26 @@ export function ReservationFormModal({
         check_out_date: values.check_out_date!,
         total_price: calculatedPrice || 0,
         payment_status: values.payment_status,
+        payment_method: (values.payment_method as PaymentMethod) || null, // [BARU] Kirim payment method
       };
 
       let result;
       if (reservationToEdit) {
         result = await updateReservation(reservationToEdit.id, reservationData);
-        // Note: Update tidak perlu menampilkan invoice otomatis, hanya create
         if (result.error) {
             notifications.show({ title: 'Failed', message: result.error, color: 'red' });
         } else {
             notifications.show({ title: 'Success', message: 'Reservation successfully updated', color: 'green' });
             onClose();
-             // Untuk edit, kita bisa refresh biasa
-             window.location.reload(); 
+            window.location.reload(); 
         }
       } else {
-        // [UPDATED] Create Logic
         result = await createReservation(reservationData);
         
         if (result.error) {
            notifications.show({ title: 'Failed', message: result.error, color: 'red' });
         } else if (result.data) {
            notifications.show({ title: 'Success', message: 'Reservation successfully created', color: 'green' });
-           
-           // Panggil onSuccess dengan data lengkap reservasi baru
            if (onSuccess) {
               onSuccess(result.data as ReservationDetails);
            } else {
@@ -207,7 +203,6 @@ export function ReservationFormModal({
     }
   };
 
-  // ... sisa JSX render (sama seperti sebelumnya, guestOptions, roomOptions, amenities) ...
   const guestOptions = useMemo(() => guestList.map(g => ({ 
     value: g.id, 
     label: `${g.full_name} (${g.email})` 
@@ -227,16 +222,6 @@ export function ReservationFormModal({
     return options;
   }, [availableRooms, reservationToEdit]);
 
-  const getAmenities = (room: RoomWithDetails) => {
-    const am = room.room_type?.amenities;
-    if (Array.isArray(am)) return am;
-    if (typeof am === 'string') {
-        try { return JSON.parse(am); } catch { return []; }
-    }
-    return [];
-  };
-
-  // --- RETURN JSX ---
   return (
     <Modal 
       opened={opened} 
@@ -396,16 +381,32 @@ export function ReservationFormModal({
                 </Group>
             </Paper>
 
-            <Select 
-                label="Payment Status" 
+            <Group grow align="flex-start">
+              <Select
+                label="Payment Method"
+                placeholder="Select Method"
                 data={[
-                { value: 'pending', label: 'Pending (Belum Lunas)' },
-                { value: 'paid', label: 'Paid (Lunas)' }
-                ]} 
-                required 
-                leftSection={<IconCash size={16} />} 
-                {...form.getInputProps('payment_status')} 
-            />
+                    { value: 'cash', label: 'Cash' },
+                    { value: 'transfer', label: 'Bank Transfer' },
+                    { value: 'qris', label: 'QRIS' },
+                    { value: 'credit_card', label: 'Credit Card' },
+                    { value: 'other', label: 'Other' },
+                ]}
+                leftSection={<IconCreditCard size={16} />}
+                clearable
+                {...form.getInputProps('payment_method')}
+              />
+              <Select 
+                  label="Payment Status" 
+                  data={[
+                  { value: 'pending', label: 'Pending (Belum Lunas)' },
+                  { value: 'paid', label: 'Paid (Lunas)' }
+                  ]} 
+                  required 
+                  leftSection={<IconCash size={16} />} 
+                  {...form.getInputProps('payment_status')} 
+              />
+            </Group>
 
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={onClose} disabled={isSubmitting}>

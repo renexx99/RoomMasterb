@@ -1,3 +1,4 @@
+// src/app/manager/dashboard/client.tsx
 'use client';
 
 import React from 'react';
@@ -14,7 +15,7 @@ interface ClientProps {
 }
 
 export default function ManagerDashboardClient({ data }: ClientProps) {
-  const { stats } = data;
+  const { stats, recentActivities } = data;
 
   return (
     <Box style={{ minHeight: '100vh', background: '#f8f9fa' }}>
@@ -22,7 +23,6 @@ export default function ManagerDashboardClient({ data }: ClientProps) {
         <Stack gap="sm">
           
           {/* 1. KPI Stats Cards */}
-          {/* Kita passing data real dari props ke komponen ini */}
           <DashboardStats 
             availableRooms={stats.availableRooms}
             todayCheckIns={stats.todayCheckIns}
@@ -34,12 +34,13 @@ export default function ManagerDashboardClient({ data }: ClientProps) {
               <OccupancyChart />
             </Grid.Col>
             <Grid.Col span={{ base: 12, md: 6 }}>
+              {/* Revenue tetap dummy sesuai permintaan */}
               <RevenueChart />
             </Grid.Col>
           </Grid>
 
-          {/* 3. Recent Reservations List */}
-          <RecentReservations />
+          {/* 3. Recent Reservations List - Menggunakan Data Real */}
+          <RecentReservations data={recentActivities} />
 
         </Stack>
       </Container>

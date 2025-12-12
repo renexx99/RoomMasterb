@@ -12,23 +12,29 @@ export interface ManagerDashboardData {
     guestsInHouse: number;
     hotelName: string;
   };
-  recentActivities: any[];
+  recentActivities: {
+    id: string;
+    guest_name: string;
+    room_number: string;
+    check_in_date: string;
+    status: string;
+    total_price: number;
+  }[];
   hotelId: string;
 }
 
 export default async function ManagerDashboardPage() {
   const cookieStore = await cookies();
-  // @ts-ignore 
+  // @ts-ignore
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   // 1. Cek Sesi
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/auth/login');
 
-  // 2. Ambil Role Asli User & Cek Impersonasi
+  // 2. Ambil Role & Hotel ID
   let hotelId: string | null = null;
 
-  // A. Ambil data roles user dari DB
   const { data: userRoles } = await supabase
     .from('user_roles')
     .select('*, role:roles(name)')
@@ -36,32 +42,26 @@ export default async function ManagerDashboardPage() {
 
   const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
 
-  // B. Logika Penentuan Hotel ID
   if (isSuperAdmin) {
-    // Jika Super Admin, cek apakah ada cookie impersonasi
-    const impersonatedHotelId = cookieStore.get('impersonated_hotel_id')?.value;
-    if (impersonatedHotelId) {
-      hotelId = impersonatedHotelId;
+    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
+    if (impersonatedId) {
+      hotelId = impersonatedId;
     } else {
-      // Jika Super Admin masuk halaman ini tanpa impersonasi, redirect balik
       redirect('/super-admin/dashboard');
     }
   } else {
-    // Jika User Biasa (Manager asli), ambil dari role mereka
-    const managerRole = userRoles?.find((ur: any) => ur.hotel_id && ur.role?.name === 'Hotel Manager');
-    hotelId = managerRole?.hotel_id;
+    const managerRole = userRoles?.find((ur: any) => 
+      ur.hotel_id && ['Hotel Manager', 'Hotel Admin'].includes(ur.role?.name || '')
+    );
+    hotelId = managerRole?.hotel_id || null;
   }
 
   // Jika tetap tidak ada hotel, tampilkan kosong
   if (!hotelId) {
-    return <ManagerDashboardClient data={{ 
-        stats: { availableRooms: 0, todayCheckIns: 0, todayCheckOuts: 0, guestsInHouse: 0, hotelName: 'No Hotel' }, 
-        recentActivities: [], 
-        hotelId: '' 
-    }} />;
+    return <div>Access Denied: No Hotel Assigned</div>;
   }
 
-  // 3. Fetch Statistik (Sama seperti sebelumnya)
+  // 3. Fetch Data Real-time (Parallel Fetching)
   const today = new Date().toISOString().split('T')[0];
 
   const [
@@ -69,14 +69,64 @@ export default async function ManagerDashboardPage() {
     availableRoomsRes,
     todayCheckInsRes,
     todayCheckOutsRes,
-    guestsInHouseRes
+    activeReservationsRes,
+    recentRes
   ] = await Promise.all([
+    // A. Nama Hotel
     supabase.from('hotels').select('name').eq('id', hotelId).single(),
-    supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('hotel_id', hotelId).eq('status', 'available'),
-    supabase.from('reservations').select('*', { count: 'exact', head: true }).eq('hotel_id', hotelId).eq('check_in_date', today).neq('payment_status', 'cancelled'),
-    supabase.from('reservations').select('*', { count: 'exact', head: true }).eq('hotel_id', hotelId).eq('check_out_date', today).neq('payment_status', 'cancelled'),
-    supabase.from('reservations').select('*', { count: 'exact', head: true }).eq('hotel_id', hotelId).lte('check_in_date', today).gte('check_out_date', today).neq('payment_status', 'cancelled'),
+    
+    // B. Kamar Tersedia
+    supabase.from('rooms')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .eq('status', 'available'),
+      
+    // C. Check-in Hari Ini (Belum Cancel)
+    supabase.from('reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .eq('check_in_date', today)
+      .neq('payment_status', 'cancelled'),
+
+    // D. Check-out Hari Ini (Belum Cancel)
+    supabase.from('reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .eq('check_out_date', today)
+      .neq('payment_status', 'cancelled'),
+
+    // E. Tamu In-House (Aktif hari ini)
+    supabase.from('reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .lte('check_in_date', today)
+      .gt('check_out_date', today) // Menggunakan GT agar yang checkout hari ini tidak dihitung (sudah akan keluar)
+      .neq('payment_status', 'cancelled'),
+
+    // F. 5 Reservasi Terbaru
+    supabase.from('reservations')
+      .select(`
+        id,
+        total_price,
+        payment_status,
+        check_in_date,
+        guest:guests(full_name),
+        room:rooms(room_number)
+      `)
+      .eq('hotel_id', hotelId)
+      .order('created_at', { ascending: false })
+      .limit(5)
   ]);
+
+  // 4. Formatting Data
+  const recentActivities = (recentRes.data || []).map((res: any) => ({
+    id: res.id,
+    guest_name: res.guest?.full_name || 'Unknown Guest',
+    room_number: res.room?.room_number || 'TBA',
+    check_in_date: res.check_in_date,
+    status: res.payment_status,
+    total_price: res.total_price || 0,
+  }));
 
   const dashboardData: ManagerDashboardData = {
     hotelId,
@@ -85,9 +135,9 @@ export default async function ManagerDashboardPage() {
       availableRooms: availableRoomsRes.count || 0,
       todayCheckIns: todayCheckInsRes.count || 0,
       todayCheckOuts: todayCheckOutsRes.count || 0,
-      guestsInHouse: guestsInHouseRes.count || 0,
+      guestsInHouse: activeReservationsRes.count || 0,
     },
-    recentActivities: [],
+    recentActivities: recentActivities,
   };
 
   return <ManagerDashboardClient data={dashboardData} />;
