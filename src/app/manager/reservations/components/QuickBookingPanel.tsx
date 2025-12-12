@@ -1,7 +1,6 @@
 // src/app/manager/reservations/components/QuickBookingPanel.tsx
 'use client';
 
-// ... imports (sama seperti sebelumnya) ...
 import { useState, useEffect } from 'react';
 import {
   Stack, Paper, Group, Text, TextInput, Select, Button, ThemeIcon, Divider
@@ -18,12 +17,10 @@ interface QuickBookingPanelProps {
   guests: GuestOption[];
   rooms: RoomWithDetails[];
   prefilledData?: { room_id?: string; check_in_date?: Date; check_out_date?: Date; } | null;
-  // [UPDATED] Callback menerima ReservationDetails
   onSuccess: (reservation: ReservationDetails) => void;
 }
 
 export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuccess }: QuickBookingPanelProps) {
-  // ... state definitions (sama seperti sebelumnya) ...
   const [guestMode, setGuestMode] = useState<'existing' | 'new'>('existing');
   const [selectedGuest, setSelectedGuest] = useState<string | null>(null);
   const [guestTitle, setGuestTitle] = useState<string | null>('Mr.');
@@ -37,7 +34,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ... useEffect hooks (prefilledData, calculatedPrice) sama ...
+  // Apply prefilled data
   useEffect(() => {
     if (prefilledData) {
       setSelectedRoom(prefilledData.room_id || null);
@@ -46,11 +43,24 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
     }
   }, [prefilledData]);
 
+  // Calculate price dengan handling Date yang aman
   useEffect(() => {
-    if (checkInDate && checkOutDate && selectedRoom && checkOutDate > checkInDate) {
+    // Konversi eksplisit ke Date object untuk menghindari error .getTime() pada string
+    const start = checkInDate ? new Date(checkInDate) : null;
+    const end = checkOutDate ? new Date(checkOutDate) : null;
+
+    // Pastikan valid: tidak null, valid date (tidak NaN), dan end > start
+    if (
+      start && 
+      end && 
+      selectedRoom && 
+      !isNaN(start.getTime()) && 
+      !isNaN(end.getTime()) && 
+      end.getTime() > start.getTime()
+    ) {
       const room = rooms.find(r => r.id === selectedRoom);
       if (room?.room_type) {
-        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24));
+        const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
         const price = nights * room.room_type.price_per_night;
         setCalculatedPrice(price);
       }
@@ -61,7 +71,6 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
 
 
   const handleQuickBook = async () => {
-    // ... validasi dasar ...
     if (!checkInDate || !checkOutDate || !selectedRoom) {
       notifications.show({ title: 'Incomplete Form', message: 'Please complete the dates and room selection', color: 'red' });
       return;
@@ -112,7 +121,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
 
       if (result.error) {
         notifications.show({ title: 'Failed to Create Reservation', message: result.error, color: 'red' });
-      } else if (result.data) { // [CHECKPOINT] Pastikan data ada
+      } else if (result.data) { 
         notifications.show({ title: 'Reservation Successful', message: 'Booking has been created', color: 'green', icon: <IconCheck size={16} /> });
         
         // Reset Form
@@ -123,7 +132,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         setCalculatedPrice(null);
         setPaymentMethod(null);
 
-        // [UPDATED] Panggil onSuccess dengan data lengkap
+        // Panggil onSuccess dengan data lengkap
         onSuccess(result.data as ReservationDetails);
       }
     } catch (error) {
@@ -136,7 +145,6 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
   const availableRooms = rooms.filter(r => r.status === 'available');
   const guestOptions = guests.map(g => ({ value: g.id, label: `${g.full_name} (${g.email})` }));
 
-  // ... return JSX (sama seperti sebelumnya) ...
   return (
     <Stack gap="md">
       {/* SECTION 1: TAMU */}
