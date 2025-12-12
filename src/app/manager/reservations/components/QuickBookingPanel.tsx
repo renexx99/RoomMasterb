@@ -1,48 +1,43 @@
 // src/app/manager/reservations/components/QuickBookingPanel.tsx
 'use client';
 
+// ... imports (sama seperti sebelumnya) ...
 import { useState, useEffect } from 'react';
 import {
   Stack, Paper, Group, Text, TextInput, Select, Button, ThemeIcon, Divider
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { 
-  IconUser, IconPhone, IconMail, IconBed, IconCalendarEvent, IconCheck, IconCreditCard 
-} from '@tabler/icons-react'; // Tambahkan IconCreditCard
+import { IconUser, IconPhone, IconMail, IconBed, IconCalendarEvent, IconCheck, IconCreditCard } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { GuestOption, RoomWithDetails } from '../page';
+import { GuestOption, RoomWithDetails, ReservationDetails } from '../page';
 import { createReservation, createGuestForReservation } from '../actions';
-import { PaymentMethod } from '@/core/types/database'; // Import tipe jika diperlukan
+import { PaymentMethod } from '@/core/types/database';
 
 interface QuickBookingPanelProps {
   hotelId: string;
   guests: GuestOption[];
   rooms: RoomWithDetails[];
   prefilledData?: { room_id?: string; check_in_date?: Date; check_out_date?: Date; } | null;
-  onSuccess: () => void;
+  // [UPDATED] Callback menerima ReservationDetails
+  onSuccess: (reservation: ReservationDetails) => void;
 }
 
 export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuccess }: QuickBookingPanelProps) {
+  // ... state definitions (sama seperti sebelumnya) ...
   const [guestMode, setGuestMode] = useState<'existing' | 'new'>('existing');
   const [selectedGuest, setSelectedGuest] = useState<string | null>(null);
-  
-  // State Tamu Baru
   const [guestTitle, setGuestTitle] = useState<string | null>('Mr.');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
-
-  // State Reservasi
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
-  
-  // [BARU] State Payment Method
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ... useEffect hooks (prefilledData, calculatedPrice) sama ...
   useEffect(() => {
     if (prefilledData) {
       setSelectedRoom(prefilledData.room_id || null);
@@ -64,8 +59,9 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
     }
   }, [checkInDate, checkOutDate, selectedRoom, rooms]);
 
+
   const handleQuickBook = async () => {
-    // Validasi Dasar
+    // ... validasi dasar ...
     if (!checkInDate || !checkOutDate || !selectedRoom) {
       notifications.show({ title: 'Form Tidak Lengkap', message: 'Mohon lengkapi tanggal dan kamar', color: 'red' });
       return;
@@ -96,7 +92,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
 
         if (guestResult.error || !guestResult.guestId) {
           notifications.show({ title: 'Gagal Buat Tamu', message: guestResult.error, color: 'red' });
-          setIsSubmitting(false); // Stop loading jika gagal
+          setIsSubmitting(false); 
           return;
         }
         finalGuestId = guestResult.guestId;
@@ -110,14 +106,13 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         check_in_date: checkInDate,
         check_out_date: checkOutDate,
         total_price: calculatedPrice || 0,
-        payment_status: 'pending', // Default pending untuk quick booking
-        // [BARU] Sertakan payment_method
+        payment_status: 'pending', 
         payment_method: (paymentMethod as PaymentMethod) || null, 
       });
 
       if (result.error) {
         notifications.show({ title: 'Gagal Membuat Reservasi', message: result.error, color: 'red' });
-      } else {
+      } else if (result.data) { // [CHECKPOINT] Pastikan data ada
         notifications.show({ title: 'Reservasi Berhasil', message: 'Booking telah dibuat', color: 'green', icon: <IconCheck size={16} /> });
         
         // Reset Form
@@ -126,9 +121,10 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         setGuestName(''); setGuestPhone(''); setGuestEmail('');
         setCheckInDate(null); setCheckOutDate(null); setSelectedRoom(null); 
         setCalculatedPrice(null);
-        setPaymentMethod(null); // Reset payment method
+        setPaymentMethod(null);
 
-        onSuccess();
+        // [UPDATED] Panggil onSuccess dengan data lengkap
+        onSuccess(result.data as ReservationDetails);
       }
     } catch (error) {
       notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
@@ -140,6 +136,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
   const availableRooms = rooms.filter(r => r.status === 'available');
   const guestOptions = guests.map(g => ({ value: g.id, label: `${g.full_name} (${g.email})` }));
 
+  // ... return JSX (sama seperti sebelumnya) ...
   return (
     <Stack gap="md">
       {/* SECTION 1: TAMU */}
@@ -255,7 +252,6 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
           
           <Divider my="xs" />
 
-          {/* [BARU] Input Payment Method */}
           <Select
             label="Metode Pembayaran (Opsional)"
             placeholder="Pilih metode"

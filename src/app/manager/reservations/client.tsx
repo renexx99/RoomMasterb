@@ -22,7 +22,7 @@ import { TimelineView } from './components/TimelineView';
 import { QuickBookingPanel } from './components/QuickBookingPanel';
 import { AISuggestionsPanel, AICoPilotPanel } from './components/AISuggestionsPanel';
 import { ReservationFormModal } from './components/ReservationFormModal';
-import { ReservationInvoiceModal } from './components/ReservationInvoiceModal'; // [BARU] Import Invoice Modal
+import { ReservationInvoiceModal } from './components/ReservationInvoiceModal';
 import { deleteReservation } from './actions';
 
 interface ClientProps {
@@ -54,7 +54,7 @@ export default function ManagerReservationsClient({
     check_out_date?: Date;
   } | null>(null);
 
-  // [BARU] State untuk Invoice Modal
+  // State untuk Invoice Modal
   const [invoiceModalOpened, setInvoiceModalOpened] = useState(false);
   const [selectedInvoiceReservation, setSelectedInvoiceReservation] = useState<ReservationDetails | null>(null);
 
@@ -87,6 +87,23 @@ export default function ManagerReservationsClient({
     });
   }, [initialReservations, searchTerm, filterStatus]);
 
+  // --- Handlers ---
+
+  // [UPDATED] Handler sukses membuat reservasi (dari Modal atau QuickBook)
+  const handleReservationCreationSuccess = (newReservation: ReservationDetails) => {
+    // 1. Refresh data server (untuk update list/timeline)
+    router.refresh();
+    
+    // 2. Set data untuk invoice dan buka modal
+    setSelectedInvoiceReservation(newReservation);
+    setInvoiceModalOpened(true);
+    
+    // 3. Tutup modal form jika terbuka
+    setModalOpened(false);
+    setReservationToEdit(null);
+    setPrefilledData(null);
+  };
+
   const handleDragCreate = (roomId: string, startDate: Date, endDate: Date) => {
     setPrefilledData({ room_id: roomId, check_in_date: startDate, check_out_date: endDate });
     setReservationToEdit(null);
@@ -99,7 +116,6 @@ export default function ManagerReservationsClient({
     setModalOpened(true);
   };
 
-  // [BARU] Handler klik reservasi di timeline
   const handleReservationClick = (reservation: ReservationDetails) => {
     setSelectedInvoiceReservation(reservation);
     setInvoiceModalOpened(true);
@@ -131,10 +147,6 @@ export default function ManagerReservationsClient({
     setModalOpened(false);
     setReservationToEdit(null);
     setPrefilledData(null);
-  };
-
-  const handleBookingSuccess = () => {
-    router.refresh();
   };
 
   if (!hotelId) return null;
@@ -252,7 +264,6 @@ export default function ManagerReservationsClient({
                   rooms={rooms}
                   reservations={filteredReservations}
                   onDragCreate={handleDragCreate}
-                  // [BARU] Pass handler ke TimelineView
                   onReservationClick={handleReservationClick} 
                 />
               </ScrollArea>
@@ -263,7 +274,7 @@ export default function ManagerReservationsClient({
               <ScrollArea style={{ flex: 1 }} p="md">
                 <Stack gap="xs">
                   {filteredReservations.map((res) => (
-                    <Card key={res.id} padding="md" radius="md" withBorder>
+                    <Card key={res.id} padding="md" radius="md" withBorder onClick={() => handleReservationClick(res)} style={{ cursor: 'pointer' }}>
                       <Group justify="space-between">
                         <Group>
                           <Avatar color="blue" radius="xl">
@@ -289,28 +300,28 @@ export default function ManagerReservationsClient({
                               {new Date(res.check_out_date).toLocaleDateString('id')}
                             </Text>
                           </Box>
-                          
-                          <Badge color={res.payment_status === 'paid' ? 'blue' : 'yellow'}>
+                            
+                            <Badge color={res.payment_status === 'paid' ? 'blue' : 'yellow'}>
                             {res.payment_status}
-                          </Badge>
-                          
-                          <Menu>
+                            </Badge>
+                            
+                            <Menu> 
                             <Menu.Target>
-                              <ActionIcon variant="light" color="gray">
-                                <IconDots size={16} />
+                              <ActionIcon variant="light" color="gray" onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}>
+                              <IconDots size={16} />
                               </ActionIcon>
                             </Menu.Target>
                             <Menu.Dropdown>
                               <Menu.Item 
-                                leftSection={<IconPencil size={14} />}
-                                onClick={() => handleEdit(res)}
+                              leftSection={<IconPencil size={14} />}
+                              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleEdit(res); }}
                               >
-                                Edit
+                              Edit
                               </Menu.Item>
                               <Menu.Item 
                                 color="red" 
                                 leftSection={<IconTrash size={14} />}
-                                onClick={() => handleDelete(res)}
+                                onClick={(e) => { e.stopPropagation(); handleDelete(res); }}
                               >
                                 Hapus
                               </Menu.Item>
@@ -352,7 +363,8 @@ export default function ManagerReservationsClient({
                     guests={guests}
                     rooms={rooms}
                     prefilledData={prefilledData}
-                    onSuccess={handleBookingSuccess}
+                    // [UPDATED] Pass handler baru
+                    onSuccess={handleReservationCreationSuccess}
                   />
                   <AISuggestionsPanel />
                 </>
@@ -364,7 +376,7 @@ export default function ManagerReservationsClient({
         </Box>
       </Box>
 
-      {/* Reservation Form Modal (Edit/Create) */}
+      {/* Reservation Form Modal */}
       <ReservationFormModal
         opened={modalOpened}
         onClose={handleModalClose}
@@ -373,9 +385,11 @@ export default function ManagerReservationsClient({
         prefilledData={prefilledData}
         guests={guests}
         availableRooms={rooms}
+        // [UPDATED] Pass handler baru
+        onSuccess={handleReservationCreationSuccess}
       />
 
-      {/* [BARU] Reservation Invoice Modal (Detail) */}
+      {/* Reservation Invoice Modal */}
       <ReservationInvoiceModal 
         opened={invoiceModalOpened}
         onClose={() => setInvoiceModalOpened(false)}
