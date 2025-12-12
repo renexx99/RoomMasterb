@@ -126,7 +126,7 @@ export default function ManagerReservationsClient({
       title: 'Hapus Reservasi',
       children: (
         <Text size="sm">
-          Apakah Anda yakin ingin menghapus reservasi untuk <strong>{reservation.guest?.full_name}</strong>?
+          Are you sure you want to delete the reservation for <strong>{reservation.guest?.full_name}</strong>?
         </Text>
       ),
       labels: { confirm: 'Hapus', cancel: 'Batal' },
@@ -186,7 +186,7 @@ export default function ManagerReservationsClient({
               <Group justify="space-between">
                 <Group gap="xs">
                   <TextInput
-                    placeholder="Cari tamu, nomor kamar..."
+                    placeholder="Search guest, room number..."
                     leftSection={<IconSearch size={16} />}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.currentTarget.value)}
@@ -195,7 +195,7 @@ export default function ManagerReservationsClient({
                   />
                   
                   <MultiSelect
-                    placeholder="Status Pembayaran"
+                    placeholder="Payment Status"
                     data={[
                       { value: 'pending', label: 'Pending' },
                       { value: 'paid', label: 'Paid' },
@@ -248,10 +248,10 @@ export default function ManagerReservationsClient({
                     variant="gradient" 
                     gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
                   >
-                    {availableRoomsCount} Kamar Tersedia
+                    {availableRoomsCount} Available Rooms
                   </Badge>
                   <Badge color="indigo" variant="light" size="sm">
-                    {filteredReservations.length} Reservasi
+                    {filteredReservations.length} Reservations
                   </Badge>
                 </Group>
               </Group>
@@ -282,7 +282,7 @@ export default function ManagerReservationsClient({
                           </Avatar>
                           <div>
                             <Text fw={600}>{res.guest?.full_name || 'N/A'}</Text>
-                            <Text size="sm" c="dimmed">Kamar {res.room?.room_number}</Text>
+                            <Text size="sm" c="dimmed">Room {res.room?.room_number}</Text>
                           </div>
                         </Group>
                         

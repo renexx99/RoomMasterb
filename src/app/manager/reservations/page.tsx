@@ -3,13 +3,15 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import ManagerReservationsClient from './client';
-import { Reservation, Guest, Room, RoomType } from '@/core/types/database';
+import { Reservation, Guest, Room, RoomType, Hotel } from '@/core/types/database';
 
 export interface ReservationDetails extends Reservation {
   guest?: Pick<Guest, 'id' | 'full_name' | 'email' | 'phone_number'>;
   room?: Pick<Room, 'id' | 'room_number'> & {
     room_type?: Pick<RoomType, 'id' | 'name' | 'price_per_night'>;
   };
+  // [BARU] Tambahkan relasi ke hotel
+  hotel?: Pick<Hotel, 'name' | 'address'>;
 }
 
 export interface RoomWithDetails extends Room {
@@ -62,7 +64,8 @@ export default async function ManagerReservationsPage() {
       .select(`
         *,
         guest:guests(id, full_name, email, phone_number),
-        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night))
+        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night)),
+        hotel:hotels(name, address)
       `)
       .eq('hotel_id', hotelId)
       .neq('payment_status', 'cancelled') 

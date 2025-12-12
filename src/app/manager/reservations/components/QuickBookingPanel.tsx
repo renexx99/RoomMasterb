@@ -63,15 +63,15 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
   const handleQuickBook = async () => {
     // ... validasi dasar ...
     if (!checkInDate || !checkOutDate || !selectedRoom) {
-      notifications.show({ title: 'Form Tidak Lengkap', message: 'Mohon lengkapi tanggal dan kamar', color: 'red' });
+      notifications.show({ title: 'Incomplete Form', message: 'Please complete the dates and room selection', color: 'red' });
       return;
     }
     if (guestMode === 'existing' && !selectedGuest) {
-      notifications.show({ title: 'Pilih Tamu', message: 'Mohon pilih tamu yang sudah ada', color: 'red' });
+      notifications.show({ title: 'Select Guest', message: 'Please select an existing guest', color: 'red' });
       return;
     }
     if (guestMode === 'new' && (!guestName || !guestEmail)) {
-      notifications.show({ title: 'Data Tamu Tidak Lengkap', message: 'Mohon lengkapi nama dan email tamu', color: 'red' });
+      notifications.show({ title: 'Incomplete Guest Data', message: 'Please complete the guest name and email', color: 'red' });
       return;
     }
 
@@ -91,7 +91,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         });
 
         if (guestResult.error || !guestResult.guestId) {
-          notifications.show({ title: 'Gagal Buat Tamu', message: guestResult.error, color: 'red' });
+          notifications.show({ title: 'Failed to Create Guest', message: guestResult.error, color: 'red' });
           setIsSubmitting(false); 
           return;
         }
@@ -111,9 +111,9 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
       });
 
       if (result.error) {
-        notifications.show({ title: 'Gagal Membuat Reservasi', message: result.error, color: 'red' });
+        notifications.show({ title: 'Failed to Create Reservation', message: result.error, color: 'red' });
       } else if (result.data) { // [CHECKPOINT] Pastikan data ada
-        notifications.show({ title: 'Reservasi Berhasil', message: 'Booking telah dibuat', color: 'green', icon: <IconCheck size={16} /> });
+        notifications.show({ title: 'Reservation Successful', message: 'Booking has been created', color: 'green', icon: <IconCheck size={16} /> });
         
         // Reset Form
         setGuestMode('existing'); 
@@ -127,7 +127,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         onSuccess(result.data as ReservationDetails);
       }
     } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+      notifications.show({ title: 'Error', message: 'System error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
@@ -143,7 +143,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
           <ThemeIcon color="blue" variant="light" size="lg"><IconUser size={18} /></ThemeIcon>
-          <Text fw={600} size="sm">Informasi Tamu</Text>
+          <Text fw={600} size="sm">Guest Information</Text>
         </Group>
         
         <Stack gap="sm">
@@ -154,7 +154,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
               gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
               size="xs"
             >
-              Tamu Lama
+              Select Existing Guest
             </Button>
             <Button 
               onClick={() => setGuestMode('new')} 
@@ -162,14 +162,14 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
               gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
               size="xs"
             >
-              Tamu Baru
+              Input New Guest
             </Button>
           </Group>
 
           {guestMode === 'existing' ? (
             <Select 
-              label="Pilih Tamu" 
-              placeholder="Cari tamu..." 
+              label="Select Guest" 
+              placeholder="Find Guest..." 
               data={guestOptions} 
               value={selectedGuest} 
               onChange={setSelectedGuest} 
@@ -185,8 +185,8 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
                 onChange={setGuestTitle} 
               />
               <TextInput 
-                label="Nama Lengkap" 
-                placeholder="Nama tamu" 
+                label="Full Name" 
+                placeholder="Guest Name" 
                 value={guestName} 
                 onChange={(e) => setGuestName(e.currentTarget.value)} 
                 leftSection={<IconUser size={16} />} 
@@ -201,7 +201,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
                 required 
               />
               <TextInput 
-                label="Telepon" 
+                label="Phone Number" 
                 placeholder="+62 xxx" 
                 value={guestPhone} 
                 onChange={(e) => setGuestPhone(e.currentTarget.value)} 
@@ -216,13 +216,13 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
           <ThemeIcon color="indigo" variant="light" size="lg"><IconCalendarEvent size={18} /></ThemeIcon>
-          <Text fw={600} size="sm">Detail Reservasi</Text>
+          <Text fw={600} size="sm">Reservation Details</Text>
         </Group>
         
         <Stack gap="sm">
           <DatePickerInput 
             label="Check-in" 
-            placeholder="Pilih tanggal" 
+            placeholder="Select date" 
             value={checkInDate} 
             onChange={(date) => setCheckInDate(date as Date | null)} 
             minDate={new Date()} 
@@ -230,15 +230,15 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
           />
           <DatePickerInput 
             label="Check-out" 
-            placeholder="Pilih tanggal" 
+            placeholder="Select date" 
             value={checkOutDate} 
             onChange={(date) => setCheckOutDate(date as Date | null)} 
             minDate={checkInDate || new Date()} 
             required 
           />
           <Select 
-            label="Pilih Kamar" 
-            placeholder="Kamar tersedia" 
+            label="Select Room" 
+            placeholder="Available rooms" 
             data={availableRooms.map(r => ({ 
               value: r.id, 
               label: `${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')})` 
@@ -253,8 +253,8 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
           <Divider my="xs" />
 
           <Select
-            label="Metode Pembayaran (Opsional)"
-            placeholder="Pilih metode"
+            label="Payment Method (Optional)"
+            placeholder="Select method"
             data={[
                 { value: 'cash', label: 'Cash' },
                 { value: 'transfer', label: 'Bank Transfer' },
@@ -289,7 +289,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         variant="gradient" 
         gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
       >
-        Buat Reservasi
+        Save Reservation
       </Button>
     </Stack>
   );

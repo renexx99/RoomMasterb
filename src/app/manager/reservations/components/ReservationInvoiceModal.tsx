@@ -1,8 +1,8 @@
 // src/app/manager/reservations/components/ReservationInvoiceModal.tsx
 'use client';
 
-import { Modal, Paper, Text, Group, Stack, Divider, Grid, Badge, ThemeIcon, Box, Button } from '@mantine/core';
-import { IconReceipt, IconUser, IconBed, IconPrinter, IconCheck } from '@tabler/icons-react';
+import { Modal, Paper, Text, Group, Stack, Divider, Grid, Badge, Box, Button, ActionIcon, ScrollArea } from '@mantine/core';
+import { IconPrinter, IconCheck, IconX } from '@tabler/icons-react';
 import { ReservationDetails } from '../page';
 
 interface Props {
@@ -27,15 +27,19 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
     }
   };
 
-  // --- Konten Invoice yang Reusable ---
+  // --- Konten Invoice yang Reusable (Untuk Layar & Cetak) ---
   const InvoiceContent = (
-    <Box p="lg" bg="white" style={{ color: 'black' }}>
+    <Box p="xl" bg="white" style={{ color: 'black' }}>
        {/* Header Invoice */}
        <Group justify="space-between" mb="xl" align='flex-start'>
-          <Stack gap={0}>
-             <Text size="xl" fw={900} tt="uppercase" c="blue.8" style={{ letterSpacing: 1 }}>INVOICE</Text>
-             <Text size="sm" c="dimmed">RoomMaster Hotel Management</Text>
-             <Text size="xs" c="dimmed">Jl. Contoh No. 123, Jakarta</Text>
+          <Stack gap={2}>
+             {/* [PERBAIKAN] Menggunakan data dinamis dari tabel Hotel */}
+             <Text size="xl" fw={900} tt="uppercase" c="blue.8" style={{ letterSpacing: 1, lineHeight: 1.2 }}>
+                {reservation.hotel?.name || 'HOTEL NAME'}
+             </Text>
+             <Text size="sm" c="dimmed">
+                {reservation.hotel?.address || 'Hotel Address Not Available'}
+             </Text>
           </Stack>
           <Stack gap={0} align="flex-end">
              <Badge 
@@ -110,7 +114,7 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
        </Paper>
 
        <Text size="xs" c="dimmed" ta="center" mt={40}>
-          Thank you for choosing RoomMaster. This is a computer-generated invoice.
+          Thank you for choosing {reservation.hotel?.name || 'RoomMaster'}. This is a computer-generated invoice.
        </Text>
     </Box>
   );
@@ -125,14 +129,28 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
       <Modal 
         opened={opened} 
         onClose={onClose} 
-        title={<Group gap="xs"><IconReceipt size={20} /><Text fw={700}>Reservation Successful</Text></Group>}
+        withCloseButton={false} // Matikan header bawaan agar kita bisa buat custom header
         size="lg"
         centered
         radius="md"
-        padding={0} // Padding 0 agar konten menyatu
+        padding={0}
       >
-        {/* Render Konten Invoice di dalam Modal */}
-        {InvoiceContent}
+        {/* CUSTOM HEADER: Agar judul rapi di tengah */}
+        <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid #e9ecef', background: '#f8f9fa' }}>
+            <Box style={{ width: 28 }} /> {/* Spacer kiri untuk menyeimbangkan tombol close */}
+            
+            {/* Judul di tengah tanpa ikon receipt */}
+            <Text fw={700} size="lg" c="dark.7">Reservation Successful</Text>
+            
+            <ActionIcon onClick={onClose} variant="subtle" color="gray" aria-label="Close modal">
+                <IconX size={20} />
+            </ActionIcon>
+        </Group>
+
+        {/* Render Konten Invoice dengan ScrollArea agar rapi jika layar kecil */}
+        <div style={{ maxHeight: "calc(100vh - 200px)", overflow: "auto" }}>
+           {InvoiceContent}
+        </div>
 
         {/* Footer Tombol */}
         <Group justify="flex-end" p="md" bg="gray.0" style={{ borderTop: '1px solid #e9ecef' }}>
@@ -160,17 +178,17 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
         }
 
         @media print {
-          /* Sembunyikan semua elemen body */
+          /* Sembunyikan semua elemen body normal */
           body * {
             visibility: hidden;
           }
           
-          /* Sembunyikan elemen portal Mantine (Modal, Overlay, Notifications) */
+          /* Sembunyikan elemen portal Mantine (Modal overlay, dll) */
           .mantine-Modal-root, .mantine-Overlay-root, .mantine-Portal-root {
             display: none !important;
           }
 
-          /* Tampilkan HANYA area print */
+          /* Tampilkan HANYA area print dan children-nya */
           #printable-area, #printable-area * {
             visibility: visible;
           }
@@ -185,7 +203,7 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
             margin: 0;
             padding: 20px;
             background: white;
-            z-index: 99999; /* Pastikan di atas segalanya */
+            z-index: 99999;
           }
         }
       `}</style>

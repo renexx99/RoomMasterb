@@ -36,7 +36,8 @@ export async function createReservation(data: ReservationData) {
 
   if (insertError) return { error: insertError.message };
 
-  // 2. Fetch Data Lengkap untuk Invoice (Join Guest & Room)
+  // 2. Fetch Data Lengkap untuk Invoice (Join Guest, Room, & Hotel)
+  // [PERBAIKAN] Menambahkan select ke tabel hotels(name, address)
   const { data: fullReservation, error: fetchError } = await supabase
     .from('reservations')
     .select(`
@@ -44,7 +45,8 @@ export async function createReservation(data: ReservationData) {
       guest:guests(id, full_name, email, phone_number),
       room:rooms(id, room_number, 
         room_type:room_types(id, name, price_per_night)
-      )
+      ),
+      hotel:hotels(name, address)
     `)
     .eq('id', insertedId.id)
     .single();

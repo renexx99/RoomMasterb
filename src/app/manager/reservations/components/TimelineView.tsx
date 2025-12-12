@@ -116,10 +116,10 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
     <Box style={{ position: 'relative' }}>
       <Group justify="space-between" mb="xs">
         <Badge variant="light" color="blue" style={{ cursor: 'pointer' }} onClick={() => handleScroll('left')}>
-          ← Minggu Sebelumnya
+          ← Previous Week
         </Badge>
         <Badge variant="light" color="blue" style={{ cursor: 'pointer' }} onClick={() => handleScroll('right')}>
-          Minggu Berikutnya →
+          Next Week →
         </Badge>
       </Group>
 
@@ -202,7 +202,7 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                             <Text size="xs" fw={600}>{reservation.guest?.full_name}</Text>
                             <Text size="xs">{new Date(reservation.check_in_date).toLocaleDateString('id')} - {new Date(reservation.check_out_date).toLocaleDateString('id')}</Text>
                             <Text size="xs">Rp {reservation.total_price?.toLocaleString('id-ID')}</Text>
-                            <Text size="xs" c="dimmed" fs="italic">Klik untuk detail</Text>
+                            <Text size="xs" c="dimmed" fs="italic">Click for details</Text>
                           </Stack>
                         }
                       >

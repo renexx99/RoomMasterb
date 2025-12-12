@@ -56,14 +56,14 @@ export function ReservationFormModal({
       payment_status: 'pending' as PaymentStatus,
     },
     validate: {
-      guest_id: (value) => (guestSelectionMode === 'select' && !value ? 'Pilih tamu' : null),
-      new_guest_name: (value) => (guestSelectionMode === 'new' && !value ? 'Nama wajib diisi' : null),
-      new_guest_email: (value) => (guestSelectionMode === 'new' && !value ? 'Email wajib diisi' : null),
-      room_id: (value) => (!value ? 'Pilih kamar' : null),
-      check_in_date: (value) => (!value ? 'Wajib diisi' : null),
+      guest_id: (value) => (guestSelectionMode === 'select' && !value ? 'Select Guest' : null),
+      new_guest_name: (value) => (guestSelectionMode === 'new' && !value ? 'Name must filled' : null),
+      new_guest_email: (value) => (guestSelectionMode === 'new' && !value ? 'Email must filled' : null),
+      room_id: (value) => (!value ? 'Select Room' : null),
+      check_in_date: (value) => (!value ? 'Must Filled' : null),
       check_out_date: (value, values) => {
-        if (!value) return 'Wajib diisi';
-        if (values.check_in_date && value <= values.check_in_date) return 'Harus setelah check-in';
+        if (!value) return 'Required';
+        if (values.check_in_date && value <= values.check_in_date) return 'Must be after check-in';
         return null;
       },
     },
@@ -151,7 +151,7 @@ export function ReservationFormModal({
         });
 
         if (guestResult.error || !guestResult.guestId) {
-          notifications.show({ title: 'Gagal Buat Tamu', message: guestResult.error, color: 'red' });
+          notifications.show({ title: 'Failed to Create Guest', message: guestResult.error, color: 'red' });
           setIsSubmitting(false);
           return;
         }
@@ -174,9 +174,9 @@ export function ReservationFormModal({
         result = await updateReservation(reservationToEdit.id, reservationData);
         // Note: Update tidak perlu menampilkan invoice otomatis, hanya create
         if (result.error) {
-            notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+            notifications.show({ title: 'Failed', message: result.error, color: 'red' });
         } else {
-            notifications.show({ title: 'Sukses', message: 'Reservasi berhasil diperbarui', color: 'green' });
+            notifications.show({ title: 'Success', message: 'Reservation successfully updated', color: 'green' });
             onClose();
              // Untuk edit, kita bisa refresh biasa
              window.location.reload(); 
@@ -186,9 +186,9 @@ export function ReservationFormModal({
         result = await createReservation(reservationData);
         
         if (result.error) {
-           notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+           notifications.show({ title: 'Failed', message: result.error, color: 'red' });
         } else if (result.data) {
-           notifications.show({ title: 'Sukses', message: 'Reservasi berhasil dibuat', color: 'green' });
+           notifications.show({ title: 'Success', message: 'Reservation successfully created', color: 'green' });
            
            // Panggil onSuccess dengan data lengkap reservasi baru
            if (onSuccess) {
@@ -201,7 +201,7 @@ export function ReservationFormModal({
       }
 
     } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+      notifications.show({ title: 'Error', message: 'A System error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
@@ -221,7 +221,7 @@ export function ReservationFormModal({
     if (reservationToEdit && !options.find(o => o.value === reservationToEdit.room_id)) {
        options.unshift({
          value: reservationToEdit.room_id,
-         label: `No. ${reservationToEdit.room?.room_number} (Kamar Saat Ini)`
+         label: `No. ${reservationToEdit.room?.room_number} (Current Room)`
        });
     }
     return options;
@@ -249,7 +249,7 @@ export function ReservationFormModal({
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
             {/* ... Bagian Form Tamu ... */}
-            <Divider label="Data Tamu" labelPosition="center" />
+            <Divider label="Guest Information" labelPosition="center" />
             <Group grow>
                 <Button 
                 onClick={() => setGuestSelectionMode('select')} 
@@ -257,7 +257,7 @@ export function ReservationFormModal({
                 gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
                 size="xs"
                 >
-                Pilih Tamu Lama
+                Select Existing Guest
                 </Button>
                 <Button 
                 onClick={() => setGuestSelectionMode('new')} 
@@ -265,17 +265,17 @@ export function ReservationFormModal({
                 gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
                 size="xs"
                 >
-                Input Tamu Baru
+                Input New Guest
                 </Button>
             </Group>
 
             {guestSelectionMode === 'select' ? (
                 <Select 
-                label="Cari Tamu" 
-                placeholder="Ketik nama..." 
+                label="Search Guest" 
+                placeholder="Type name..." 
                 data={guestOptions} 
                 searchable 
-                nothingFoundMessage="Tamu tidak ditemukan" 
+                nothingFoundMessage="Guest not found" 
                 {...form.getInputProps('guest_id')} 
                 />
             ) : (
@@ -283,15 +283,15 @@ export function ReservationFormModal({
                 <Group grow>
                     <Select
                     label="Title"
-                    placeholder="Pilih"
+                    placeholder="Select"
                     data={['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']}
                     style={{ maxWidth: 80 }}
                     required
                     {...form.getInputProps('new_guest_title')}
                     />
                     <TextInput 
-                    label="Nama Lengkap" 
-                    placeholder="Nama tamu" 
+                    label="Full Name" 
+                    placeholder="Guest name" 
                     required 
                     leftSection={<IconUser size={16} />} 
                     {...form.getInputProps('new_guest_name')} 
@@ -305,7 +305,7 @@ export function ReservationFormModal({
                     {...form.getInputProps('new_guest_email')} 
                 />
                 <TextInput 
-                    label="No. HP" 
+                    label="Phone Number" 
                     placeholder="0812..." 
                     leftSection={<IconPhone size={16} />} 
                     {...form.getInputProps('new_guest_phone')} 
@@ -314,10 +314,10 @@ export function ReservationFormModal({
             )}
 
             {/* ... Bagian Detail Kamar ... */}
-            <Divider label="Detail Kamar & Waktu" labelPosition="center" mt="xs" />
+            <Divider label="Room Details & Time" labelPosition="center" mt="xs" />
             <Select 
-                label="Pilih Kamar" 
-                placeholder="Cari nomor kamar..." 
+                label="Select Room" 
+                placeholder="Search room number..." 
                 data={roomOptions} 
                 searchable 
                 required 
@@ -330,7 +330,7 @@ export function ReservationFormModal({
                 <Paper p="sm" bg="blue.0" radius="md" withBorder style={{ borderColor: 'var(--mantine-color-blue-2)' }}>
                     <Group justify="space-between" mb={4}>
                         <Text size="sm" fw={700} c="blue.9">
-                            Detail Kamar {selectedRoomDetail.room_number}
+                            Room Details {selectedRoomDetail.room_number}
                         </Text>
                         <Badge size="xs" variant="white" color="blue">
                             {selectedRoomDetail.room_type.name}
@@ -372,14 +372,14 @@ export function ReservationFormModal({
             <Group grow>
                 <DatePickerInput 
                 label="Check-in" 
-                placeholder="Pilih tanggal" 
+                placeholder="Select Date" 
                 minDate={new Date()} 
                 leftSection={<IconCalendar size={16} />} 
                 {...form.getInputProps('check_in_date')} 
                 />
                 <DatePickerInput 
                 label="Check-out" 
-                placeholder="Pilih tanggal" 
+                placeholder="Select Date" 
                 minDate={form.values.check_in_date || new Date()} 
                 leftSection={<IconCalendar size={16} />} 
                 {...form.getInputProps('check_out_date')} 
@@ -389,7 +389,7 @@ export function ReservationFormModal({
             {/* ... Bagian Payment ... */}
             <Paper p="sm" bg="gray.0" radius="md" withBorder>
                 <Group justify="space-between">
-                <Text size="sm" fw={500}>Estimasi Total:</Text>
+                <Text size="sm" fw={500}>Total Estimation:</Text>
                 <Text size="xl" fw={700} c="blue.7">
                     {calculatedPrice ? `Rp ${calculatedPrice.toLocaleString('id-ID')}` : '-'}
                 </Text>
@@ -397,7 +397,7 @@ export function ReservationFormModal({
             </Paper>
 
             <Select 
-                label="Status Pembayaran" 
+                label="Payment Status" 
                 data={[
                 { value: 'pending', label: 'Pending (Belum Lunas)' },
                 { value: 'paid', label: 'Paid (Lunas)' }
@@ -409,7 +409,7 @@ export function ReservationFormModal({
 
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={onClose} disabled={isSubmitting}>
-                Batal
+                Cancel
                 </Button>
                 <Button 
                 type="submit" 
@@ -418,7 +418,7 @@ export function ReservationFormModal({
                 loading={isSubmitting} 
                 disabled={!calculatedPrice && !reservationToEdit}
                 >
-                Simpan Reservasi
+                Save Reservation
                 </Button>
             </Group>
         </Stack>
