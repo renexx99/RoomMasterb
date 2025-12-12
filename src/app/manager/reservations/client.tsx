@@ -123,20 +123,20 @@ export default function ManagerReservationsClient({
 
   const handleDelete = (reservation: ReservationDetails) => {
     modals.openConfirmModal({
-      title: 'Hapus Reservasi',
+      title: 'Delete Reservation',
       children: (
         <Text size="sm">
           Are you sure you want to delete the reservation for <strong>{reservation.guest?.full_name}</strong>?
         </Text>
       ),
-      labels: { confirm: 'Hapus', cancel: 'Batal' },
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
         const result = await deleteReservation(reservation.id);
         if (result.error) {
-          notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+          notifications.show({ title: 'Failed', message: result.error, color: 'red' });
         } else {
-          notifications.show({ title: 'Berhasil', message: 'Reservasi berhasil dihapus', color: 'green' });
+          notifications.show({ title: 'Success', message: 'Reservation deleted successfully', color: 'green' });
           router.refresh();
         }
       }

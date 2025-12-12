@@ -1,9 +1,8 @@
-// src/app/fo/reservations/client.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
 import {
-  Box, Group, TextInput, Button, MultiSelect, Badge,
+  Box, Group, TextInput, MultiSelect, Badge,
   ScrollArea, Card, Avatar, Text, ActionIcon, Menu, SegmentedControl, Stack, Center
 } from '@mantine/core';
 import { DatesProvider } from '@mantine/dates';
@@ -22,6 +21,8 @@ import { TimelineView } from './components/TimelineView';
 import { QuickBookingPanel } from './components/QuickBookingPanel';
 import { AISuggestionsPanel, AICoPilotPanel } from './components/AISuggestionsPanel';
 import { ReservationFormModal } from './components/ReservationFormModal';
+// Import Invoice Modal
+import { ReservationInvoiceModal } from './components/ReservationInvoiceModal';
 import { deleteReservation } from './actions';
 
 interface ClientProps {
@@ -42,11 +43,9 @@ export default function FoReservationsClient({
   const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
   const [rightPanelMode, setRightPanelMode] = useState<'booking' | 'ai'>('booking');
   
-  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   
-  // Modal states
   const [modalOpened, setModalOpened] = useState(false);
   const [reservationToEdit, setReservationToEdit] = useState<ReservationDetails | null>(null);
   const [prefilledData, setPrefilledData] = useState<{
@@ -55,27 +54,26 @@ export default function FoReservationsClient({
     check_out_date?: Date;
   } | null>(null);
 
-  // --- STYLE KHUSUS SEGMENTED CONTROL ---
-  // Kita gunakan inline styles untuk root & indicator, 
-  // tapi teks active ditangani oleh CSS class di bawah
+  // --- STATE UNTUK INVOICE MODAL ---
+  const [invoiceModalOpened, setInvoiceModalOpened] = useState(false);
+  const [selectedInvoiceReservation, setSelectedInvoiceReservation] = useState<ReservationDetails | null>(null);
+
   const gradientSegmentedStyles = {
     root: {
       backgroundColor: '#f8f9fa',
       border: '1px solid #e9ecef',
     },
     indicator: {
-      // Gradient Teal ke Biru
-      background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)',
+      background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', // FO Gradient (Teal)
       boxShadow: '0 2px 4px rgba(20, 184, 166, 0.2)',
     },
     label: {
       fontWeight: 500,
-      color: 'var(--mantine-color-gray-6)', // Warna default (saat tidak aktif)
+      color: 'var(--mantine-color-gray-6)',
       transition: 'color 0.2s ease',
     },
   };
 
-  // Filtered reservations
   const filteredReservations = useMemo(() => {
     return initialReservations.filter(res => {
       const matchesSearch = !searchTerm || 
@@ -89,7 +87,24 @@ export default function FoReservationsClient({
     });
   }, [initialReservations, searchTerm, filterStatus]);
 
-  // Handlers
+  // --- HANDLERS ---
+
+  // Handler saat reservasi sukses dibuat (Menampilkan Invoice)
+  const handleReservationCreationSuccess = (newReservation: ReservationDetails) => {
+    router.refresh(); // Refresh data server
+    setSelectedInvoiceReservation(newReservation);
+    setInvoiceModalOpened(true); // Buka modal invoice
+    setModalOpened(false); // Tutup form modal
+    setReservationToEdit(null);
+    setPrefilledData(null);
+  };
+
+  // Handler saat klik item reservasi di list/timeline (Menampilkan Invoice)
+  const handleReservationClick = (reservation: ReservationDetails) => {
+    setSelectedInvoiceReservation(reservation);
+    setInvoiceModalOpened(true);
+  };
+
   const handleDragCreate = (roomId: string, startDate: Date, endDate: Date) => {
     setPrefilledData({ room_id: roomId, check_in_date: startDate, check_out_date: endDate });
     setReservationToEdit(null);
@@ -104,20 +119,20 @@ export default function FoReservationsClient({
 
   const handleDelete = (reservation: ReservationDetails) => {
     modals.openConfirmModal({
-      title: 'Hapus Reservasi',
+      title: 'Delete Reservation',
       children: (
         <Text size="sm">
-          Apakah Anda yakin ingin menghapus reservasi untuk <strong>{reservation.guest?.full_name}</strong>?
+          Are you sure you want to delete the reservation for <strong>{reservation.guest?.full_name}</strong>?
         </Text>
       ),
-      labels: { confirm: 'Hapus', cancel: 'Batal' },
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
         const result = await deleteReservation(reservation.id);
         if (result.error) {
-          notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+          notifications.show({ title: 'Failed', message: result.error, color: 'red' });
         } else {
-          notifications.show({ title: 'Berhasil', message: 'Reservasi berhasil dihapus', color: 'green' });
+          notifications.show({ title: 'Success', message: 'Reservation Deleted', color: 'green' });
           router.refresh();
         }
       }
@@ -130,18 +145,12 @@ export default function FoReservationsClient({
     setPrefilledData(null);
   };
 
-  const handleBookingSuccess = () => {
-    router.refresh();
-  };
-
   if (!hotelId) return null;
 
-  // Calculate stats
   const availableRoomsCount = rooms.filter(r => r.status === 'available').length;
 
   return (
     <DatesProvider settings={{ locale: 'id', firstDayOfWeek: 1, weekendDays: [0] }}>
-      {/* Inject CSS Manual untuk menangani state Active */}
       <style dangerouslySetInnerHTML={{ __html: `
         .fo-segmented-control .mantine-SegmentedControl-label[data-active] {
           color: #ffffff !important;
@@ -157,10 +166,9 @@ export default function FoReservationsClient({
 
       <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
         
-        {/* Main Content Area - Split View */}
         <Box style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           
-          {/* LEFT PANEL - Main View (68%) */}
+          {/* LEFT PANEL */}
           <Box style={{ 
             width: '68%', 
             borderRight: '1px solid #e9ecef',
@@ -174,7 +182,7 @@ export default function FoReservationsClient({
               <Group justify="space-between">
                 <Group gap="xs">
                   <TextInput
-                    placeholder="Cari tamu, nomor kamar..."
+                    placeholder="Find guest or room..."
                     leftSection={<IconSearch size={16} />}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.currentTarget.value)}
@@ -183,7 +191,7 @@ export default function FoReservationsClient({
                   />
                   
                   <MultiSelect
-                    placeholder="Status Pembayaran"
+                    placeholder="Payment Status"
                     data={[
                       { value: 'pending', label: 'Pending' },
                       { value: 'paid', label: 'Paid' },
@@ -196,11 +204,10 @@ export default function FoReservationsClient({
                     clearable
                   />
 
-                  {/* UPDATE: Segmented Control - Timeline/List */}
                   <SegmentedControl
                     value={viewMode}
                     onChange={(val) => setViewMode(val as any)}
-                    className="fo-segmented-control" // Class khusus untuk CSS override
+                    className="fo-segmented-control"
                     data={[
                       { 
                         label: (
@@ -237,10 +244,10 @@ export default function FoReservationsClient({
                     variant="gradient" 
                     gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
                   >
-                    {availableRoomsCount} Kamar Tersedia
+                    {availableRoomsCount} Available Rooms
                   </Badge>
                   <Badge color="blue" variant="light" size="sm">
-                    {filteredReservations.length} Reservasi
+                    {filteredReservations.length} Reservation
                   </Badge>
                 </Group>
               </Group>
@@ -253,6 +260,9 @@ export default function FoReservationsClient({
                   rooms={rooms}
                   reservations={filteredReservations}
                   onDragCreate={handleDragCreate}
+                  // Mengirim handler klik ke Timeline (Note: TimelineView perlu diupdate untuk menerima prop ini)
+                  // @ts-ignore (Sementara diabaikan sampai TimelineView diupdate)
+                  onReservationClick={handleReservationClick}
                 />
               </ScrollArea>
             )}
@@ -262,7 +272,16 @@ export default function FoReservationsClient({
               <ScrollArea style={{ flex: 1 }} p="md">
                 <Stack gap="xs">
                   {filteredReservations.map((res) => (
-                    <Card key={res.id} padding="md" radius="md" withBorder>
+                    <Card 
+                        key={res.id} 
+                        padding="md" 
+                        radius="md" 
+                        withBorder
+                        // Klik card membuka Invoice
+                        onClick={() => handleReservationClick(res)}
+                        style={{ cursor: 'pointer' }}
+                        className="hover:bg-gray-50"
+                    >
                       <Group justify="space-between">
                         <Group>
                           <Avatar color="teal" radius="xl">
@@ -295,21 +314,21 @@ export default function FoReservationsClient({
                           
                           <Menu>
                             <Menu.Target>
-                              <ActionIcon variant="light" color="gray">
+                              <ActionIcon variant="light" color="gray" onClick={(e) => e.stopPropagation()}>
                                 <IconDots size={16} />
                               </ActionIcon>
                             </Menu.Target>
                             <Menu.Dropdown>
                               <Menu.Item 
                                 leftSection={<IconPencil size={14} />}
-                                onClick={() => handleEdit(res)}
+                                onClick={(e) => { e.stopPropagation(); handleEdit(res); }}
                               >
                                 Edit
                               </Menu.Item>
                               <Menu.Item 
                                 color="red" 
                                 leftSection={<IconTrash size={14} />}
-                                onClick={() => handleDelete(res)}
+                                onClick={(e) => { e.stopPropagation(); handleDelete(res); }}
                               >
                                 Hapus
                               </Menu.Item>
@@ -324,15 +343,14 @@ export default function FoReservationsClient({
             )}
           </Box>
 
-          {/* RIGHT PANEL - Action & AI Panel (32%) */}
+          {/* RIGHT PANEL */}
           <Box style={{ width: '32%', display: 'flex', flexDirection: 'column', background: '#fafafa' }}>
             
-            {/* Panel Mode Switcher - Quick Book / AI */}
             <Box p="md" style={{ borderBottom: '1px solid #e9ecef' }}>
               <SegmentedControl
                 value={rightPanelMode}
                 onChange={(val) => setRightPanelMode(val as any)}
-                className="fo-segmented-control" // Class khusus untuk CSS override
+                className="fo-segmented-control"
                 data={[
                   { label: 'Quick Book', value: 'booking' },
                   { label: 'AI Co-Pilot', value: 'ai' }
@@ -352,7 +370,9 @@ export default function FoReservationsClient({
                     guests={guests}
                     rooms={rooms}
                     prefilledData={prefilledData}
-                    onSuccess={handleBookingSuccess}
+                    // Menggunakan handler sukses baru
+                    // @ts-ignore (Sementara diabaikan sampai QuickBookingPanel diupdate)
+                    onSuccess={handleReservationCreationSuccess}
                   />
                   <AISuggestionsPanel />
                 </>
@@ -373,6 +393,16 @@ export default function FoReservationsClient({
         prefilledData={prefilledData}
         guests={guests}
         availableRooms={rooms}
+        // Menggunakan handler sukses baru
+        // @ts-ignore (Sementara diabaikan sampai ReservationFormModal diupdate)
+        onSuccess={handleReservationCreationSuccess}
+      />
+
+      {/* Reservation Invoice Modal (Baru) */}
+      <ReservationInvoiceModal 
+        opened={invoiceModalOpened}
+        onClose={() => setInvoiceModalOpened(false)}
+        reservation={selectedInvoiceReservation}
       />
     </DatesProvider>
   );

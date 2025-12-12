@@ -1,15 +1,16 @@
-// src/app/fo/reservations/page.tsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import FoReservationsClient from './client';
-import { Reservation, Guest, Room, RoomType } from '@/core/types/database';
+import { Reservation, Guest, Room, RoomType, Hotel } from '@/core/types/database';
 
+// Update Interface: Menambahkan relasi 'hotel'
 export interface ReservationDetails extends Reservation {
   guest?: Pick<Guest, 'id' | 'full_name' | 'email' | 'phone_number'>;
   room?: Pick<Room, 'id' | 'room_number'> & {
     room_type?: Pick<RoomType, 'id' | 'name' | 'price_per_night'>;
   };
+  hotel?: Pick<Hotel, 'name' | 'address'>;
 }
 
 export interface RoomWithDetails extends Room {
@@ -61,13 +62,13 @@ export default async function FoReservationsPage() {
       .select(`
         *,
         guest:guests(id, full_name, email, phone_number),
-        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night))
-      `)
+        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night)),
+        hotel:hotels(name, address) 
+      `) // <-- Menambahkan fetch hotels(name, address)
       .eq('hotel_id', hotelId)
-      .neq('payment_status', 'cancelled') // Hanya tampilkan yang aktif di timeline
+      .neq('payment_status', 'cancelled')
       .order('check_in_date', { ascending: false }),
     
-    // Fetch SEMUA kamar (bukan cuma available) untuk timeline
     supabase.from('rooms').select(`*, room_type:room_types(*)`)
       .eq('hotel_id', hotelId)
       .order('room_number', { ascending: true }),

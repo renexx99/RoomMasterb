@@ -1,10 +1,16 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Modal, Stack, TextInput, Button, Group, Select, Paper, Text, Divider } from '@mantine/core';
+import { 
+  Modal, Stack, TextInput, Button, Group, Select, Paper, Text, Divider, 
+  Grid, Badge, ThemeIcon
+} from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash } from '@tabler/icons-react';
+import { 
+  IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash, 
+  IconMaximize, IconArmchair, IconEye, IconAirConditioning 
+} from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { PaymentStatus } from '@/core/types/database';
 import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
@@ -15,17 +21,15 @@ interface Props {
   onClose: () => void;
   hotelId: string;
   reservationToEdit: ReservationDetails | null;
-  prefilledData?: {
-    room_id?: string;
-    check_in_date?: Date;
-    check_out_date?: Date;
-  } | null;
+  prefilledData?: { room_id?: string; check_in_date?: Date; check_out_date?: Date; } | null;
   guests: GuestOption[];
   availableRooms: RoomWithDetails[];
+  // [BARU] Callback onSuccess
+  onSuccess?: (reservation: ReservationDetails) => void;
 }
 
 export function ReservationFormModal({ 
-  opened, onClose, hotelId, reservationToEdit, prefilledData, guests, availableRooms 
+  opened, onClose, hotelId, reservationToEdit, prefilledData, guests, availableRooms, onSuccess 
 }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [guestSelectionMode, setGuestSelectionMode] = useState<'select' | 'new'>('select');
@@ -61,11 +65,16 @@ export function ReservationFormModal({
     },
   });
 
-  // Reset form on modal open
+  // Helper: Detail kamar yang dipilih untuk ditampilkan di UI
+  const selectedRoomDetail = useMemo(() => {
+    if (!form.values.room_id) return null;
+    return availableRooms.find(r => r.id === form.values.room_id);
+  }, [form.values.room_id, availableRooms]);
+
+  // Reset Form Logic
   useEffect(() => {
     if (opened) {
       if (reservationToEdit) {
-        // Mode Edit
         setGuestSelectionMode('select');
         form.setValues({
           guest_id: reservationToEdit.guest_id,
@@ -74,14 +83,10 @@ export function ReservationFormModal({
           check_out_date: new Date(reservationToEdit.check_out_date),
           total_price: reservationToEdit.total_price,
           payment_status: reservationToEdit.payment_status,
-          new_guest_title: 'Mr.',
-          new_guest_name: '', 
-          new_guest_email: '', 
-          new_guest_phone: '',
+          new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setCalculatedPrice(reservationToEdit.total_price);
       } else if (prefilledData) {
-        // Mode Create dari Timeline
         form.reset();
         form.setValues({
           room_id: prefilledData.room_id || '',
@@ -89,16 +94,11 @@ export function ReservationFormModal({
           check_out_date: prefilledData.check_out_date || null,
           total_price: 0,
           payment_status: 'pending',
-          guest_id: '', 
-          new_guest_title: 'Mr.',
-          new_guest_name: '', 
-          new_guest_email: '', 
-          new_guest_phone: '',
+          guest_id: '', new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setGuestSelectionMode('select');
         setCalculatedPrice(null);
       } else {
-        // Mode Create Kosong
         form.reset();
         setGuestSelectionMode('select');
         setCalculatedPrice(null);
@@ -107,14 +107,15 @@ export function ReservationFormModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, reservationToEdit, prefilledData]);
 
-  // Calculate price
+  // Kalkulasi Harga
   useEffect(() => {
     const { check_in_date, check_out_date, room_id } = form.values;
     let pricePerNight = 0;
     
-    const roomFromList = availableRooms.find(r => r.id === room_id);
-    if (roomFromList?.room_type) {
-      pricePerNight = roomFromList.room_type.price_per_night;
+    if (selectedRoomDetail?.room_type) {
+      pricePerNight = selectedRoomDetail.room_type.price_per_night;
+    } else if (reservationToEdit && reservationToEdit.room_id === room_id && reservationToEdit.room?.room_type) {
+      pricePerNight = reservationToEdit.room.room_type.price_per_night;
     }
 
     const checkIn = check_in_date ? new Date(check_in_date) : null;
@@ -125,9 +126,11 @@ export function ReservationFormModal({
       const price = nights * pricePerNight;
       setCalculatedPrice(price);
       form.setFieldValue('total_price', price);
+    } else {
+      setCalculatedPrice(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.values.check_in_date, form.values.check_out_date, form.values.room_id, availableRooms]);
+  }, [form.values.check_in_date, form.values.check_out_date, form.values.room_id, selectedRoomDetail, reservationToEdit]);
+
 
   const handleSubmit = async (values: typeof form.values) => {
     setIsSubmitting(true);
@@ -164,17 +167,28 @@ export function ReservationFormModal({
       let result;
       if (reservationToEdit) {
         result = await updateReservation(reservationToEdit.id, reservationData);
+        if (result.error) {
+            notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+        } else {
+            notifications.show({ title: 'Sukses', message: 'Reservasi berhasil diperbarui', color: 'green' });
+            onClose();
+            window.location.reload(); 
+        }
       } else {
         result = await createReservation(reservationData);
+        if (result.error) {
+           notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+        } else if (result.data) {
+           notifications.show({ title: 'Sukses', message: 'Reservasi berhasil dibuat', color: 'green' });
+           if (onSuccess) {
+              onSuccess(result.data as ReservationDetails);
+           } else {
+              onClose();
+              window.location.reload(); 
+           }
+        }
       }
 
-      if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
-      } else {
-        notifications.show({ title: 'Sukses', message: 'Reservasi berhasil disimpan', color: 'green' });
-        onClose();
-        window.location.reload(); 
-      }
     } catch (error) {
       notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
     } finally {
@@ -187,10 +201,19 @@ export function ReservationFormModal({
     label: `${g.full_name} (${g.email})` 
   })), [guestList]);
   
-  const roomOptions = useMemo(() => availableRooms.map(r => ({
-    value: r.id,
-    label: `No. ${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')})`
-  })), [availableRooms]);
+  const roomOptions = useMemo(() => {
+    const options = availableRooms.map(r => ({
+      value: r.id,
+      label: `No. ${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')})`
+    }));
+    if (reservationToEdit && !options.find(o => o.value === reservationToEdit.room_id)) {
+       options.unshift({
+         value: reservationToEdit.room_id,
+         label: `No. ${reservationToEdit.room?.room_number} (Kamar Saat Ini)`
+       });
+    }
+    return options;
+  }, [availableRooms, reservationToEdit]);
 
   return (
     <Modal 
@@ -203,9 +226,9 @@ export function ReservationFormModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <Divider label="Data Tamu" labelPosition="center" />
+          {/* Section Tamu */}
+          <Divider label="Informasi Tamu" labelPosition="center" />
           <Group grow>
-            {/* PERBAIKAN: Menghapus properti duplicate 'variant' */}
             <Button 
               onClick={() => setGuestSelectionMode('select')} 
               variant={guestSelectionMode === 'select' ? 'gradient' : 'default'}
@@ -235,27 +258,22 @@ export function ReservationFormModal({
             />
           ) : (
             <Stack gap="xs">
-              <Select
-                label="Title"
-                placeholder="Pilih title"
-                data={[
-                  { value: 'Mr.', label: 'Mr.' },
-                  { value: 'Mrs.', label: 'Mrs.' },
-                  { value: 'Ms.', label: 'Ms.' },
-                  { value: 'Dr.', label: 'Dr.' },
-                  { value: 'Prof.', label: 'Prof.' },
-                  { value: 'Other', label: 'Other' }
-                ]}
-                required
-                {...form.getInputProps('new_guest_title')}
-              />
-              <TextInput 
-                label="Nama Lengkap" 
-                placeholder="Nama tamu" 
-                required 
-                leftSection={<IconUser size={16} />} 
-                {...form.getInputProps('new_guest_name')} 
-              />
+              <Group grow>
+                  <Select
+                    label="Title"
+                    data={['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']}
+                    style={{ maxWidth: 80 }}
+                    required
+                    {...form.getInputProps('new_guest_title')}
+                  />
+                  <TextInput 
+                    label="Nama Lengkap" 
+                    placeholder="Nama tamu" 
+                    required 
+                    leftSection={<IconUser size={16} />} 
+                    {...form.getInputProps('new_guest_name')} 
+                  />
+              </Group>
               <TextInput 
                 label="Email" 
                 placeholder="email@tamu.com" 
@@ -272,6 +290,7 @@ export function ReservationFormModal({
             </Stack>
           )}
 
+          {/* Section Detail Kamar */}
           <Divider label="Detail Kamar & Waktu" labelPosition="center" mt="xs" />
           <Select 
             label="Pilih Kamar" 
@@ -283,6 +302,49 @@ export function ReservationFormModal({
             {...form.getInputProps('room_id')} 
           />
           
+          {selectedRoomDetail && selectedRoomDetail.room_type && (
+                <Paper p="sm" bg="teal.0" radius="md" withBorder style={{ borderColor: 'var(--mantine-color-teal-2)' }}>
+                    <Group justify="space-between" mb={4}>
+                        <Text size="sm" fw={700} c="teal.9">
+                            Detail Kamar {selectedRoomDetail.room_number}
+                        </Text>
+                        <Badge size="xs" variant="white" color="teal">
+                            {selectedRoomDetail.room_type.name}
+                        </Badge>
+                    </Group>
+                    <Grid gutter="xs">
+                        <Grid.Col span={6}>
+                            <Stack gap={4}>
+                                <Group gap={6}>
+                                    <ThemeIcon size="xs" variant="transparent" color="teal.6"><IconMaximize size={12}/></ThemeIcon>
+                                    <Text size="xs" c="dark.6">{selectedRoomDetail.room_type.size_sqm || '-'} m²</Text>
+                                </Group>
+                                <Group gap={6}>
+                                    <ThemeIcon size="xs" variant="transparent" color="teal.6"><IconArmchair size={12}/></ThemeIcon>
+                                    <Text size="xs" c="dark.6">
+                                        {selectedRoomDetail.room_type.bed_count}x {selectedRoomDetail.room_type.bed_type}
+                                    </Text>
+                                </Group>
+                            </Stack>
+                        </Grid.Col>
+                        <Grid.Col span={6}>
+                            <Stack gap={4}>
+                                <Group gap={6}>
+                                    <ThemeIcon size="xs" variant="transparent" color="teal.6"><IconEye size={12}/></ThemeIcon>
+                                    <Text size="xs" c="dark.6">{selectedRoomDetail.room_type.view_type || 'Standard'}</Text>
+                                </Group>
+                                <Group gap={6}>
+                                    <ThemeIcon size="xs" variant="transparent" color="teal.6"><IconAirConditioning size={12}/></ThemeIcon>
+                                    <Text size="xs" c="dark.6">
+                                        {selectedRoomDetail.room_type.smoking_allowed ? 'Smoking' : 'Non-Smoking'}
+                                    </Text>
+                                </Group>
+                            </Stack>
+                        </Grid.Col>
+                    </Grid>
+                </Paper>
+            )}
+
           <Group grow>
             <DatePickerInput 
               label="Check-in" 
@@ -299,7 +361,7 @@ export function ReservationFormModal({
             />
           </Group>
 
-          <Paper p="sm" bg="teal.0" radius="md" withBorder>
+          <Paper p="sm" bg="gray.0" radius="md" withBorder>
             <Group justify="space-between">
               <Text size="sm" fw={500}>Estimasi Total:</Text>
               <Text size="xl" fw={700} c="teal.9">
@@ -320,17 +382,15 @@ export function ReservationFormModal({
           />
 
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose} disabled={isSubmitting}>
-              Batal
-            </Button>
+            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
             <Button 
-              type="submit" 
-              variant="gradient"
-              gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
-              loading={isSubmitting} 
-              disabled={!calculatedPrice && !reservationToEdit}
+                type="submit" 
+                variant="gradient"
+                gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
+                loading={isSubmitting} 
+                disabled={!calculatedPrice && !reservationToEdit}
             >
-              Simpan
+                Simpan
             </Button>
           </Group>
         </Stack>

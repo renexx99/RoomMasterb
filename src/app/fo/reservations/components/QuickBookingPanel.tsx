@@ -1,4 +1,3 @@
-// src/app/fo/reservations/components/QuickBookingPanel.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,30 +5,21 @@ import {
   Stack, Paper, Group, Text, TextInput, Select, Button, ThemeIcon, Divider
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconUser, IconPhone, IconMail, IconBed, IconCalendarEvent, IconCheck } from '@tabler/icons-react';
+import { IconUser, IconPhone, IconMail, IconBed, IconCalendarEvent, IconCheck, IconCreditCard } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { GuestOption, RoomWithDetails } from '../page';
+import { GuestOption, RoomWithDetails, ReservationDetails } from '../page';
 import { createReservation, createGuestForReservation } from '../actions';
+import { PaymentMethod } from '@/core/types/database';
 
 interface QuickBookingPanelProps {
   hotelId: string;
   guests: GuestOption[];
   rooms: RoomWithDetails[];
-  prefilledData?: {
-    room_id?: string;
-    check_in_date?: Date;
-    check_out_date?: Date;
-  } | null;
-  onSuccess: () => void;
+  prefilledData?: { room_id?: string; check_in_date?: Date; check_out_date?: Date; } | null;
+  onSuccess: (reservation: ReservationDetails) => void;
 }
 
-export function QuickBookingPanel({ 
-  hotelId, 
-  guests, 
-  rooms, 
-  prefilledData,
-  onSuccess 
-}: QuickBookingPanelProps) {
+export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuccess }: QuickBookingPanelProps) {
   const [guestMode, setGuestMode] = useState<'existing' | 'new'>('existing');
   const [selectedGuest, setSelectedGuest] = useState<string | null>(null);
   const [guestTitle, setGuestTitle] = useState<string | null>('Mr.');
@@ -39,8 +29,9 @@ export function QuickBookingPanel({
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Apply prefilled data
   useEffect(() => {
@@ -53,10 +44,17 @@ export function QuickBookingPanel({
 
   // Calculate price
   useEffect(() => {
-    if (checkInDate && checkOutDate && selectedRoom && checkOutDate > checkInDate) {
+    const start = checkInDate ? new Date(checkInDate) : null;
+    const end = checkOutDate ? new Date(checkOutDate) : null;
+
+    if (
+      start && end && selectedRoom && 
+      !isNaN(start.getTime()) && !isNaN(end.getTime()) && 
+      end.getTime() > start.getTime()
+    ) {
       const room = rooms.find(r => r.id === selectedRoom);
       if (room?.room_type) {
-        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24));
+        const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
         const price = nights * room.room_type.price_per_night;
         setCalculatedPrice(price);
       }
@@ -65,31 +63,18 @@ export function QuickBookingPanel({
     }
   }, [checkInDate, checkOutDate, selectedRoom, rooms]);
 
+
   const handleQuickBook = async () => {
     if (!checkInDate || !checkOutDate || !selectedRoom) {
-      notifications.show({
-        title: 'Form Tidak Lengkap',
-        message: 'Mohon lengkapi tanggal dan kamar',
-        color: 'red'
-      });
+      notifications.show({ title: 'Data Kurang', message: 'Lengkapi tanggal dan kamar', color: 'red' });
       return;
     }
-
     if (guestMode === 'existing' && !selectedGuest) {
-      notifications.show({
-        title: 'Pilih Tamu',
-        message: 'Mohon pilih tamu yang sudah ada',
-        color: 'red'
-      });
+      notifications.show({ title: 'Pilih Tamu', message: 'Pilih tamu yang sudah ada', color: 'red' });
       return;
     }
-
     if (guestMode === 'new' && (!guestName || !guestEmail)) {
-      notifications.show({
-        title: 'Data Tamu Tidak Lengkap',
-        message: 'Mohon lengkapi nama dan email tamu',
-        color: 'red'
-      });
+      notifications.show({ title: 'Data Tamu Kurang', message: 'Lengkapi nama dan email tamu', color: 'red' });
       return;
     }
 
@@ -98,7 +83,6 @@ export function QuickBookingPanel({
     try {
       let finalGuestId = selectedGuest;
 
-      // Create new guest if needed
       if (guestMode === 'new') {
         const guestResult = await createGuestForReservation({
           hotel_id: hotelId,
@@ -109,17 +93,13 @@ export function QuickBookingPanel({
         });
 
         if (guestResult.error || !guestResult.guestId) {
-          notifications.show({ 
-            title: 'Gagal Buat Tamu', 
-            message: guestResult.error, 
-            color: 'red' 
-          });
+          notifications.show({ title: 'Gagal Buat Tamu', message: guestResult.error, color: 'red' });
+          setIsSubmitting(false); 
           return;
         }
         finalGuestId = guestResult.guestId;
       }
 
-      // Create reservation
       const result = await createReservation({
         hotel_id: hotelId,
         guest_id: finalGuestId!,
@@ -127,61 +107,39 @@ export function QuickBookingPanel({
         check_in_date: checkInDate,
         check_out_date: checkOutDate,
         total_price: calculatedPrice || 0,
-        payment_status: 'pending',
+        payment_status: 'pending', 
+        payment_method: (paymentMethod as PaymentMethod) || null, 
       });
 
       if (result.error) {
-        notifications.show({
-          title: 'Gagal Membuat Reservasi',
-          message: result.error,
-          color: 'red'
-        });
-      } else {
-        notifications.show({
-          title: 'Reservasi Berhasil',
-          message: `Booking untuk ${guestMode === 'new' ? guestName : guests.find(g => g.id === selectedGuest)?.full_name} telah dibuat`,
-          color: 'teal',
-          icon: <IconCheck size={16} />
-        });
+        notifications.show({ title: 'Gagal Membuat Reservasi', message: result.error, color: 'red' });
+      } else if (result.data) { 
+        notifications.show({ title: 'Berhasil', message: 'Booking telah dibuat', color: 'green', icon: <IconCheck size={16} /> });
         
-        // Reset form
-        setGuestMode('existing');
-        setSelectedGuest(null);
-        setGuestName('');
-        setGuestPhone('');
-        setGuestEmail('');
-        setGuestTitle('Mr.');
-        setCheckInDate(null);
-        setCheckOutDate(null);
-        setSelectedRoom(null);
-        setCalculatedPrice(null);
-        
-        onSuccess();
+        // Reset Form
+        setGuestMode('existing'); setSelectedGuest(null); 
+        setGuestName(''); setGuestPhone(''); setGuestEmail('');
+        setCheckInDate(null); setCheckOutDate(null); setSelectedRoom(null); 
+        setCalculatedPrice(null); setPaymentMethod(null);
+
+        // Panggil onSuccess
+        onSuccess(result.data as ReservationDetails);
       }
     } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Terjadi kesalahan sistem',
-        color: 'red'
-      });
+      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const availableRooms = rooms.filter(r => r.status === 'available');
-  const guestOptions = guests.map(g => ({ 
-    value: g.id, 
-    label: `${g.full_name} (${g.email})` 
-  }));
+  const guestOptions = guests.map(g => ({ value: g.id, label: `${g.full_name} (${g.email})` }));
 
   return (
     <Stack gap="md">
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
-          <ThemeIcon color="teal" variant="light" size="lg">
-            <IconUser size={18} />
-          </ThemeIcon>
+          <ThemeIcon color="teal" variant="light" size="lg"><IconUser size={18} /></ThemeIcon>
           <Text fw={600} size="sm">Informasi Tamu</Text>
         </Group>
         
@@ -189,7 +147,6 @@ export function QuickBookingPanel({
           <Group grow mb="xs">
             <Button 
               onClick={() => setGuestMode('existing')} 
-              // PERBAIKAN: Ubah warna tombol toggle ke gradient jika aktif
               variant={guestMode === 'existing' ? 'gradient' : 'default'}
               gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
@@ -198,7 +155,6 @@ export function QuickBookingPanel({
             </Button>
             <Button 
               onClick={() => setGuestMode('new')} 
-              // PERBAIKAN: Ubah warna tombol toggle ke gradient jika aktif
               variant={guestMode === 'new' ? 'gradient' : 'default'}
               gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
@@ -208,54 +164,45 @@ export function QuickBookingPanel({
           </Group>
 
           {guestMode === 'existing' ? (
-            <Select
-              label="Pilih Tamu"
-              placeholder="Cari tamu..."
-              data={guestOptions}
-              value={selectedGuest}
-              onChange={setSelectedGuest}
-              searchable
-              nothingFoundMessage="Tamu tidak ditemukan"
-              leftSection={<IconUser size={16} />}
+            <Select 
+              label="Pilih Tamu" 
+              placeholder="Cari tamu..." 
+              data={guestOptions} 
+              value={selectedGuest} 
+              onChange={setSelectedGuest} 
+              searchable 
+              leftSection={<IconUser size={16} />} 
             />
           ) : (
             <>
-              <Select
-                label="Title"
-                placeholder="Pilih title"
-                data={[
-                  { value: 'Mr.', label: 'Mr.' },
-                  { value: 'Mrs.', label: 'Mrs.' },
-                  { value: 'Ms.', label: 'Ms.' },
-                  { value: 'Dr.', label: 'Dr.' },
-                  { value: 'Prof.', label: 'Prof.' },
-                  { value: 'Other', label: 'Other' }
-                ]}
-                value={guestTitle}
-                onChange={setGuestTitle}
+              <Select 
+                label="Title" 
+                data={['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']} 
+                value={guestTitle} 
+                onChange={setGuestTitle} 
               />
-              <TextInput
-                label="Nama Lengkap"
-                placeholder="Nama tamu"
-                value={guestName}
-                onChange={(e) => setGuestName(e.currentTarget.value)}
-                leftSection={<IconUser size={16} />}
-                required
+              <TextInput 
+                label="Nama Lengkap" 
+                placeholder="Nama tamu" 
+                value={guestName} 
+                onChange={(e) => setGuestName(e.currentTarget.value)} 
+                leftSection={<IconUser size={16} />} 
+                required 
               />
-              <TextInput
-                label="Email"
-                placeholder="email@example.com"
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.currentTarget.value)}
-                leftSection={<IconMail size={16} />}
-                required
+              <TextInput 
+                label="Email" 
+                placeholder="email@example.com" 
+                value={guestEmail} 
+                onChange={(e) => setGuestEmail(e.currentTarget.value)} 
+                leftSection={<IconMail size={16} />} 
+                required 
               />
-              <TextInput
-                label="Telepon"
-                placeholder="+62 xxx"
-                value={guestPhone}
-                onChange={(e) => setGuestPhone(e.currentTarget.value)}
-                leftSection={<IconPhone size={16} />}
+              <TextInput 
+                label="No. HP" 
+                placeholder="+62 xxx" 
+                value={guestPhone} 
+                onChange={(e) => setGuestPhone(e.currentTarget.value)} 
+                leftSection={<IconPhone size={16} />} 
               />
             </>
           )}
@@ -264,65 +211,78 @@ export function QuickBookingPanel({
 
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
-          <ThemeIcon color="cyan" variant="light" size="lg">
-            <IconCalendarEvent size={18} />
-          </ThemeIcon>
-          <Text fw={600} size="sm">Tanggal & Kamar</Text>
+          <ThemeIcon color="indigo" variant="light" size="lg"><IconCalendarEvent size={18} /></ThemeIcon>
+          <Text fw={600} size="sm">Detail Reservasi</Text>
         </Group>
         
         <Stack gap="sm">
-          <DatePickerInput
-            label="Check-in"
-            placeholder="Pilih tanggal"
-            value={checkInDate}
-            onChange={(date) => setCheckInDate(date as Date | null)}
-            minDate={new Date()}
-            required
+          <DatePickerInput 
+            label="Check-in" 
+            placeholder="Pilih tanggal" 
+            value={checkInDate} 
+            onChange={(date) => setCheckInDate(date as Date | null)} 
+            minDate={new Date()} 
+            required 
           />
-          <DatePickerInput
-            label="Check-out"
-            placeholder="Pilih tanggal"
-            value={checkOutDate}
-            onChange={(date) => setCheckOutDate(date as Date | null)}
-            minDate={checkInDate || new Date()}
-            required
+          <DatePickerInput 
+            label="Check-out" 
+            placeholder="Pilih tanggal" 
+            value={checkOutDate} 
+            onChange={(date) => setCheckOutDate(date as Date | null)} 
+            minDate={checkInDate || new Date()} 
+            required 
           />
+          <Select 
+            label="Pilih Kamar" 
+            placeholder="Kamar tersedia" 
+            data={availableRooms.map(r => ({ 
+              value: r.id, 
+              label: `${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')})` 
+            }))} 
+            value={selectedRoom} 
+            onChange={setSelectedRoom} 
+            leftSection={<IconBed size={16} />} 
+            searchable 
+            required 
+          />
+          
+          <Divider my="xs" />
+
           <Select
-            label="Pilih Kamar"
-            placeholder="Kamar tersedia"
-            data={availableRooms.map(r => ({
-              value: r.id,
-              label: `${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')})`
-            }))}
-            value={selectedRoom}
-            onChange={setSelectedRoom}
-            leftSection={<IconBed size={16} />}
-            searchable
-            required
+            label="Metode Pembayaran (Opsional)"
+            placeholder="Pilih metode"
+            data={[
+                { value: 'cash', label: 'Cash' },
+                { value: 'transfer', label: 'Bank Transfer' },
+                { value: 'qris', label: 'QRIS' },
+                { value: 'credit_card', label: 'Credit Card' },
+                { value: 'other', label: 'Lainnya' },
+            ]}
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+            clearable
+            leftSection={<IconCreditCard size={16} />}
           />
           
           {calculatedPrice && (
-            <Paper p="sm" bg="teal.0" radius="md" withBorder>
+            <Paper p="sm" bg="teal.0" radius="md" withBorder mt="xs">
               <Group justify="space-between">
                 <Text size="sm" fw={500}>Total:</Text>
-                <Text size="xl" fw={700} c="teal.9">
-                  Rp {calculatedPrice.toLocaleString('id-ID')}
-                </Text>
+                <Text size="xl" fw={700} c="teal.9">Rp {calculatedPrice.toLocaleString('id-ID')}</Text>
               </Group>
             </Paper>
           )}
         </Stack>
       </Paper>
 
-      {/* PERBAIKAN: Ubah tombol Buat Reservasi menjadi Gradient */}
       <Button 
         fullWidth 
         size="md" 
-        leftSection={<IconCheck size={18} />}
-        onClick={handleQuickBook}
-        loading={isSubmitting}
+        leftSection={<IconCheck size={18} />} 
+        onClick={handleQuickBook} 
+        loading={isSubmitting} 
         disabled={!calculatedPrice}
-        variant="gradient"
+        variant="gradient" 
         gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
       >
         Buat Reservasi
