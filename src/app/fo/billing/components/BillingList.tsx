@@ -3,14 +3,14 @@
 
 import { Paper, Grid, Card, Group, Avatar, Box, Text, Button, Stack, Center } from '@mantine/core';
 import { IconUser, IconFileInvoice, IconUserOff } from '@tabler/icons-react';
-import { ReservationDetails } from '../page'; // Import tipe
+import { ReservationDetails } from '../page'; 
 
 interface Props {
   reservations: ReservationDetails[];
-  onViewFolio: (res: ReservationDetails) => void;
+  onViewInvoice: (res: ReservationDetails) => void; // Renamed prop
 }
 
-export function BillingList({ reservations, onViewFolio }: Props) {
+export function BillingList({ reservations, onViewInvoice }: Props) {
   if (reservations.length === 0) {
     return (
       <Paper shadow="sm" p="xl" radius="md" withBorder>
@@ -64,9 +64,9 @@ export function BillingList({ reservations, onViewFolio }: Props) {
                 color="teal"
                 size="xs"
                 leftSection={<IconFileInvoice size={16} />}
-                onClick={() => onViewFolio(res)}
+                onClick={() => onViewInvoice(res)} // Use new prop
               >
-                Lihat Folio
+                Lihat Invoice
               </Button>
             </Grid.Col>
           </Grid>

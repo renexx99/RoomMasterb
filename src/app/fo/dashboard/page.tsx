@@ -3,8 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import FoDashboardClient from './client';
-// Pastikan path mock json ini benar relative terhadap struktur folder kamu
-import ordersMock from '../../../../public/mocks/Orders.json';
+import { ReservationDetails } from '../reservations/page';
 
 // Interface untuk Data yang akan dikirim ke Client
 export interface DashboardData {
@@ -15,7 +14,7 @@ export interface DashboardData {
     dirtyRooms: number;
     hotelName: string;
   };
-  orders: any[];
+  recentReservations: ReservationDetails[];
 }
 
 export default async function FoDashboardPage() {
@@ -29,51 +28,28 @@ export default async function FoDashboardPage() {
     redirect('/auth/login');
   }
 
-  // 2. Tentukan Hotel ID (Logika Impersonasi vs User Biasa)
+  // 2. Tentukan Hotel ID
   let hotelId: string | null = null;
-
-  // A. Ambil role user saat ini
   const { data: userRoles } = await supabase
     .from('user_roles')
     .select('*, role:roles(name)')
     .eq('user_id', session.user.id);
 
-  // Cek apakah user adalah Super Admin
   const isSuperAdmin = userRoles?.some((ur: any) => ur.role?.name === 'Super Admin');
 
   if (isSuperAdmin) {
-    // B. Jika Super Admin, ambil hotel_id dari Cookie Impersonasi
-    const impersonatedId = cookieStore.get('impersonated_hotel_id')?.value;
-    
-    if (impersonatedId) {
-      hotelId = impersonatedId;
-    } else {
-      // Jika tidak ada cookie (misal akses langsung via URL), kembalikan ke dashboard super admin
-      redirect('/super-admin/dashboard');
-    }
+    hotelId = cookieStore.get('impersonated_hotel_id')?.value || null;
+    if (!hotelId) redirect('/super-admin/dashboard');
   } else {
-    // C. User Biasa (Front Office / Manager asli), ambil dari database
-    // Kita cari role yang relevan dengan operasional hotel
     const operationalRole = userRoles?.find((ur: any) => 
       ur.hotel_id && 
       ['Front Office', 'Hotel Manager', 'Hotel Admin'].includes(ur.role?.name || '')
     );
-    
     hotelId = operationalRole?.hotel_id || null;
   }
 
-  // Jika tetap tidak ada Hotel ID, kirim data kosong (atau bisa redirect ke login)
   if (!hotelId) {
-    return <FoDashboardClient data={{ 
-      stats: { 
-        todayCheckIns: 0, 
-        todayCheckOuts: 0, 
-        availableRooms: 0, 
-        dirtyRooms: 0, 
-        hotelName: 'No Hotel Assigned' 
-      }, 
-      orders: [] 
-    }} />;
+    return <div>No Hotel Assigned</div>;
   }
 
   // 3. Fetch Data Dashboard Secara Paralel
@@ -84,7 +60,8 @@ export default async function FoDashboardPage() {
     availableRes,
     dirtyRes,
     checkInsRes,
-    checkOutsRes
+    checkOutsRes,
+    recentRes
   ] = await Promise.all([
     // a. Nama Hotel
     supabase.from('hotels').select('name').eq('id', hotelId).single(),
@@ -99,21 +76,34 @@ export default async function FoDashboardPage() {
     supabase.from('rooms')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
-      .eq('status', 'dirty'),
+      .eq('status', 'available')
+      .eq('cleaning_status', 'dirty'),
 
-    // d. Check-in Hari Ini
+    // d. Check-in Hari Ini (Expected Arrival)
     supabase.from('reservations')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
       .eq('check_in_date', today)
       .neq('payment_status', 'cancelled'),
 
-    // e. Check-out Hari Ini
+    // e. Check-out Hari Ini (Expected Departure)
     supabase.from('reservations')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
       .eq('check_out_date', today)
       .neq('payment_status', 'cancelled'),
+
+    // f. Recent Activity (Reservations)
+    supabase.from('reservations')
+      .select(`
+        *,
+        guest:guests(id, full_name, email, phone_number),
+        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night)),
+        hotel:hotels(name, address)
+      `)
+      .eq('hotel_id', hotelId)
+      .order('created_at', { ascending: false })
+      .limit(10)
   ]);
 
   const dashboardData: DashboardData = {
@@ -124,7 +114,7 @@ export default async function FoDashboardPage() {
       todayCheckIns: checkInsRes.count || 0,
       todayCheckOuts: checkOutsRes.count || 0,
     },
-    orders: ordersMock || [],
+    recentReservations: (recentRes.data as ReservationDetails[]) || [],
   };
 
   return <FoDashboardClient data={dashboardData} />;

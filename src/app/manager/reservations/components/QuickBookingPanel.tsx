@@ -151,7 +151,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
           <ThemeIcon color="blue" variant="light" size="lg"><IconUser size={18} /></ThemeIcon>
-          <Text fw={600} size="sm">Guest Information</Text>
+          <Text fw={600} size="sm">Guest Folio</Text>
         </Group>
         
         <Stack gap="sm">
@@ -162,7 +162,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
               gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
               size="xs"
             >
-              Select Existing Guest
+              Existing Guest
             </Button>
             <Button 
               onClick={() => setGuestMode('new')} 
@@ -170,7 +170,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
               gradient={{ from: '#3b82f6', to: '#2563eb', deg: 135 }}
               size="xs"
             >
-              Input New Guest
+              New Guest
             </Button>
           </Group>
 

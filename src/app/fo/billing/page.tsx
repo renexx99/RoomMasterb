@@ -3,13 +3,15 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import BillingClient from './client';
-import { Reservation, Guest, Room, RoomType } from '@/core/types/database';
+import { Reservation, Guest, Room, RoomType, Hotel } from '@/core/types/database';
 
+// [PERBAIKAN] Update interface agar cocok dengan ReservationInvoiceModal
 export interface ReservationDetails extends Reservation {
-  guest?: Pick<Guest, 'id' | 'full_name' | 'email'>;
+  guest?: Pick<Guest, 'id' | 'full_name' | 'email' | 'phone_number'>;
   room?: Pick<Room, 'id' | 'room_number'> & {
     room_type?: Pick<RoomType, 'id' | 'name' | 'price_per_night'>;
   };
+  hotel?: Pick<Hotel, 'name' | 'address'>;
 }
 
 export default async function BillingPage() {
@@ -53,12 +55,14 @@ export default async function BillingPage() {
   const today = new Date().toISOString().split('T')[0];
 
   // Fetch Tamu In-House (Check-in <= Today && Check-out >= Today)
+  // [PERBAIKAN] Menambahkan fetch 'hotel(name, address)' dan 'guest.phone_number'
   const { data: reservations } = await supabase
     .from('reservations')
     .select(`
         *,
-        guest:guests(id, full_name, email),
-        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night))
+        guest:guests(id, full_name, email, phone_number),
+        room:rooms(id, room_number, room_type:room_types(id, name, price_per_night)),
+        hotel:hotels(name, address)
     `)
     .eq('hotel_id', hotelId)
     .lte('check_in_date', today)

@@ -58,7 +58,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/fo/dashboard' },
   { label: 'Check-In / Out', icon: IconLogin, href: '/fo/check-in' },
   { label: 'Reservations', icon: IconCalendarEvent, href: '/fo/reservations' },
-  { label: 'Guest Book', icon: IconUsersGroup, href: '/fo/guests' },
+  { label: 'Guest Folio', icon: IconUsersGroup, href: '/fo/guests' },
   { label: 'Room Availability', icon: IconSearch, href: '/fo/availability' },
   { label: 'Billing & Folio', icon: IconCoin, href: '/fo/billing' },
   { label: 'Guest Log', icon: IconBook2, href: '/fo/log' },

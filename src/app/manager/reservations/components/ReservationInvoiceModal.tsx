@@ -1,7 +1,6 @@
-// src/app/manager/reservations/components/ReservationInvoiceModal.tsx
 'use client';
 
-import { Modal, Paper, Text, Group, Stack, Divider, Grid, Badge, Box, Button, ActionIcon, ScrollArea } from '@mantine/core';
+import { Modal, Paper, Text, Group, Stack, Divider, Grid, Badge, Box, Button, ActionIcon } from '@mantine/core';
 import { IconPrinter, IconCheck, IconX } from '@tabler/icons-react';
 import { ReservationDetails } from '../page';
 
@@ -33,8 +32,15 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
        {/* Header Invoice */}
        <Group justify="space-between" mb="xl" align='flex-start'>
           <Stack gap={2}>
-             {/* [PERBAIKAN] Menggunakan data dinamis dari tabel Hotel */}
-             <Text size="xl" fw={900} tt="uppercase" c="blue.8" style={{ letterSpacing: 1, lineHeight: 1.2 }}>
+             {/* [UPDATED] Nama Hotel dengan Gradient Ungu (Konsisten dengan Login/FO) */}
+             <Text 
+                size="xl" 
+                fw={900} 
+                tt="uppercase" 
+                variant="gradient"
+                gradient={{ from: '#667eea', to: '#764ba2', deg: 135 }}
+                style={{ letterSpacing: 1, lineHeight: 1.2 }}
+             >
                 {reservation.hotel?.name || 'HOTEL NAME'}
              </Text>
              <Text size="sm" c="dimmed">
@@ -95,10 +101,12 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
                </Grid.Col>
             </Grid>
          </Box>
-         <Box p="md" bg="blue.0" style={{ borderTop: '1px solid #dee2e6' }}>
+         
+         {/* [UPDATED] Bagian Total dengan Warna Tema Ungu/Violet (Agar senada dengan Header Invoice) */}
+         <Box p="md" style={{ background: '#f5f3ff', borderTop: '1px solid #dee2e6' }}>
             <Grid align="center">
                <Grid.Col span={8}>
-                  <Text fw={800} size="lg" c="blue.9">TOTAL</Text>
+                  <Text fw={800} size="lg" c="violet.9">TOTAL</Text>
                   {reservation.payment_method && (
                       <Group gap={4}>
                          <IconCheck size={14} color="teal" />
@@ -107,7 +115,7 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
                   )}
                </Grid.Col>
                <Grid.Col span={4} style={{ textAlign: 'right' }}>
-                  <Text fw={800} size="xl" c="blue.9">Rp {reservation.total_price.toLocaleString('id-ID')}</Text>
+                  <Text fw={800} size="xl" c="violet.9">Rp {reservation.total_price.toLocaleString('id-ID')}</Text>
                </Grid.Col>
             </Grid>
          </Box>
@@ -129,25 +137,22 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
       <Modal 
         opened={opened} 
         onClose={onClose} 
-        withCloseButton={false} // Matikan header bawaan agar kita bisa buat custom header
+        withCloseButton={false} 
         size="lg"
         centered
         radius="md"
         padding={0}
       >
-        {/* CUSTOM HEADER: Agar judul rapi di tengah */}
+        {/* CUSTOM HEADER */}
         <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid #e9ecef', background: '#f8f9fa' }}>
-            <Box style={{ width: 28 }} /> {/* Spacer kiri untuk menyeimbangkan tombol close */}
-            
-            {/* Judul di tengah tanpa ikon receipt */}
+            <Box style={{ width: 28 }} /> 
             <Text fw={700} size="lg" c="dark.7">Reservation Successful</Text>
-            
             <ActionIcon onClick={onClose} variant="subtle" color="gray" aria-label="Close modal">
                 <IconX size={20} />
             </ActionIcon>
         </Group>
 
-        {/* Render Konten Invoice dengan ScrollArea agar rapi jika layar kecil */}
+        {/* Render Konten Invoice */}
         <div style={{ maxHeight: "calc(100vh - 200px)", overflow: "auto" }}>
            {InvoiceContent}
         </div>
@@ -155,6 +160,7 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
         {/* Footer Tombol */}
         <Group justify="flex-end" p="md" bg="gray.0" style={{ borderTop: '1px solid #e9ecef' }}>
           <Button variant="default" onClick={onClose}>Close</Button>
+          {/* Tombol Print tetap Biru (Default Manager Theme) */}
           <Button 
             leftSection={<IconPrinter size={16} />} 
             color="blue"
@@ -172,28 +178,20 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
 
       {/* 3. Style Global untuk Print */}
       <style jsx global>{`
-        /* Sembunyikan area print saat di layar biasa */
         #printable-area {
           display: none;
         }
 
         @media print {
-          /* Sembunyikan semua elemen body normal */
           body * {
             visibility: hidden;
           }
-          
-          /* Sembunyikan elemen portal Mantine (Modal overlay, dll) */
           .mantine-Modal-root, .mantine-Overlay-root, .mantine-Portal-root {
             display: none !important;
           }
-
-          /* Tampilkan HANYA area print dan children-nya */
           #printable-area, #printable-area * {
             visibility: visible;
           }
-
-          /* Posisikan area print di pojok kiri atas kertas */
           #printable-area {
             display: block !important;
             position: absolute;

@@ -1,35 +1,33 @@
 // src/app/fo/dashboard/client.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Container, Stack, Grid } from '@mantine/core';
 import { DashboardData } from './page';
 import { DashboardStats } from './components/DashboardStats';
 import { RecentActivityTable } from './components/RecentActivityTable';
 import { WaitingListWidget } from './components/WaitingListWidget';
 import { AICopilotWidget } from './components/AICopilotWidget';
+import { ReservationInvoiceModal } from '../reservations/components/ReservationInvoiceModal';
+import { ReservationDetails } from '../reservations/page';
 
 interface ClientProps {
   data: DashboardData;
 }
 
 export default function FoDashboardClient({ data }: ClientProps) {
-  const { stats, orders } = data;
+  const { stats, recentReservations } = data;
+  
+  const [invoiceModalOpened, setInvoiceModalOpened] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationDetails | null>(null);
 
-  // Mapping orders dummy to new structure if needed
-  const mappedActivity = orders.map((o: any) => ({
-    id: o.id,
-    product: o.product,
-    guest: 'John Doe', // Dummy, since mock might not have it
-    total: o.total,
-    payment_method: o.payment_method,
-    status: o.status,
-    date: o.date
-  }));
+  const handleViewInvoice = (reservation: ReservationDetails) => {
+    setSelectedReservation(reservation);
+    setInvoiceModalOpened(true);
+  };
 
   return (
     <Box style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      
       <Container fluid px="md" py="md">
         <Stack gap="md">
           
@@ -45,10 +43,13 @@ export default function FoDashboardClient({ data }: ClientProps) {
           <Grid gutter="md">
             {/* Left Col: Activity Table */}
             <Grid.Col span={{ base: 12, md: 8, lg: 9 }}>
-              <RecentActivityTable data={mappedActivity} />
+              <RecentActivityTable 
+                data={recentReservations} 
+                onViewInvoice={handleViewInvoice} 
+              />
             </Grid.Col>
 
-            {/* Right Col: Waiting List & Quick Status */}
+            {/* Right Col: Waiting List (Static for now as requested) */}
             <Grid.Col span={{ base: 12, md: 4, lg: 3 }}>
               <WaitingListWidget />
             </Grid.Col>
@@ -59,6 +60,13 @@ export default function FoDashboardClient({ data }: ClientProps) {
 
       {/* 3. Floating AI Widget */}
       <AICopilotWidget />
+
+      {/* 4. Invoice Modal */}
+      <ReservationInvoiceModal 
+        opened={invoiceModalOpened} 
+        onClose={() => setInvoiceModalOpened(false)} 
+        reservation={selectedReservation} 
+      />
     </Box>
   );
 }

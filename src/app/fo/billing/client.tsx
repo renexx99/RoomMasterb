@@ -10,7 +10,8 @@ import { IconArrowLeft, IconCoin, IconSearch } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { ReservationDetails } from './page';
 import { BillingList } from './components/BillingList';
-import { BillingFolioModal } from './components/BillingFolioModal';
+// REPLACE: Import Invoice Modal instead of Folio Modal
+import { ReservationInvoiceModal } from '../reservations/components/ReservationInvoiceModal';
 
 interface ClientProps {
   initialReservations: ReservationDetails[];
@@ -35,7 +36,8 @@ export default function BillingClient({ initialReservations, hotelId }: ClientPr
     );
   }, [initialReservations, searchTerm]);
 
-  const handleOpenFolio = (res: ReservationDetails) => {
+  // Handler now opens Invoice Modal
+  const handleOpenInvoice = (res: ReservationDetails) => {
     setSelectedRes(res);
     setModalOpened(true);
   };
@@ -65,8 +67,8 @@ export default function BillingClient({ initialReservations, hotelId }: ClientPr
                   <IconCoin size={20} stroke={1.5} />
                 </ThemeIcon>
                 <div style={{ lineHeight: 1 }}>
-                  <Title order={4} c="white" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.2 }}>Billing & Folio</Title>
-                  <Text c="white" opacity={0.8} size="xs" mt={2}>Tagihan & Pembayaran Tamu In-House</Text>
+                  <Title order={4} c="white" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.2 }}>Billing & Invoice</Title>
+                  <Text c="white" opacity={0.8} size="xs" mt={2}>Manage guest payments and invoices</Text>
                 </div>
               </Group>
               <ActionIcon variant="white" color="teal" size="lg" radius="md" onClick={() => router.push('/fo/dashboard')} aria-label="Kembali">
@@ -98,14 +100,14 @@ export default function BillingClient({ initialReservations, hotelId }: ClientPr
           {/* List */}
           <BillingList 
             reservations={filteredReservations} 
-            onViewFolio={handleOpenFolio}
+            onViewInvoice={handleOpenInvoice} // Updated prop name
           />
 
         </Box>
       </Container>
 
-      {/* Modal */}
-      <BillingFolioModal 
+      {/* Modal - Replaced with Invoice Modal */}
+      <ReservationInvoiceModal 
         opened={modalOpened} 
         onClose={handleCloseModal} 
         reservation={selectedRes}

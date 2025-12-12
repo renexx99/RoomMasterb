@@ -140,7 +140,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
           <ThemeIcon color="teal" variant="light" size="lg"><IconUser size={18} /></ThemeIcon>
-          <Text fw={600} size="sm">Informasi Tamu</Text>
+          <Text fw={600} size="sm">Guest Folio</Text>
         </Group>
         
         <Stack gap="sm">
@@ -151,7 +151,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
               gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
-              Tamu Lama
+              Existing Guest
             </Button>
             <Button 
               onClick={() => setGuestMode('new')} 
@@ -159,14 +159,14 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
               gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
               size="xs"
             >
-              Tamu Baru
+              New Guest
             </Button>
           </Group>
 
           {guestMode === 'existing' ? (
             <Select 
-              label="Pilih Tamu" 
-              placeholder="Cari tamu..." 
+              label="Select Guest" 
+              placeholder="Search Guest..." 
               data={guestOptions} 
               value={selectedGuest} 
               onChange={setSelectedGuest} 
@@ -182,8 +182,8 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
                 onChange={setGuestTitle} 
               />
               <TextInput 
-                label="Nama Lengkap" 
-                placeholder="Nama tamu" 
+                label="Full Name" 
+                placeholder="Guest Name" 
                 value={guestName} 
                 onChange={(e) => setGuestName(e.currentTarget.value)} 
                 leftSection={<IconUser size={16} />} 
@@ -198,7 +198,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
                 required 
               />
               <TextInput 
-                label="No. HP" 
+                label="Phone Number" 
                 placeholder="+62 xxx" 
                 value={guestPhone} 
                 onChange={(e) => setGuestPhone(e.currentTarget.value)} 
@@ -212,13 +212,13 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
       <Paper p="md" radius="md" withBorder style={{ background: 'white' }}>
         <Group gap="xs" mb="md">
           <ThemeIcon color="indigo" variant="light" size="lg"><IconCalendarEvent size={18} /></ThemeIcon>
-          <Text fw={600} size="sm">Detail Reservasi</Text>
+          <Text fw={600} size="sm">Reservation Detail</Text>
         </Group>
         
         <Stack gap="sm">
           <DatePickerInput 
             label="Check-in" 
-            placeholder="Pilih tanggal" 
+            placeholder="Select date" 
             value={checkInDate} 
             onChange={(date) => setCheckInDate(date as Date | null)} 
             minDate={new Date()} 
@@ -226,15 +226,15 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
           />
           <DatePickerInput 
             label="Check-out" 
-            placeholder="Pilih tanggal" 
+            placeholder="Select date" 
             value={checkOutDate} 
             onChange={(date) => setCheckOutDate(date as Date | null)} 
             minDate={checkInDate || new Date()} 
             required 
           />
           <Select 
-            label="Pilih Kamar" 
-            placeholder="Kamar tersedia" 
+            label="Select Room" 
+            placeholder="Room available..." 
             data={availableRooms.map(r => ({ 
               value: r.id, 
               label: `${r.room_number} - ${r.room_type?.name} (Rp ${r.room_type?.price_per_night.toLocaleString('id-ID')})` 
@@ -249,14 +249,14 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
           <Divider my="xs" />
 
           <Select
-            label="Metode Pembayaran (Opsional)"
-            placeholder="Pilih metode"
+            label="Payment Method (Optional)"
+            placeholder="Select Method"
             data={[
                 { value: 'cash', label: 'Cash' },
                 { value: 'transfer', label: 'Bank Transfer' },
                 { value: 'qris', label: 'QRIS' },
                 { value: 'credit_card', label: 'Credit Card' },
-                { value: 'other', label: 'Lainnya' },
+                { value: 'other', label: 'Other' },
             ]}
             value={paymentMethod}
             onChange={setPaymentMethod}
@@ -285,7 +285,7 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         variant="gradient" 
         gradient={{ from: '#14b8a6', to: '#0891b2', deg: 135 }}
       >
-        Buat Reservasi
+        Make Reservation
       </Button>
     </Stack>
   );

@@ -115,10 +115,10 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
     <Box style={{ position: 'relative' }}>
       <Group justify="space-between" mb="xs">
         <Badge variant="light" color="teal" style={{ cursor: 'pointer' }} onClick={() => handleScroll('left')}>
-          ← Minggu Sebelumnya
+          ← Previous Week
         </Badge>
         <Badge variant="light" color="teal" style={{ cursor: 'pointer' }} onClick={() => handleScroll('right')}>
-          Minggu Berikutnya →
+          Next Week →
         </Badge>
       </Group>
 
