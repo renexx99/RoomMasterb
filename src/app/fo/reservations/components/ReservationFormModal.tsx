@@ -1,3 +1,4 @@
+// src/app/fo/reservations/components/ReservationFormModal.tsx
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -9,10 +10,10 @@ import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { 
   IconUser, IconMail, IconPhone, IconBed, IconCalendar, IconCash, 
-  IconMaximize, IconArmchair, IconEye, IconAirConditioning 
+  IconMaximize, IconArmchair, IconEye, IconAirConditioning, IconCreditCard 
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { PaymentStatus } from '@/core/types/database';
+import { PaymentStatus, PaymentMethod } from '@/core/types/database';
 import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
 import { createReservation, updateReservation, createGuestForReservation } from '../actions';
 
@@ -24,7 +25,6 @@ interface Props {
   prefilledData?: { room_id?: string; check_in_date?: Date; check_out_date?: Date; } | null;
   guests: GuestOption[];
   availableRooms: RoomWithDetails[];
-  // [BARU] Callback onSuccess
   onSuccess?: (reservation: ReservationDetails) => void;
 }
 
@@ -50,6 +50,7 @@ export function ReservationFormModal({
       check_out_date: null as Date | null,
       total_price: 0,
       payment_status: 'pending' as PaymentStatus,
+      payment_method: '' as PaymentMethod | '', // [BARU] Field Payment Method
     },
     validate: {
       guest_id: (value) => (guestSelectionMode === 'select' && !value ? 'Pilih tamu' : null),
@@ -83,6 +84,7 @@ export function ReservationFormModal({
           check_out_date: new Date(reservationToEdit.check_out_date),
           total_price: reservationToEdit.total_price,
           payment_status: reservationToEdit.payment_status,
+          payment_method: reservationToEdit.payment_method || '', // [BARU] Populate payment method
           new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setCalculatedPrice(reservationToEdit.total_price);
@@ -94,6 +96,7 @@ export function ReservationFormModal({
           check_out_date: prefilledData.check_out_date || null,
           total_price: 0,
           payment_status: 'pending',
+          payment_method: '',
           guest_id: '', new_guest_title: 'Mr.', new_guest_name: '', new_guest_email: '', new_guest_phone: '',
         });
         setGuestSelectionMode('select');
@@ -162,6 +165,7 @@ export function ReservationFormModal({
         check_out_date: values.check_out_date!,
         total_price: calculatedPrice || 0,
         payment_status: values.payment_status,
+        payment_method: (values.payment_method as PaymentMethod) || null, // [BARU] Kirim payment method
       };
 
       let result;
@@ -370,16 +374,33 @@ export function ReservationFormModal({
             </Group>
           </Paper>
 
-          <Select 
-            label="Payment Status" 
-            data={[
-              { value: 'pending', label: 'Pending' },
-              { value: 'paid', label: 'Paid' }
-            ]} 
-            required 
-            leftSection={<IconCash size={16} />} 
-            {...form.getInputProps('payment_status')} 
-          />
+          {/* [BARU] Field Payment Method & Status */}
+          <Group grow align="flex-start">
+            <Select
+              label="Payment Method"
+              placeholder="Select Method"
+              data={[
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'transfer', label: 'Bank Transfer' },
+                  { value: 'qris', label: 'QRIS' },
+                  { value: 'credit_card', label: 'Credit Card' },
+                  { value: 'other', label: 'Other' },
+              ]}
+              leftSection={<IconCreditCard size={16} />}
+              clearable
+              {...form.getInputProps('payment_method')}
+            />
+            <Select 
+              label="Payment Status" 
+              data={[
+                { value: 'pending', label: 'Pending' },
+                { value: 'paid', label: 'Paid' }
+              ]} 
+              required 
+              leftSection={<IconCash size={16} />} 
+              {...form.getInputProps('payment_status')} 
+            />
+          </Group>
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
