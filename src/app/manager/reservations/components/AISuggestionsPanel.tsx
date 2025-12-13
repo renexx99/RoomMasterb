@@ -57,7 +57,7 @@ export function AICoPilotPanel() {
     <Stack gap="md" style={{ height: '100%' }}>
       <Paper p="md" radius="md" withBorder style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
         <Group gap="xs">
-          <ThemeIcon size="xl" color="white" variant="light" style={{ background: 'rgba(255,255,255,0.2)' }}><IconRobot size={24} /></ThemeIcon>
+          <ThemeIcon size="xl" color="white" variant="light" style={{ background: 'rgba(255,255,255,0.2)' }}><IconSparkles size={28} stroke={2} /></ThemeIcon>
           <div><Text c="white" fw={600}>AI Manager Assistant</Text><Text c="blue.0" size="xs">Strategi & Ketersediaan</Text></div>
         </Group>
       </Paper>

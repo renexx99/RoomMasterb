@@ -108,7 +108,7 @@ export function AICoPilotPanel() {
       <Paper p="md" radius="md" withBorder style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)' }}>
         <Group gap="xs">
           <ThemeIcon size="xl" color="white" variant="light" style={{ background: 'rgba(255,255,255,0.2)' }}>
-            <IconRobot size={24} />
+            <IconSparkles size={28} stroke={2} />
           </ThemeIcon>
           <div>
             <Text c="white" fw={600}>AI Reservation Assistant</Text>

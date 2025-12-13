@@ -1,3 +1,4 @@
+// src/app/fo/dashboard/components/AICopilotWidget.tsx
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -6,7 +7,7 @@ import {
   Box, Textarea, Tooltip, Transition
 } from '@mantine/core';
 import {
-  IconRobot, IconMaximize, IconMinimize, IconX, IconSend, IconMessage
+  IconSparkles, IconMaximize, IconMinimize, IconX, IconSend
 } from '@tabler/icons-react';
 
 interface ChatMessage {
@@ -60,12 +61,12 @@ export function AICopilotWidget() {
     <>
       {/* Floating Button */}
       {!isWidgetOpen && (
-        <Tooltip label="FO Assistant" position="left">
+        <Tooltip label="Open AI Co-Pilot" position="left">
           <ActionIcon
-            size={56}
+            size={60} // Ukuran disamakan dengan Manager (60px)
             radius="xl"
             variant="gradient"
-            gradient={{ from: 'teal', to: 'cyan' }}
+            gradient={{ from: 'teal', to: 'cyan' }} // Warna Tema FO
             style={{
               position: 'fixed',
               bottom: 24,
@@ -76,7 +77,8 @@ export function AICopilotWidget() {
             }}
             onClick={() => setIsWidgetOpen(true)}
           >
-            <IconRobot size={28} stroke={1.5} />
+            {/* Icon disamakan dengan Manager */}
+            <IconSparkles size={28} stroke={2} />
           </ActionIcon>
         </Tooltip>
       )}
@@ -92,13 +94,13 @@ export function AICopilotWidget() {
               position: 'fixed',
               bottom: isMaximized ? 0 : 24,
               right: isMaximized ? 0 : 24,
-              width: isMaximized ? '100%' : 380,
-              height: isMaximized ? '100vh' : 500,
+              width: isMaximized ? '100%' : 420, // Lebar disamakan (420px)
+              height: isMaximized ? '100vh' : 600, // Tinggi disamakan (600px)
               zIndex: 1001,
               display: 'flex',
               flexDirection: 'column',
               background: 'white',
-              border: '1px solid #20c997', // Teal border
+              border: '2px solid #14b8a6', // Border warna FO (Teal)
               overflow: 'hidden',
             }}
           >
@@ -107,18 +109,18 @@ export function AICopilotWidget() {
               <Group justify="space-between">
                 <Group gap="xs">
                   <ThemeIcon size={28} radius="md" color="white" variant="light">
-                    <IconRobot size={18} stroke={2} />
+                    <IconSparkles size={16} stroke={2} />
                   </ThemeIcon>
                   <div>
-                    <Text size="xs" fw={700} c="white">FO Assistant</Text>
-                    <Badge size="xs" variant="light" color="white" c="teal" style={{ height: '16px', padding: '0 6px' }}>ONLINE</Badge>
+                    <Text size="xs" fw={700} c="white">AI Co-Pilot</Text>
+                    <Badge size="xs" variant="light" color="white" c="teal" style={{ height: '16px', padding: '0 6px' }}>FO MODE</Badge>
                   </div>
                 </Group>
                 <Group gap={4}>
-                  <ActionIcon size={24} variant="subtle" color="white" onClick={() => setIsMaximized(!isMaximized)}>
+                  <ActionIcon size={28} variant="subtle" color="white" onClick={() => setIsMaximized(!isMaximized)}>
                     {isMaximized ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
                   </ActionIcon>
-                  <ActionIcon size={24} variant="subtle" color="white" onClick={() => setIsWidgetOpen(false)}>
+                  <ActionIcon size={28} variant="subtle" color="white" onClick={() => setIsWidgetOpen(false)}>
                     <IconX size={16} />
                   </ActionIcon>
                 </Group>
@@ -126,33 +128,34 @@ export function AICopilotWidget() {
             </Box>
 
             {/* Chat Area */}
-            <ScrollArea style={{ flex: 1, padding: '12px 16px' }} viewportRef={chatScrollRef} bg="gray.0">
+            <ScrollArea style={{ flex: 1, padding: '12px 16px' }} viewportRef={chatScrollRef}>
               <Stack gap="sm">
-                <Paper p="sm" radius="md" bg="white" withBorder style={{ borderColor: '#e9ecef' }}>
-                  <Group gap="xs" mb={4}>
-                    <IconMessage size={14} color="gray" />
-                    <Text size="xs" fw={600} c="dimmed">System</Text>
+                <Paper p="md" radius="md" style={{ background: 'white', border: '1px solid #e9ecef' }}>
+                  <Group gap="xs" mb="xs">
+                    <ThemeIcon size={28} radius="md" variant="light" color="teal">
+                        <IconSparkles size={16} />
+                    </ThemeIcon>
+                    <Text size="sm" fw={700}>AI Co-Pilot</Text>
                   </Group>
-                  <Text size="sm">Hello! I can help you with room status, quick guest lookups, or housekeeping requests.</Text>
+                  <Text size="sm" style={{ lineHeight: 1.5 }} c="dimmed">
+                    Halo! Saya adalah asisten AI Co-Pilot Anda, siap membantu operasional front office hotel Anda.
+                  </Text>
                 </Paper>
 
                 {chatHistory.map((msg, idx) => (
                   <Box key={idx} style={{ display: 'flex', justifyContent: msg.type === 'user' ? 'flex-end' : 'flex-start' }}>
                     <Paper 
-                      p="xs" 
-                      px="sm"
+                      p="sm"
                       radius="md" 
                       style={{ 
                         maxWidth: '85%', 
-                        background: msg.type === 'user' ? '#14b8a6' : 'white', 
+                        // Warna bubble chat user disesuaikan dengan tema FO
+                        background: msg.type === 'user' ? '#14b8a6' : '#f8f9fa', 
                         color: msg.type === 'user' ? 'white' : 'inherit',
                         border: msg.type === 'ai' ? '1px solid #e9ecef' : 'none'
                       }}
                     >
                       <Text size="sm">{msg.content}</Text>
-                      <Text size="9px" c={msg.type === 'user' ? 'rgba(255,255,255,0.7)' : 'dimmed'} mt={2} ta="right">
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
                     </Paper>
                   </Box>
                 ))}
@@ -160,7 +163,7 @@ export function AICopilotWidget() {
             </ScrollArea>
 
             {/* Input */}
-            <Box p="sm" bg="white" style={{ borderTop: '1px solid #e9ecef' }}>
+            <Box p="md" style={{ borderTop: '1px solid #e9ecef', background: 'white' }}>
               <Group gap="xs" align="flex-end">
                 <Textarea
                   placeholder="Type a command..."
@@ -172,7 +175,7 @@ export function AICopilotWidget() {
                   style={{ flex: 1 }}
                   onKeyPress={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
                 />
-                <ActionIcon size={36} radius="md" color="teal" variant="filled" onClick={handleSendMessage}>
+                <ActionIcon size={36} radius="md" variant="gradient" gradient={{ from: 'teal', to: 'cyan' }} onClick={handleSendMessage}>
                   <IconSend size={18} />
                 </ActionIcon>
               </Group>
