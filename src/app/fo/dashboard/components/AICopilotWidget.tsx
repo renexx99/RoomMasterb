@@ -171,8 +171,8 @@ export function AICopilotWidget() {
                     <ThemeIcon size={60} radius="xl" variant="light" color="gray" mb="sm">
                       <IconRobot size={32} />
                     </ThemeIcon>
-                    <Text size="sm">Halo! Saya asisten Front Office Anda.</Text>
-                    <Text size="xs">Coba ketik: "Buat reservasi untuk Budi besok"</Text>
+                    <Text size="sm">Halo! Apa yang bisa aku bantu?</Text>
+                    <Text size="xs">Contoh: "Kamar apa yang kosong hari ini?"</Text>
                   </Box>
                 )}
 
