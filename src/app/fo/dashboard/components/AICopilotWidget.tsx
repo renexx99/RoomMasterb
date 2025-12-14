@@ -4,14 +4,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Paper, Group, ThemeIcon, Text, Badge, ActionIcon, ScrollArea, Stack,
-  Box, Textarea, Tooltip, Transition
+  Box, Textarea, Tooltip, Transition, Loader
 } from '@mantine/core';
 import {
-  IconSparkles, IconMaximize, IconMinimize, IconX, IconSend
+  IconSparkles, IconMaximize, IconMinimize, IconX, IconSend, IconRobot
 } from '@tabler/icons-react';
+import { chatWithAI } from '../../ai-actions';
 
 interface ChatMessage {
-  type: 'ai' | 'user';
+  type: 'ai' | 'user' | 'system';
   content: string;
   timestamp: Date;
 }
@@ -21,164 +22,214 @@ export function AICopilotWidget() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
+  
+  const viewport = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = () => {
-    if (!chatMessage.trim()) return;
+  useEffect(() => {
+    if (viewport.current) {
+      viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [chatHistory, isWidgetOpen]);
 
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || loadingAI) return;
+
+    const userMsg = chatMessage;
+    setChatMessage('');
+    
     setChatHistory(prev => [...prev, {
       type: 'user',
-      content: chatMessage,
+      content: userMsg,
       timestamp: new Date(),
     }]);
 
-    // Simulasi respons AI
-    setTimeout(() => {
-      const responses = [
-        'Room 101 is designated as Vacant Clean. You can proceed with check-in.',
-        'Guest Mr. Smith requested a wake-up call at 06:00 AM. I have noted it.',
-        'The housekeeping team has been notified about the extra bed for Room 205.',
-        'Taxi for Room 303 has been scheduled for 2 PM.',
-      ];
-      
+    setLoadingAI(true);
+
+    try {
+      const response = await chatWithAI(userMsg);
+
       setChatHistory(prev => [...prev, {
         type: 'ai',
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: response.content || 'Maaf, saya tidak bisa memproses permintaan itu.',
         timestamp: new Date(),
       }]);
-    }, 1000);
 
-    setChatMessage('');
+    } catch (e) {
+      console.error("Error calling AI:", e);
+      setChatHistory(prev => [...prev, {
+        type: 'system',
+        content: 'Terjadi kesalahan saat menghubungkan ke AI Agent.',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setLoadingAI(false);
+    }
   };
 
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
-  }, [chatHistory]);
+  };
 
   return (
     <>
-      {/* Floating Button */}
       {!isWidgetOpen && (
-        <Tooltip label="Open AI Co-Pilot" position="left">
-          <ActionIcon
-            size={60} // Ukuran disamakan dengan Manager (60px)
-            radius="xl"
-            variant="gradient"
-            gradient={{ from: 'teal', to: 'cyan' }} // Warna Tema FO
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              boxShadow: '0 4px 20px rgba(20, 184, 166, 0.4)',
-              cursor: 'pointer',
-              zIndex: 1000,
-            }}
-            onClick={() => setIsWidgetOpen(true)}
-          >
-            {/* Icon disamakan dengan Manager */}
-            <IconSparkles size={28} stroke={2} />
-          </ActionIcon>
-        </Tooltip>
+        <Transition transition="slide-up" mounted={!isWidgetOpen}>
+          {(styles) => (
+            <Tooltip label="Ask AI Agent" position="left" withArrow>
+              <ActionIcon
+                style={{ 
+                    ...styles, 
+                    position: 'fixed', 
+                    bottom: 30, 
+                    right: 30, 
+                    zIndex: 100,
+                    // PERBAIKAN: Menggunakan boxShadow di style alih-alih prop shadow
+                    boxShadow: 'var(--mantine-shadow-lg)' 
+                }}
+                size={60}
+                radius={60}
+                variant="gradient"
+                gradient={{ from: 'teal', to: 'blue', deg: 60 }}
+                onClick={() => setIsWidgetOpen(true)}
+              >
+                <IconSparkles size={32} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Transition>
       )}
 
-      {/* Widget Panel */}
-      <Transition mounted={isWidgetOpen} transition="slide-up" duration={300} timingFunction="ease">
+      <Transition transition="slide-up" mounted={isWidgetOpen}>
         {(styles) => (
           <Paper
             shadow="xl"
             radius="lg"
+            withBorder
             style={{
               ...styles,
               position: 'fixed',
-              bottom: isMaximized ? 0 : 24,
-              right: isMaximized ? 0 : 24,
-              width: isMaximized ? '100%' : 420, // Lebar disamakan (420px)
-              height: isMaximized ? '100vh' : 600, // Tinggi disamakan (600px)
-              zIndex: 1001,
+              bottom: isMaximized ? 0 : 30,
+              right: isMaximized ? 0 : 30,
+              width: isMaximized ? '100vw' : 400,
+              height: isMaximized ? '100vh' : 600,
+              zIndex: 200,
               display: 'flex',
               flexDirection: 'column',
-              background: 'white',
-              border: '2px solid #14b8a6', // Border warna FO (Teal)
-              overflow: 'hidden',
+              overflow: 'hidden'
             }}
           >
-            {/* Header */}
-            <Box style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', padding: '12px 16px', borderRadius: isMaximized ? 0 : '12px 12px 0 0' }}>
+            {/* HEADER */}
+            <Box p="sm" bg="teal" style={{ color: 'white' }}>
               <Group justify="space-between">
                 <Group gap="xs">
-                  <ThemeIcon size={28} radius="md" color="white" variant="light">
-                    <IconSparkles size={16} stroke={2} />
+                  <ThemeIcon variant="light" color="white" size="md" radius="xl">
+                    <IconSparkles size={18} />
                   </ThemeIcon>
-                  <div>
-                    <Text size="xs" fw={700} c="white">AI Co-Pilot</Text>
-                    <Badge size="xs" variant="light" color="white" c="teal" style={{ height: '16px', padding: '0 6px' }}>FO MODE</Badge>
-                  </div>
+                  <Box>
+                    <Text fw={700} size="sm" c="white">Hotel AI Agent</Text>
+                    <Group gap={4}>
+                      <Badge size="xs" color="green" variant="filled">Online</Badge>
+                      <Text size="xs" c="teal.1">FO Assistant</Text>
+                    </Group>
+                  </Box>
                 </Group>
                 <Group gap={4}>
-                  <ActionIcon size={28} variant="subtle" color="white" onClick={() => setIsMaximized(!isMaximized)}>
-                    {isMaximized ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+                  <ActionIcon variant="transparent" color="white" onClick={() => setIsMaximized(!isMaximized)}>
+                    {isMaximized ? <IconMinimize size={18} /> : <IconMaximize size={18} />}
                   </ActionIcon>
-                  <ActionIcon size={28} variant="subtle" color="white" onClick={() => setIsWidgetOpen(false)}>
-                    <IconX size={16} />
+                  <ActionIcon variant="transparent" color="white" onClick={() => setIsWidgetOpen(false)}>
+                    <IconX size={18} />
                   </ActionIcon>
                 </Group>
               </Group>
             </Box>
 
-            {/* Chat Area */}
-            <ScrollArea style={{ flex: 1, padding: '12px 16px' }} viewportRef={chatScrollRef}>
-              <Stack gap="sm">
-                <Paper p="md" radius="md" style={{ background: 'white', border: '1px solid #e9ecef' }}>
-                  <Group gap="xs" mb="xs">
-                    <ThemeIcon size={28} radius="md" variant="light" color="teal">
-                        <IconSparkles size={16} />
+            {/* CHAT AREA */}
+            <ScrollArea viewportRef={viewport} style={{ flex: 1, backgroundColor: '#f8f9fa' }} p="md">
+              <Stack gap="md">
+                {chatHistory.length === 0 && (
+                  <Box style={{ textAlign: 'center', opacity: 0.6, marginTop: 40 }}>
+                    <ThemeIcon size={60} radius="xl" variant="light" color="gray" mb="sm">
+                      <IconRobot size={32} />
                     </ThemeIcon>
-                    <Text size="sm" fw={700}>AI Co-Pilot</Text>
-                  </Group>
-                  <Text size="sm" style={{ lineHeight: 1.5 }} c="dimmed">
-                    Halo! Saya adalah asisten AI Co-Pilot Anda, siap membantu operasional front office hotel Anda.
-                  </Text>
-                </Paper>
+                    <Text size="sm">Halo! Saya asisten Front Office Anda.</Text>
+                    <Text size="xs">Coba ketik: "Buat reservasi untuk Budi besok"</Text>
+                  </Box>
+                )}
 
                 {chatHistory.map((msg, idx) => (
-                  <Box key={idx} style={{ display: 'flex', justifyContent: msg.type === 'user' ? 'flex-end' : 'flex-start' }}>
-                    <Paper 
-                      p="sm"
-                      radius="md" 
-                      style={{ 
-                        maxWidth: '85%', 
-                        // Warna bubble chat user disesuaikan dengan tema FO
-                        background: msg.type === 'user' ? '#14b8a6' : '#f8f9fa', 
-                        color: msg.type === 'user' ? 'white' : 'inherit',
-                        border: msg.type === 'ai' ? '1px solid #e9ecef' : 'none'
-                      }}
+                  <Box
+                    key={idx}
+                    style={{
+                      alignSelf: msg.type === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '85%'
+                    }}
+                  >
+                    <Paper
+                      p="xs"
+                      radius="md"
+                      shadow="xs"
+                      withBorder={msg.type !== 'user'}
+                      bg={
+                        msg.type === 'user' ? 'teal' : 
+                        msg.type === 'system' ? 'red.1' : 'white'
+                      }
+                      c={msg.type === 'user' ? 'white' : 'black'}
                     >
-                      <Text size="sm">{msg.content}</Text>
+                      <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</Text>
+                      <Text size="xs" c={msg.type === 'user' ? 'white' : 'dimmed'} mt={4} ta="right">
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
                     </Paper>
                   </Box>
                 ))}
+
+                {loadingAI && (
+                  <Box style={{ alignSelf: 'flex-start' }}>
+                    <Paper p="xs" radius="md" bg="white" withBorder>
+                      <Group gap="xs">
+                        <Loader size="xs" color="teal" />
+                        <Text size="xs" c="dimmed">Sedang memproses...</Text>
+                      </Group>
+                    </Paper>
+                  </Box>
+                )}
               </Stack>
             </ScrollArea>
 
-            {/* Input */}
+            {/* INPUT AREA */}
             <Box p="md" style={{ borderTop: '1px solid #e9ecef', background: 'white' }}>
               <Group gap="xs" align="flex-end">
                 <Textarea
-                  placeholder="Type a command..."
+                  placeholder="Ketik perintah operasional..."
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
                   minRows={1}
                   maxRows={3}
                   autosize
                   style={{ flex: 1 }}
-                  onKeyPress={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                  onKeyDown={handleKeyPress}
+                  disabled={loadingAI}
                 />
-                <ActionIcon size={36} radius="md" variant="gradient" gradient={{ from: 'teal', to: 'cyan' }} onClick={handleSendMessage}>
+                <ActionIcon 
+                  size={36} 
+                  radius="md" 
+                  variant="gradient" 
+                  gradient={{ from: 'teal', to: 'cyan' }} 
+                  onClick={handleSendMessage}
+                  loading={loadingAI}
+                  disabled={!chatMessage.trim() || loadingAI}
+                >
                   <IconSend size={18} />
                 </ActionIcon>
               </Group>
+              <Text size="xs" c="dimmed" mt={4} ta="center">
+                AI dapat melakukan kesalahan. Cek kembali data reservasi.
+              </Text>
             </Box>
           </Paper>
         )}
