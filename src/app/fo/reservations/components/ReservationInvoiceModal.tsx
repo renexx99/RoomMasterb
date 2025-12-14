@@ -107,7 +107,7 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
             <Grid align="center">
                <Grid.Col span={8}>
                   <Text fw={800} size="lg" c="violet.9">TOTAL</Text>
-                  {reservation.payment_method && (
+                  {reservation.payment_method && reservation.payment_status === 'paid' && (
                       <Group gap={4}>
                          <IconCheck size={14} color="teal" />
                          <Text size="xs" c="teal.7" fw={600}>Paid via {reservation.payment_method}</Text>

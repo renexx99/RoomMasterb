@@ -1,7 +1,6 @@
-// src/app/manager/reservations/components/TimelineView.tsx
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box, Group, Text, Paper, ThemeIcon, Tooltip, Badge, Stack
 } from '@mantine/core';
@@ -12,7 +11,6 @@ interface TimelineViewProps {
   rooms: RoomWithDetails[];
   reservations: ReservationDetails[];
   onDragCreate: (roomId: string, startDate: Date, endDate: Date) => void;
-  // [BARU] Prop untuk handle klik
   onReservationClick: (reservation: ReservationDetails) => void;
 }
 
@@ -58,7 +56,6 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
     const checkOut = reservation.check_out_date.split('T')[0];
     
     const isStart = dateStr === checkIn;
-    const isEnd = new Date(dateStr).getTime() === new Date(checkOut).getTime() - 86400000;
     
     let spanDays = 0;
     for (let i = 0; i < dateHeaders.length; i++) {
@@ -68,7 +65,7 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
       }
     }
     
-    return { isStart, isEnd, spanDays };
+    return { isStart, spanDays };
   };
 
   const handleMouseDown = (roomId: string, dateIndex: number) => {
@@ -134,7 +131,7 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                 key={idx} 
                 style={{ 
                   flex: 1, textAlign: 'center', padding: '8px',
-                  background: isToday ? '#dbeafe' : 'transparent', // Blue tint for today
+                  background: isToday ? '#dbeafe' : 'transparent',
                   borderRadius: 6
                 }}
               >
@@ -180,7 +177,8 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                 let reservationSpan = 0;
                 if (reservation) {
                   const span = getReservationSpan(room.id, date, reservation);
-                  showReservation = span.isStart;
+                  // PERBAIKAN: Tampilkan juga jika ini adalah awal dari tampilan timeline (idx 0)
+                  showReservation = span.isStart || idx === 0;
                   reservationSpan = span.spanDays;
                 }
                 
@@ -212,16 +210,14 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                             left: 0,
                             right: reservationSpan > 1 ? `calc(-${(reservationSpan - 1) * 100}% - ${(reservationSpan - 1) * 4}px)` : 0,
                             top: 0, bottom: 0,
-                            // Blue for paid, Orange pending, Gray cancelled
                             background: reservation.payment_status === 'paid' ? '#3b82f6' : 
                                        reservation.payment_status === 'pending' ? '#f59e0b' : '#6b7280',
                             border: '1px solid #dee2e6', borderRadius: 4,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             zIndex: 1, overflow: 'hidden',
-                            cursor: 'pointer' // Ubah kursor jadi pointer
+                            cursor: 'pointer'
                           }}
-                          // [BARU] Tambahkan handler klik
-                          onMouseDown={(e) => e.stopPropagation()} // Mencegah drag saat klik reservasi
+                          onMouseDown={(e) => e.stopPropagation()} 
                           onClick={(e) => {
                              e.stopPropagation();
                              onReservationClick(reservation);
@@ -236,7 +232,7 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                       <Box
                         style={{
                           width: '100%', height: '100%',
-                          background: inDrag ? '#bfdbfe' : '#e9ecef', // Blue tint for selection
+                          background: inDrag ? '#bfdbfe' : '#e9ecef',
                           border: '1px solid #dee2e6', borderRadius: 4
                         }}
                       />

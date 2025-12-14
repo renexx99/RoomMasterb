@@ -11,7 +11,6 @@ interface TimelineViewProps {
   rooms: RoomWithDetails[];
   reservations: ReservationDetails[];
   onDragCreate: (roomId: string, startDate: Date, endDate: Date) => void;
-  // [BARU] Prop untuk handle klik
   onReservationClick: (reservation: ReservationDetails) => void;
 }
 
@@ -57,17 +56,18 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
     const checkOut = reservation.check_out_date.split('T')[0];
     
     const isStart = dateStr === checkIn;
-    const isEnd = new Date(dateStr).getTime() === new Date(checkOut).getTime() - 86400000;
+    // const isEnd = new Date(dateStr).getTime() === new Date(checkOut).getTime() - 86400000; // Not strictly needed for logic
     
     let spanDays = 0;
     for (let i = 0; i < dateHeaders.length; i++) {
       const currentDate = dateHeaders[i].toISOString().split('T')[0];
+      // Hitung span hanya untuk hari-hari yang visible di timeline saat ini
       if (currentDate >= checkIn && currentDate < checkOut) {
         spanDays++;
       }
     }
     
-    return { isStart, isEnd, spanDays };
+    return { isStart, spanDays };
   };
 
   const handleMouseDown = (roomId: string, dateIndex: number) => {
@@ -177,9 +177,12 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                 
                 let showReservation = false;
                 let reservationSpan = 0;
+                
                 if (reservation) {
                   const span = getReservationSpan(room.id, date, reservation);
-                  showReservation = span.isStart;
+                  // PERBAIKAN: Tampilkan jika ini tanggal check-in ATAU jika ini awal dari tampilan timeline (idx 0)
+                  // Ini menangani kasus reservasi yang 'terpotong' antar minggu
+                  showReservation = span.isStart || idx === 0;
                   reservationSpan = span.spanDays;
                 }
                 
@@ -209,9 +212,9 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                           style={{
                             position: 'absolute',
                             left: 0,
+                            // Lebar dinamis berdasarkan sisa hari yang terlihat di minggu ini
                             right: reservationSpan > 1 ? `calc(-${(reservationSpan - 1) * 100}% - ${(reservationSpan - 1) * 4}px)` : 0,
                             top: 0, bottom: 0,
-                            // Warna FO: Paid = Teal
                             background: reservation.payment_status === 'paid' ? '#14b8a6' : 
                                        reservation.payment_status === 'pending' ? '#f59e0b' : '#6b7280',
                             border: '1px solid #dee2e6', borderRadius: 4,
@@ -234,7 +237,7 @@ export function TimelineView({ rooms, reservations, onDragCreate, onReservationC
                       <Box
                         style={{
                           width: '100%', height: '100%',
-                          background: inDrag ? '#ccfbf1' : '#e9ecef', // Drag color Teal tint
+                          background: inDrag ? '#ccfbf1' : '#e9ecef',
                           border: '1px solid #dee2e6', borderRadius: 4
                         }}
                       />
