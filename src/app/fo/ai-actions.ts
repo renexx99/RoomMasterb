@@ -103,8 +103,15 @@ async function createReservationTool(args: any) {
   };
 }
 
+// Tambahkan Interface untuk struktur pesan OpenAI
+interface OpenAIMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 // --- MAIN AI HANDLER ---
-export async function chatWithAI(userMessage: string) {
+// Menerima pesan user & riwayat chat
+export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) {
   try {
     // 1. Definisikan Tools (Kemampuan Agen)
     const tools = [
@@ -112,15 +119,15 @@ export async function chatWithAI(userMessage: string) {
         type: "function" as const,
         function: {
           name: "create_reservation",
-          description: "Membuat reservasi hotel baru untuk tamu.",
+          description: "Membuat reservasi hotel baru untuk tamu. Wajib tanya semua parameter sebelum eksekusi.",
           parameters: {
             type: "object",
             properties: {
               guest_name: { type: "string", description: "Nama lengkap tamu" },
               user_email: { type: "string", description: "Email tamu (opsional)" },
               room_number: { type: "string", description: "Nomor kamar yang diinginkan (contoh: 101)" },
-              check_in: { type: "string", format: "date", description: "Tanggal check-in (YYYY-MM-DD)" },
-              check_out: { type: "string", format: "date", description: "Tanggal check-out (YYYY-MM-DD)" },
+              check_in: { type: "string", format: "date", description: "Tanggal check-in (YYYY-MM-DD). Konversi dari 'besok' atau tanggal spesifik." },
+              check_out: { type: "string", format: "date", description: "Tanggal check-out (YYYY-MM-DD)." },
             },
             required: ["guest_name", "room_number", "check_in", "check_out"],
           },
@@ -130,20 +137,36 @@ export async function chatWithAI(userMessage: string) {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // 2. Panggil OpenAI (Step 1: Niat)
+    // System Prompt
+    const systemMessage: OpenAIMessage = { 
+        role: "system", 
+        content: `Kamu adalah asisten Front Office Hotel (RoomMaster). 
+        Hari ini: ${today}. 
+        Tugasmu: Membantu staff membuat reservasi.
+        Aturan:
+        1. Kumpulkan data: Nama, Kamar, Check-in, Check-out.
+        2. Jangan panggil tool 'create_reservation' jika data belum lengkap. Tanya user data yang kurang.
+        3. Jika user menyebut nama bulan (misal: Desember), pastikan tahunnya relevan (jika lewat, pakai tahun depan).`
+    };
+
+    // 2. Gabungkan Context: System + History + Pesan Baru
+    const messages = [
+        systemMessage,
+        ...history,
+        { role: 'user', content: userMessage } as OpenAIMessage
+    ];
+
+    // 3. Panggil OpenAI
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini", // Model hemat & cepat
-      messages: [
-        { role: "system", content: `Kamu adalah asisten Front Office Hotel yang membantu operasional. Hari ini adalah tanggal ${today}. Jangan berasumsi, tanyakan jika data kurang.` },
-        { role: "user", content: userMessage }
-      ],
+      messages: messages as any,
       tools: tools,
       tool_choice: "auto", 
     });
 
     const responseMessage = response.choices[0].message;
 
-    // 3. Cek apakah AI ingin memanggil Tool (Function Calling)
+    // 4. Cek apakah AI ingin memanggil Tool (Function Calling)
     if (responseMessage.tool_calls) {
       const toolCall = responseMessage.tool_calls[0];
       
@@ -153,8 +176,7 @@ export async function chatWithAI(userMessage: string) {
         // JALANKAN FUNGSI DATABASE KITA
         const actionResult = await createReservationTool(args);
 
-        // 4. Balikkan hasil fungsi ke AI agar dia bisa ngomong ke User
-        // (Kita skip round-trip kedua biar hemat token, langsung return hasil fungsi ke UI)
+        // Balikkan hasil fungsi ke AI/UI
         if (actionResult.error) {
              return { role: 'ai', content: `Maaf, ada masalah: ${actionResult.error}` };
         }

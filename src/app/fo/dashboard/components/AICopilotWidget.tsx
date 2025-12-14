@@ -26,6 +26,7 @@ export function AICopilotWidget() {
   
   const viewport = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll saat ada pesan baru
   useEffect(() => {
     if (viewport.current) {
       viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
@@ -38,6 +39,7 @@ export function AICopilotWidget() {
     const userMsg = chatMessage;
     setChatMessage('');
     
+    // 1. Update UI Client (Optimistic)
     setChatHistory(prev => [...prev, {
       type: 'user',
       content: userMsg,
@@ -47,8 +49,20 @@ export function AICopilotWidget() {
     setLoadingAI(true);
 
     try {
-      const response = await chatWithAI(userMsg);
+      // 2. Siapkan format riwayat chat untuk OpenAI
+      // Filter pesan system/error dan mapping type ke role yang sesuai
+      const apiHistory = chatHistory
+        .filter(msg => msg.type !== 'system')
+        .map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }));
 
+      // 3. Panggil Server Action dengan pesan baru & riwayat
+      // @ts-ignore (abaikan warning tipe sementara jika ada ketidakcocokan minor)
+      const response = await chatWithAI(userMsg, apiHistory);
+
+      // 4. Update UI dengan balasan AI
       setChatHistory(prev => [...prev, {
         type: 'ai',
         content: response.content || 'Maaf, saya tidak bisa memproses permintaan itu.',
@@ -76,6 +90,7 @@ export function AICopilotWidget() {
 
   return (
     <>
+      {/* FLOATING BUTTON */}
       {!isWidgetOpen && (
         <Transition transition="slide-up" mounted={!isWidgetOpen}>
           {(styles) => (
@@ -87,8 +102,7 @@ export function AICopilotWidget() {
                     bottom: 30, 
                     right: 30, 
                     zIndex: 100,
-                    // PERBAIKAN: Menggunakan boxShadow di style alih-alih prop shadow
-                    boxShadow: 'var(--mantine-shadow-lg)' 
+                    boxShadow: 'var(--mantine-shadow-lg)' // Perbaikan Shadow
                 }}
                 size={60}
                 radius={60}
@@ -103,6 +117,7 @@ export function AICopilotWidget() {
         </Transition>
       )}
 
+      {/* CHAT WINDOW */}
       <Transition transition="slide-up" mounted={isWidgetOpen}>
         {(styles) => (
           <Paper
