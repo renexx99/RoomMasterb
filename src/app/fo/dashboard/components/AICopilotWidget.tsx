@@ -29,7 +29,7 @@ const QUICK_PROMPTS = [
   },
   {
     label: 'Cek Profil Tamu',
-    text: 'Cek profil dan history tamu: [Nama Tamu / No HP]. Apakah ada preferensi khusus?',
+    text: 'Cek profil dan history tamu: [Nama]. Apakah ada preferensi khusus?',
     icon: <IconUserSearch size={14} />,
     color: 'blue',
     desc: 'Lihat riwayat menginap & preferensi'
