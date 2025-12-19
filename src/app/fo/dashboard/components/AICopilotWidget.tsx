@@ -4,10 +4,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Paper, Group, ThemeIcon, Text, Badge, ActionIcon, ScrollArea, Stack,
-  Box, Textarea, Tooltip, Transition, Loader
+  Box, Textarea, Tooltip, Transition, Loader, Button
 } from '@mantine/core';
 import {
-  IconSparkles, IconMaximize, IconMinimize, IconX, IconSend, IconRobot
+  IconSparkles, IconMaximize, IconMinimize, IconX, IconSend, IconRobot, 
+  IconUserSearch, IconChartBar, IconBed, IconBulb, IconChevronRight
 } from '@tabler/icons-react';
 import { chatWithAI } from '../../ai-actions';
 
@@ -17,6 +18,38 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+// [UPDATE] Hapus emoji dari label & text, sesuaikan bahasa agar lebih formal/bersih
+const QUICK_PROMPTS = [
+  {
+    label: 'Walk-in Booking',
+    text: 'Booking Walk-in: Tamu [Nama], Tipe [Deluxe], Check-in [Hari ini], [1] malam.',
+    icon: <IconBed size={14} />, // Ukuran icon diperkecil
+    color: 'teal',
+    desc: 'Buat reservasi langsung di tempat'
+  },
+  {
+    label: 'Cek Profil Tamu',
+    text: 'Cek profil dan history tamu: [Nama Tamu / No HP]. Apakah ada preferensi khusus?',
+    icon: <IconUserSearch size={14} />,
+    color: 'blue',
+    desc: 'Lihat riwayat menginap & preferensi'
+  },
+  {
+    label: 'Saran Upselling',
+    text: 'Berikan rekomendasi penawaran atau upgrade kamar untuk tamu [Nama Tamu] berdasarkan history menginapnya.',
+    icon: <IconBulb size={14} />,
+    color: 'grape',
+    desc: 'Rekomendasi penawaran untuk tamu'
+  },
+  {
+    label: 'Laporan Revenue',
+    text: 'Buatkan ringkasan performa hotel (Revenue & Occupancy) untuk periode [Bulan Ini].',
+    icon: <IconChartBar size={14} />,
+    color: 'orange',
+    desc: 'Analisa pendapatan & okupansi'
+  }
+];
+
 export function AICopilotWidget() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -25,6 +58,7 @@ export function AICopilotWidget() {
   const [loadingAI, setLoadingAI] = useState(false);
   
   const viewport = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll saat ada pesan baru
   useEffect(() => {
@@ -33,13 +67,19 @@ export function AICopilotWidget() {
     }
   }, [chatHistory, isWidgetOpen]);
 
+  const handleQuickPrompt = (text: string) => {
+    setChatMessage(text);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || loadingAI) return;
 
     const userMsg = chatMessage;
     setChatMessage('');
     
-    // 1. Update UI Client (Optimistic)
     setChatHistory(prev => [...prev, {
       type: 'user',
       content: userMsg,
@@ -49,8 +89,6 @@ export function AICopilotWidget() {
     setLoadingAI(true);
 
     try {
-      // 2. Siapkan format riwayat chat untuk OpenAI
-      // Filter pesan system/error dan mapping type ke role yang sesuai
       const apiHistory = chatHistory
         .filter(msg => msg.type !== 'system')
         .map(msg => ({
@@ -58,11 +96,9 @@ export function AICopilotWidget() {
           content: msg.content
         }));
 
-      // 3. Panggil Server Action dengan pesan baru & riwayat
-      // @ts-ignore (abaikan warning tipe sementara jika ada ketidakcocokan minor)
+      // @ts-ignore
       const response = await chatWithAI(userMsg, apiHistory);
 
-      // 4. Update UI dengan balasan AI
       setChatHistory(prev => [...prev, {
         type: 'ai',
         content: response.content || 'Maaf, saya tidak bisa memproses permintaan itu.',
@@ -102,7 +138,7 @@ export function AICopilotWidget() {
                     bottom: 30, 
                     right: 30, 
                     zIndex: 100,
-                    boxShadow: 'var(--mantine-shadow-lg)' // Perbaikan Shadow
+                    boxShadow: 'var(--mantine-shadow-lg)'
                 }}
                 size={60}
                 radius={60}
@@ -166,16 +202,77 @@ export function AICopilotWidget() {
             {/* CHAT AREA */}
             <ScrollArea viewportRef={viewport} style={{ flex: 1, backgroundColor: '#f8f9fa' }} p="md">
               <Stack gap="md">
+                
+                {/* --- ZERO STATE (Menu Awal) --- */}
                 {chatHistory.length === 0 && (
-                  <Box style={{ textAlign: 'center', opacity: 0.6, marginTop: 40 }}>
-                    <ThemeIcon size={60} radius="xl" variant="light" color="gray" mb="sm">
-                      <IconRobot size={32} />
-                    </ThemeIcon>
-                    <Text size="sm">Halo! Apa yang bisa aku bantu?</Text>
-                    <Text size="xs">Contoh: "Kamar apa yang kosong hari ini?"</Text>
+                  <Box mt="xs">
+                    <Box style={{ textAlign: 'center', opacity: 0.8, marginBottom: 20 }}>
+                      <ThemeIcon size={64} radius="xl" variant="light" color="teal" mb="sm">
+                        <IconRobot size={36} />
+                      </ThemeIcon>
+                      <Text fw={600} size="md">Halo, FO Team!</Text>
+                      <Text size="xs" c="dimmed">
+                        Pilih menu cepat di bawah ini:
+                      </Text>
+                    </Box>
+
+                    {/* [UPDATE] Layout Stack (Vertical List) */}
+                    <Stack gap={8}>
+                      {QUICK_PROMPTS.map((prompt, index) => (
+                        <Button
+                          key={index}
+                          variant="default" // Ganti ke default agar lebih clean (putih/abu)
+                          size="md"         // Tetap md tapi contentnya kita kecilkan manual lewat styles
+                          radius="md"
+                          fullWidth
+                          justify="space-between" // Icon kiri, text kiri, chevron kanan
+                          leftSection={
+                            <ThemeIcon size="sm" color={prompt.color} variant="light" radius="sm">
+                              {prompt.icon}
+                            </ThemeIcon>
+                          }
+                          rightSection={<IconChevronRight size={14} style={{ opacity: 0.5 }} />}
+                          onClick={() => handleQuickPrompt(prompt.text)}
+                          styles={(theme) => ({
+                            root: {
+                              border: `1px solid ${theme.colors.gray[3]}`,
+                              height: 'auto', // Auto height agar padding enak
+                              paddingTop: 8,
+                              paddingBottom: 8,
+                              backgroundColor: 'white',
+                              '&:hover': {
+                                backgroundColor: theme.colors.gray[0],
+                                borderColor: theme.colors[prompt.color][4],
+                              }
+                            },
+                            inner: {
+                              justifyContent: 'flex-start' // Align content ke kiri
+                            },
+                            section: {
+                              marginRight: 10 // Jarak icon ke text
+                            },
+                            label: {
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              lineHeight: 1.2
+                            }
+                          })}
+                        >
+                          {/* Konten Text dalam Tombol */}
+                          <Text size="xs" fw={600} c="dark.9">
+                            {prompt.label}
+                          </Text>
+                          <Text size="10px" c="dimmed" fw={400}>
+                            {prompt.desc}
+                          </Text>
+                        </Button>
+                      ))}
+                    </Stack>
                   </Box>
                 )}
 
+                {/* --- CHAT BUBBLES --- */}
                 {chatHistory.map((msg, idx) => (
                   <Box
                     key={idx}
@@ -217,9 +314,10 @@ export function AICopilotWidget() {
             </ScrollArea>
 
             {/* INPUT AREA */}
-            <Box p="md" style={{ borderTop: '1px solid #e9ecef', background: 'white' }}>
+            <Box p="sm" style={{ borderTop: '1px solid #e9ecef', background: 'white' }}>
               <Group gap="xs" align="flex-end">
                 <Textarea
+                  ref={inputRef}
                   placeholder="Ketik perintah operasional..."
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
@@ -229,6 +327,7 @@ export function AICopilotWidget() {
                   style={{ flex: 1 }}
                   onKeyDown={handleKeyPress}
                   disabled={loadingAI}
+                  size="sm"
                 />
                 <ActionIcon 
                   size={36} 
@@ -242,8 +341,8 @@ export function AICopilotWidget() {
                   <IconSend size={18} />
                 </ActionIcon>
               </Group>
-              <Text size="xs" c="dimmed" mt={4} ta="center">
-                AI dapat melakukan kesalahan. Cek kembali data reservasi.
+              <Text size="10px" c="dimmed" mt={4} ta="center">
+                AI dapat melakukan kesalahan. Cek kembali data.
               </Text>
             </Box>
           </Paper>
