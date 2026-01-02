@@ -4,11 +4,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Paper, Group, ThemeIcon, Text, Badge, ActionIcon, ScrollArea, Stack,
-  Box, Textarea, Tooltip, Transition, Loader, Button
+  Box, Textarea, Tooltip, Transition, Loader, Button, Table, Card, 
+  Divider, SimpleGrid, Alert, RingProgress, Center
 } from '@mantine/core';
 import {
   IconSparkles, IconMaximize, IconMinimize, IconX, IconSend, IconRobot, 
-  IconUserSearch, IconChartBar, IconBed, IconBulb, IconChevronRight
+  IconUserSearch, IconChartBar, IconBed, IconBulb, IconChevronRight,
+  IconCheck, IconAlertCircle, IconInfoCircle, IconFileInvoice, IconPrinter,
+  IconUser, IconMail, IconPhone, IconCalendar, IconCoin, IconHome,
+  IconBuildingStore, IconBrush, IconTrendingUp, IconReceipt
 } from '@tabler/icons-react';
 import { chatWithAI } from '../../ai-actions';
 
@@ -16,14 +20,15 @@ interface ChatMessage {
   type: 'ai' | 'user' | 'system';
   content: string;
   timestamp: Date;
+  data?: any;
+  responseType?: string;
 }
 
-// [UPDATE] Hapus emoji dari label & text, sesuaikan bahasa agar lebih formal/bersih
 const QUICK_PROMPTS = [
   {
     label: 'Walk-in Booking',
     text: 'Booking Walk-in: Tamu [Nama], Tipe [Deluxe], Check-in [Hari ini], [1] malam.',
-    icon: <IconBed size={14} />, // Ukuran icon diperkecil
+    icon: <IconBed size={14} />,
     color: 'teal',
     desc: 'Buat reservasi langsung di tempat'
   },
@@ -50,6 +55,479 @@ const QUICK_PROMPTS = [
   }
 ];
 
+// Komponen untuk menampilkan Konfirmasi Booking
+function BookingConfirmationCard({ data }: { data: any }) {
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="teal" variant="light" size="lg" radius="md">
+            <IconCheck size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm">Konfirmasi Pemesanan</Text>
+            <Text size="xs" c="dimmed">Mohon cek kembali detail berikut</Text>
+          </div>
+        </Group>
+        <Badge color="yellow" variant="light">Menunggu Konfirmasi</Badge>
+      </Group>
+
+      <Divider mb="md" />
+
+      <SimpleGrid cols={2} spacing="xs" mb="md">
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconUser size={14} color="gray" />
+            <Text size="xs" c="dimmed">Nama Tamu</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.guest_name}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconMail size={14} color="gray" />
+            <Text size="xs" c="dimmed">Email</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.email}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconPhone size={14} color="gray" />
+            <Text size="xs" c="dimmed">Telepon</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.phone}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconHome size={14} color="gray" />
+            <Text size="xs" c="dimmed">Kamar</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.room_type} - {data.room_number}</Text>
+        </Box>
+      </SimpleGrid>
+
+      <Divider mb="md" />
+
+      <SimpleGrid cols={3} spacing="xs" mb="md">
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconCalendar size={14} color="gray" />
+            <Text size="xs" c="dimmed">Check-in</Text>
+          </Group>
+          <Text size="sm" fw={500}>{new Date(data.check_in).toLocaleDateString('id-ID')}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconCalendar size={14} color="gray" />
+            <Text size="xs" c="dimmed">Check-out</Text>
+          </Group>
+          <Text size="sm" fw={500}>{new Date(data.check_out).toLocaleDateString('id-ID')}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconBed size={14} color="gray" />
+            <Text size="xs" c="dimmed">Durasi</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.nights} Malam</Text>
+        </Box>
+      </SimpleGrid>
+
+      <Box p="sm" bg="gray.0" style={{ borderRadius: 8 }}>
+        <Group justify="space-between" mb={4}>
+          <Text size="xs" c="dimmed">Harga per Malam</Text>
+          <Text size="sm" fw={500}>Rp {data.price_per_night.toLocaleString('id-ID')}</Text>
+        </Group>
+        <Group justify="space-between">
+          <Text size="sm" fw={700}>Total Pembayaran</Text>
+          <Text size="lg" fw={700} c="teal">Rp {data.total_price.toLocaleString('id-ID')}</Text>
+        </Group>
+      </Box>
+
+      <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light" mt="md">
+        <Text size="xs">
+          Ketik <strong>"Ya"</strong> atau <strong>"Konfirmasi"</strong> untuk melanjutkan pemesanan
+        </Text>
+      </Alert>
+    </Card>
+  );
+}
+
+// Komponen untuk Reservasi Berhasil
+function ReservationSuccessCard({ data }: { data: any }) {
+  const handlePrintInvoice = () => {
+    // Redirect ke halaman invoice atau trigger print
+    window.open(`/fo/reservations/${data.reservation_id}/invoice`, '_blank');
+  };
+
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder style={{ borderColor: '#12b886' }}>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="teal" variant="light" size="lg" radius="md">
+            <IconCheck size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm" c="teal">Reservasi Berhasil!</Text>
+            <Text size="xs" c="dimmed">Booking telah disimpan ke sistem</Text>
+          </div>
+        </Group>
+        <Badge color="teal" variant="filled">Sukses</Badge>
+      </Group>
+
+      <Divider mb="md" />
+
+      <Box mb="md">
+        <Text size="xs" c="dimmed" mb={4}>Nomor Booking</Text>
+        <Text size="xl" fw={700} ff="monospace" c="teal">#{data.folio_number}</Text>
+      </Box>
+
+      <SimpleGrid cols={2} spacing="xs" mb="md">
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconUser size={14} color="gray" />
+            <Text size="xs" c="dimmed">Tamu</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.guest_name}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconHome size={14} color="gray" />
+            <Text size="xs" c="dimmed">Kamar</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.room_number} ({data.room_type})</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconCalendar size={14} color="gray" />
+            <Text size="xs" c="dimmed">Periode</Text>
+          </Group>
+          <Text size="sm" fw={500}>
+            {new Date(data.check_in).toLocaleDateString('id-ID')} - {new Date(data.check_out).toLocaleDateString('id-ID')}
+          </Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconCoin size={14} color="gray" />
+            <Text size="xs" c="dimmed">Total</Text>
+          </Group>
+          <Text size="sm" fw={700} c="teal">Rp {data.total_price.toLocaleString('id-ID')}</Text>
+        </Box>
+      </SimpleGrid>
+
+      <Button 
+        fullWidth 
+        leftSection={<IconFileInvoice size={16} />}
+        color="teal"
+        variant="light"
+        onClick={handlePrintInvoice}
+      >
+        Lihat & Cetak Invoice
+      </Button>
+    </Card>
+  );
+}
+
+// Komponen untuk Availability Check
+function AvailabilityCard({ data }: { data: any }) {
+  return (
+    <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="blue" variant="light" size="lg" radius="md">
+            <IconInfoCircle size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm">Ketersediaan Kamar</Text>
+            <Text size="xs" c="dimmed">Informasi kamar tersedia</Text>
+          </div>
+        </Group>
+        <Badge color="blue" variant="light">Available</Badge>
+      </Group>
+
+      <SimpleGrid cols={2} spacing="xs" mb="sm">
+        <Box>
+          <Text size="xs" c="dimmed">Nomor Kamar</Text>
+          <Text size="sm" fw={600}>{data.room_number}</Text>
+        </Box>
+        <Box>
+          <Text size="xs" c="dimmed">Tipe Kamar</Text>
+          <Text size="sm" fw={600}>{data.room_type}</Text>
+        </Box>
+        <Box>
+          <Text size="xs" c="dimmed">Harga/Malam</Text>
+          <Text size="sm" fw={600}>Rp {data.price_per_night.toLocaleString('id-ID')}</Text>
+        </Box>
+        <Box>
+          <Text size="xs" c="dimmed">Status</Text>
+          <Badge size="sm" color={data.cleaning_status === 'clean' ? 'teal' : 'orange'}>
+            {data.cleaning_status === 'clean' ? 'Siap Huni' : 'Perlu Dibersihkan'}
+          </Badge>
+        </Box>
+      </SimpleGrid>
+
+      <Divider my="sm" />
+
+      <Box p="xs" bg="gray.0" style={{ borderRadius: 6 }}>
+        <Group justify="space-between">
+          <div>
+            <Text size="xs" c="dimmed">Estimasi {data.nights} Malam</Text>
+            <Text size="xs" c="dimmed">{new Date(data.check_in).toLocaleDateString('id-ID')} - {new Date(data.check_out).toLocaleDateString('id-ID')}</Text>
+          </div>
+          <Text size="lg" fw={700} c="blue">Rp {data.total_estimate.toLocaleString('id-ID')}</Text>
+        </Group>
+      </Box>
+    </Card>
+  );
+}
+
+// Komponen untuk Analytics Report
+function AnalyticsCard({ data }: { data: any }) {
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="orange" variant="light" size="lg" radius="md">
+            <IconChartBar size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm">Laporan Kinerja</Text>
+            <Text size="xs" c="dimmed">
+              {new Date(data.period.start).toLocaleDateString('id-ID')} - {new Date(data.period.end).toLocaleDateString('id-ID')}
+            </Text>
+          </div>
+        </Group>
+        <Badge color="orange" variant="light">{data.period.days} Hari</Badge>
+      </Group>
+
+      <SimpleGrid cols={2} spacing="md" mb="md">
+        <Card padding="sm" radius="md" withBorder>
+          <Group gap={8} mb={4}>
+            <IconTrendingUp size={16} color="green" />
+            <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Revenue</Text>
+          </Group>
+          <Text size="xl" fw={700} c="green">Rp {data.revenue.total.toLocaleString('id-ID')}</Text>
+          <Text size="xs" c="dimmed">Avg per Booking: Rp {data.revenue.average_per_booking.toLocaleString('id-ID')}</Text>
+        </Card>
+
+        <Card padding="sm" radius="md" withBorder>
+          <Group gap={8} mb={4}>
+            <IconBed size={16} color="blue" />
+            <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Occupancy</Text>
+          </Group>
+          <Group align="flex-end" gap={4}>
+            <Text size="xl" fw={700} c="blue">{data.occupancy.rate}%</Text>
+          </Group>
+          <Text size="xs" c="dimmed">{data.bookings.total} of {data.occupancy.capacity} capacity</Text>
+        </Card>
+      </SimpleGrid>
+
+      <Table>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Metrik</Table.Th>
+            <Table.Th ta="right">Nilai</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          <Table.Tr>
+            <Table.Td>Total Bookings</Table.Td>
+            <Table.Td ta="right" fw={600}>{data.bookings.total}</Table.Td>
+          </Table.Tr>
+          <Table.Tr>
+            <Table.Td>Paid Bookings</Table.Td>
+            <Table.Td ta="right" fw={600}>{data.bookings.paid}</Table.Td>
+          </Table.Tr>
+          <Table.Tr>
+            <Table.Td>Pending Bookings</Table.Td>
+            <Table.Td ta="right" fw={600}>{data.bookings.pending}</Table.Td>
+          </Table.Tr>
+          <Table.Tr>
+            <Table.Td>Available Rooms</Table.Td>
+            <Table.Td ta="right" fw={600}>{data.occupancy.rooms_available}</Table.Td>
+          </Table.Tr>
+        </Table.Tbody>
+      </Table>
+    </Card>
+  );
+}
+
+// Komponen untuk Guest Profile
+function GuestProfileCard({ data }: { data: any }) {
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="violet" variant="light" size="lg" radius="md">
+            <IconUser size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm">Profil Tamu</Text>
+            <Text size="xs" c="dimmed">{data.guest.name}</Text>
+          </div>
+        </Group>
+        <Badge color="violet" variant="light" tt="uppercase">{data.guest.tier}</Badge>
+      </Group>
+
+      <SimpleGrid cols={2} spacing="xs" mb="md">
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconMail size={14} color="gray" />
+            <Text size="xs" c="dimmed">Email</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.guest.email}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconPhone size={14} color="gray" />
+            <Text size="xs" c="dimmed">Telepon</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.guest.phone}</Text>
+        </Box>
+      </SimpleGrid>
+
+      <Divider my="md" label="Statistik" labelPosition="center" />
+
+      <SimpleGrid cols={3} spacing="xs" mb="md">
+        <Box ta="center">
+          <Text size="xl" fw={700} c="violet">{data.statistics.total_stays}</Text>
+          <Text size="xs" c="dimmed">Total Menginap</Text>
+        </Box>
+        <Box ta="center">
+          <Text size="xl" fw={700} c="teal">Rp {(data.statistics.total_spent / 1000000).toFixed(1)}jt</Text>
+          <Text size="xs" c="dimmed">Total Transaksi</Text>
+        </Box>
+        <Box ta="center">
+          <Text size="xs" fw={700} c="blue">{new Date(data.statistics.last_visit).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}</Text>
+          <Text size="xs" c="dimmed">Kunjungan Terakhir</Text>
+        </Box>
+      </SimpleGrid>
+
+      {data.guest.preferences !== "Tidak ada" && (
+        <>
+          <Divider my="md" />
+          <Box p="xs" bg="gray.0" style={{ borderRadius: 6 }}>
+            <Text size="xs" c="dimmed" mb={4}>Preferensi</Text>
+            <Text size="sm">{data.guest.preferences}</Text>
+          </Box>
+        </>
+      )}
+
+      {data.booking_history && data.booking_history.length > 0 && (
+        <>
+          <Divider my="md" label="Riwayat Menginap" labelPosition="center" />
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ fontSize: '12px' }}>Folio</Table.Th>
+                <Table.Th style={{ fontSize: '12px' }}>Tanggal</Table.Th>
+                <Table.Th style={{ fontSize: '12px' }}>Kamar</Table.Th>
+                <Table.Th ta="right" style={{ fontSize: '12px' }}>Total</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.booking_history.map((booking: any, idx: number) => (
+                <Table.Tr key={idx}>
+                  <Table.Td ff="monospace" style={{ fontSize: '12px' }}>#{booking.folio}</Table.Td>
+                  <Table.Td style={{ fontSize: '12px' }}>{new Date(booking.check_in).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</Table.Td>
+                  <Table.Td style={{ fontSize: '12px' }}>{booking.room_number}</Table.Td>
+                  <Table.Td ta="right" fw={500} style={{ fontSize: '12px' }}>Rp {(booking.amount / 1000).toFixed(0)}k</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// Komponen untuk Room Inspection
+function RoomInspectionCard({ data }: { data: any }) {
+  const getStatusColor = (status: string) => {
+    if (status === 'available') return 'teal';
+    if (status === 'occupied') return 'red';
+    return 'orange';
+  };
+
+  const getCleaningColor = (status: string) => {
+    if (status === 'clean') return 'teal';
+    if (status === 'dirty') return 'red';
+    return 'orange';
+  };
+
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="cyan" variant="light" size="lg" radius="md">
+            <IconBuildingStore size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="lg">Kamar {data.room_number}</Text>
+            <Text size="xs" c="dimmed">{data.room_type}</Text>
+          </div>
+        </Group>
+        <Group gap="xs">
+          <Badge color={getStatusColor(data.status)} tt="capitalize">{data.status}</Badge>
+          <Badge color={getCleaningColor(data.cleaning_status)} tt="capitalize">{data.cleaning_status}</Badge>
+        </Group>
+      </Group>
+
+      <SimpleGrid cols={2} spacing="md" mb="md">
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconHome size={14} color="gray" />
+            <Text size="xs" c="dimmed">Lokasi</Text>
+          </Group>
+          <Text size="sm" fw={500}>Lantai {data.floor} - {data.wing}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconCoin size={14} color="gray" />
+            <Text size="xs" c="dimmed">Harga/Malam</Text>
+          </Group>
+          <Text size="sm" fw={600}>Rp {data.price_per_night.toLocaleString('id-ID')}</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconUser size={14} color="gray" />
+            <Text size="xs" c="dimmed">Kapasitas</Text>
+          </Group>
+          <Text size="sm" fw={500}>{data.capacity} Orang</Text>
+        </Box>
+
+        <Box>
+          <Group gap={6} mb={4}>
+            <IconBrush size={14} color="gray" />
+            <Text size="xs" c="dimmed">Kondisi Furnitur</Text>
+          </Group>
+          <Badge size="sm" variant="light" tt="capitalize">{data.furniture_condition.replace('_', ' ')}</Badge>
+        </Box>
+      </SimpleGrid>
+
+      {data.special_notes !== "Tidak ada catatan" && (
+        <>
+          <Divider my="md" />
+          <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
+            <Text size="xs" fw={600} mb={4}>Catatan Khusus</Text>
+            <Text size="xs">{data.special_notes}</Text>
+          </Alert>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export function AICopilotWidget() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -60,7 +538,6 @@ export function AICopilotWidget() {
   const viewport = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll saat ada pesan baru
   useEffect(() => {
     if (viewport.current) {
       viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
@@ -103,6 +580,8 @@ export function AICopilotWidget() {
         type: 'ai',
         content: response.content || 'Maaf, saya tidak bisa memproses permintaan itu.',
         timestamp: new Date(),
+        data: response.data || null,
+        responseType: response.type || 'text'
       }]);
 
     } catch (e) {
@@ -124,9 +603,55 @@ export function AICopilotWidget() {
     }
   };
 
+  const renderMessageContent = (msg: ChatMessage) => {
+    // Render berdasarkan responseType
+    if (msg.responseType === 'confirmation' && msg.data) {
+      return <BookingConfirmationCard data={msg.data} />;
+    }
+    
+    if (msg.responseType === 'reservation_success' && msg.data) {
+      return <ReservationSuccessCard data={msg.data} />;
+    }
+    
+    if (msg.responseType === 'availability' && msg.data) {
+      return <AvailabilityCard data={msg.data} />;
+    }
+    
+    if (msg.responseType === 'analytics' && msg.data) {
+      return <AnalyticsCard data={msg.data} />;
+    }
+    
+    if (msg.responseType === 'guest_profile' && msg.data) {
+      return <GuestProfileCard data={msg.data} />;
+    }
+    
+    if (msg.responseType === 'room_inspection' && msg.data) {
+      return <RoomInspectionCard data={msg.data} />;
+    }
+
+    // Default text bubble untuk response type lainnya
+    return (
+      <Paper
+        p="xs"
+        radius="md"
+        shadow="xs"
+        withBorder={msg.type !== 'user'}
+        bg={
+          msg.type === 'user' ? 'teal' : 
+          msg.type === 'system' ? 'red.1' : 'white'
+        }
+        c={msg.type === 'user' ? 'white' : 'black'}
+      >
+        <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</Text>
+        <Text size="xs" c={msg.type === 'user' ? 'white' : 'dimmed'} mt={4} ta="right">
+          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </Paper>
+    );
+  };
+
   return (
     <>
-      {/* FLOATING BUTTON */}
       {!isWidgetOpen && (
         <Transition transition="slide-up" mounted={!isWidgetOpen}>
           {(styles) => (
@@ -153,7 +678,6 @@ export function AICopilotWidget() {
         </Transition>
       )}
 
-      {/* CHAT WINDOW */}
       <Transition transition="slide-up" mounted={isWidgetOpen}>
         {(styles) => (
           <Paper
@@ -165,8 +689,8 @@ export function AICopilotWidget() {
               position: 'fixed',
               bottom: isMaximized ? 0 : 30,
               right: isMaximized ? 0 : 30,
-              width: isMaximized ? '100vw' : 400,
-              height: isMaximized ? '100vh' : 600,
+              width: isMaximized ? '100vw' : 450,
+              height: isMaximized ? '100vh' : 650,
               zIndex: 200,
               display: 'flex',
               flexDirection: 'column',
@@ -203,7 +727,6 @@ export function AICopilotWidget() {
             <ScrollArea viewportRef={viewport} style={{ flex: 1, backgroundColor: '#f8f9fa' }} p="md">
               <Stack gap="md">
                 
-                {/* --- ZERO STATE (Menu Awal) --- */}
                 {chatHistory.length === 0 && (
                   <Box mt="xs">
                     <Box style={{ textAlign: 'center', opacity: 0.8, marginBottom: 20 }}>
@@ -216,16 +739,15 @@ export function AICopilotWidget() {
                       </Text>
                     </Box>
 
-                    {/* [UPDATE] Layout Stack (Vertical List) */}
                     <Stack gap={8}>
                       {QUICK_PROMPTS.map((prompt, index) => (
                         <Button
                           key={index}
-                          variant="default" // Ganti ke default agar lebih clean (putih/abu)
-                          size="md"         // Tetap md tapi contentnya kita kecilkan manual lewat styles
+                          variant="default"
+                          size="md"
                           radius="md"
                           fullWidth
-                          justify="space-between" // Icon kiri, text kiri, chevron kanan
+                          justify="space-between"
                           leftSection={
                             <ThemeIcon size="sm" color={prompt.color} variant="light" radius="sm">
                               {prompt.icon}
@@ -236,7 +758,7 @@ export function AICopilotWidget() {
                           styles={(theme) => ({
                             root: {
                               border: `1px solid ${theme.colors.gray[3]}`,
-                              height: 'auto', // Auto height agar padding enak
+                              height: 'auto',
                               paddingTop: 8,
                               paddingBottom: 8,
                               backgroundColor: 'white',
@@ -246,10 +768,10 @@ export function AICopilotWidget() {
                               }
                             },
                             inner: {
-                              justifyContent: 'flex-start' // Align content ke kiri
+                              justifyContent: 'flex-start'
                             },
                             section: {
-                              marginRight: 10 // Jarak icon ke text
+                              marginRight: 10
                             },
                             label: {
                               display: 'flex',
@@ -259,7 +781,6 @@ export function AICopilotWidget() {
                             }
                           })}
                         >
-                          {/* Konten Text dalam Tombol */}
                           <Text size="xs" fw={600} c="dark.9">
                             {prompt.label}
                           </Text>
@@ -272,31 +793,15 @@ export function AICopilotWidget() {
                   </Box>
                 )}
 
-                {/* --- CHAT BUBBLES --- */}
                 {chatHistory.map((msg, idx) => (
                   <Box
                     key={idx}
                     style={{
                       alignSelf: msg.type === 'user' ? 'flex-end' : 'flex-start',
-                      maxWidth: '85%'
+                      maxWidth: msg.type === 'user' ? '85%' : '100%'
                     }}
                   >
-                    <Paper
-                      p="xs"
-                      radius="md"
-                      shadow="xs"
-                      withBorder={msg.type !== 'user'}
-                      bg={
-                        msg.type === 'user' ? 'teal' : 
-                        msg.type === 'system' ? 'red.1' : 'white'
-                      }
-                      c={msg.type === 'user' ? 'white' : 'black'}
-                    >
-                      <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</Text>
-                      <Text size="xs" c={msg.type === 'user' ? 'white' : 'dimmed'} mt={4} ta="right">
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
-                    </Paper>
+                    {renderMessageContent(msg)}
                   </Box>
                 ))}
 

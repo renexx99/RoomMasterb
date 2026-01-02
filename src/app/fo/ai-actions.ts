@@ -25,7 +25,6 @@ function calculateNights(checkIn: string, checkOut: string): number {
 }
 
 // --- HELPER INTERNAL: Cari Kamar Kosong Terbaik ---
-// Fungsi ini digunakan oleh tool konfirmasi dan tool booking untuk memastikan konsistensi
 async function findAvailableRoomInternal(supabase: any, hotelId: string, checkIn: string, checkOut: string, roomTypeName?: string) {
   const { data: occupied } = await supabase
     .from('reservations')
@@ -57,15 +56,11 @@ async function findAvailableRoomInternal(supabase: any, hotelId: string, checkIn
     query = query.ilike('room_type.name', `%${roomTypeName}%`);
   }
 
-  // Ambil beberapa opsi untuk dipilih (prioritas 'clean')
   const { data: rooms, error } = await query.limit(5);
   
   if (error || !rooms || rooms.length === 0) return null;
 
-  // Prioritaskan kamar yang sudah bersih (clean)
   const cleanRoom = rooms.find((r: any) => r.cleaning_status === 'clean');
-  
-  // Jika ada yang clean, return itu. Jika tidak, return kamar available pertama (meskipun dirty, nanti bisa dibersihkan)
   return cleanRoom || rooms[0];
 }
 
@@ -86,30 +81,34 @@ async function confirmBookingDetailsTool(args: any) {
     const { data: roleData } = await supabase.from('user_roles').select('hotel_id').eq('user_id', session.user.id).maybeSingle();
     const hotelId = roleData?.hotel_id;
 
-    // Cek ketersediaan kamar secara internal
     const room = await findAvailableRoomInternal(supabase, hotelId, check_in, check_out, room_type_name);
 
     if (!room) {
-        return { message: `Mohon maaf, tidak ada kamar tipe '${room_type_name}' yang tersedia pada tanggal ${check_in} s.d ${check_out}.` };
+        return { 
+            type: 'error',
+            message: `Tidak ada kamar tipe '${room_type_name}' yang tersedia pada tanggal ${check_in} hingga ${check_out}.`
+        };
     }
 
     const nights = calculateNights(check_in, check_out);
     const totalPrice = nights * room.room_type.price_per_night;
 
-    // Format mata uang
-    const formattedPrice = totalPrice.toLocaleString('id-ID');
-
     return {
         success: true,
-        message: `📋 **KONFIRMASI PEMESANAN**
-        \nMohon cek kembali detail berikut sebelum diproses:
-        \n👤 **Tamu:** ${guest_name}
-        📧 **Email:** ${user_email && user_email !== '-' ? user_email : '(Kosong)'}
-        📱 **HP:** ${phone_number && phone_number !== '-' ? phone_number : '(Kosong)'}
-        🛏️ **Kamar:** ${room.room_type.name} (Unit: ${room.room_number})
-        📅 **Tanggal:** ${check_in} s/d ${check_out} (${nights} Malam)
-        💰 **Total:** Rp ${formattedPrice}
-        \nApakah data ini sudah benar? Ketik **"Ya"** untuk memproses booking.`
+        type: 'confirmation',
+        data: {
+            guest_name,
+            email: user_email && user_email !== '-' ? user_email : 'Tidak ada',
+            phone: phone_number && phone_number !== '-' ? phone_number : 'Tidak ada',
+            room_type: room.room_type.name,
+            room_number: room.room_number,
+            check_in,
+            check_out,
+            nights,
+            price_per_night: room.room_type.price_per_night,
+            total_price: totalPrice,
+            cleaning_status: room.cleaning_status
+        }
     };
 }
 
@@ -124,19 +123,18 @@ async function createReservationTool(args: any) {
   const { data: roleData } = await supabase.from('user_roles').select('hotel_id').eq('user_id', session?.user.id).maybeSingle();
   const hotelId = roleData?.hotel_id;
 
-  // 1. Re-Check Availability (Mencegah race condition)
   const selectedRoom = await findAvailableRoomInternal(supabase, hotelId, check_in, check_out, room_type_name);
-  if (!selectedRoom) return { error: `Gagal: Kamar tipe ${room_type_name} baru saja diambil tamu lain.` };
+  if (!selectedRoom) return { 
+    type: 'error',
+    message: `Kamar tipe ${room_type_name} baru saja diambil tamu lain.` 
+  };
 
-  // 2. Hitung Harga Final
   const nights = calculateNights(check_in, check_out);
   const totalPrice = nights * (selectedRoom as any).room_type.price_per_night;
 
-  // 3. Handle Data Tamu (Cari Existing atau Buat Baru)
   let guestId = '';
   let queryGuest = supabase.from('guests').select('id').eq('hotel_id', hotelId);
   
-  // Logika pencarian tamu: Prioritas Email -> Prioritas Nama + No HP
   if (user_email && user_email !== '-' && user_email.includes('@')) {
       queryGuest = queryGuest.eq('email', user_email);
   } else {
@@ -151,7 +149,6 @@ async function createReservationTool(args: any) {
   if (existingGuest) {
     guestId = existingGuest.id;
   } else {
-    // Buat tamu baru
     const { data: newGuest, error: guestError } = await supabase
       .from('guests')
       .insert({
@@ -159,17 +156,16 @@ async function createReservationTool(args: any) {
         full_name: guest_name,
         email: (user_email && user_email.includes('@')) ? user_email : `guest-${Date.now()}@temp.com`,
         phone_number: (phone_number && phone_number.length > 5) ? phone_number : null,
-        title: 'Mr.', // [FIX] Menggunakan title umum yang aman
-        loyalty_tier: 'bronze' // [FIX] Menggunakan lowercase 'bronze' sesuai enum DB
+        title: 'Mr.',
+        loyalty_tier: 'bronze'
       })
       .select('id')
       .single();
     
-    if (guestError) return { error: "Gagal membuat profil tamu: " + guestError.message };
+    if (guestError) return { type: 'error', message: "Gagal membuat profil tamu: " + guestError.message };
     guestId = newGuest.id;
   }
 
-  // 4. Simpan Reservasi
   const { data: reservation, error: resError } = await supabase
     .from('reservations')
     .insert({
@@ -185,15 +181,24 @@ async function createReservationTool(args: any) {
     .select()
     .single();
 
-  if (resError) return { error: "Gagal menyimpan reservasi: " + resError.message };
+  if (resError) return { type: 'error', message: "Gagal menyimpan reservasi: " + resError.message };
 
   return { 
-    success: true, 
-    message: `✅ **RESERVASI BERHASIL!**
-    \n**No. Booking:** #${reservation.id.substring(0,8).toUpperCase()}
-    **Kamar:** ${selectedRoom.room_number} (${selectedRoom.cleaning_status})
-    **Tamu:** ${guest_name}
-    \nSilakan lanjutkan ke proses pembayaran atau check-in.` 
+    success: true,
+    type: 'reservation_success',
+    data: {
+      reservation_id: reservation.id,
+      folio_number: reservation.id.substring(0, 8).toUpperCase(),
+      guest_name,
+      room_number: selectedRoom.room_number,
+      room_type: selectedRoom.room_type.name,
+      check_in,
+      check_out,
+      nights,
+      total_price: totalPrice,
+      payment_status: 'pending',
+      cleaning_status: selectedRoom.cleaning_status
+    }
   };
 }
 
@@ -208,15 +213,26 @@ async function checkAvailabilityTool(args: any) {
 
   const room = await findAvailableRoomInternal(supabase, hotelId, check_in, check_out, room_type_name);
 
-  if (!room) return { message: "Maaf, tidak ada kamar kosong sesuai kriteria tersebut pada tanggal yang diminta." };
+  if (!room) return { 
+    type: 'info',
+    message: "Tidak ada kamar kosong sesuai kriteria pada tanggal yang diminta." 
+  };
+
+  const nights = calculateNights(check_in, check_out);
 
   return { 
-    success: true, 
-    message: `ℹ️ **Info Ketersediaan**
-    \nDitemukan: Kamar ${room.room_number} (${room.room_type.name})
-    Harga: Rp ${room.room_type.price_per_night.toLocaleString('id-ID')}/malam
-    Status: ${room.cleaning_status === 'clean' ? '✅ Siap Huni' : '⚠️ Perlu Dibersihkan'}
-    \nKetik "Book kamar ini" jika ingin membuat reservasi.` 
+    success: true,
+    type: 'availability',
+    data: {
+      room_number: room.room_number,
+      room_type: room.room_type.name,
+      price_per_night: room.room_type.price_per_night,
+      cleaning_status: room.cleaning_status,
+      check_in,
+      check_out,
+      nights,
+      total_estimate: nights * room.room_type.price_per_night
+    }
   };
 }
 
@@ -229,27 +245,28 @@ async function analyticsReporterTool(args: any) {
   const { data: roleData } = await supabase.from('user_roles').select('hotel_id').eq('user_id', session?.user.id).maybeSingle();
   const hotelId = roleData?.hotel_id;
 
-  // 1. Hitung Total Kamar
   const { count: totalRooms } = await supabase
     .from('rooms')
     .select('*', { count: 'exact', head: true })
     .eq('hotel_id', hotelId);
 
-  // 2. Tarik Data Reservasi
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('total_price')
+    .select('total_price, payment_status, check_in_date')
     .eq('hotel_id', hotelId)
     .neq('payment_status', 'cancelled')
     .gte('check_in_date', start_date)
     .lte('check_in_date', end_date);
 
-  if (!reservations || reservations.length === 0) return { message: "Belum ada data reservasi pada periode ini." };
+  if (!reservations || reservations.length === 0) return { 
+    type: 'info',
+    message: "Belum ada data reservasi pada periode ini." 
+  };
 
   const totalRevenue = reservations.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0);
   const totalBookings = reservations.length;
+  const paidBookings = reservations.filter(r => r.payment_status === 'paid').length;
   
-  // Kalkulasi Okupansi Sederhana
   const start = new Date(start_date);
   const end = new Date(end_date);
   const daysDiff = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
@@ -258,10 +275,28 @@ async function analyticsReporterTool(args: any) {
 
   return {
     success: true,
-    message: `📊 **Laporan Kinerja (${start_date} s/d ${end_date})**
-    \n💰 **Pendapatan:** Rp ${totalRevenue.toLocaleString('id-ID')}
-    📈 **Okupansi:** ${occupancyRate}%
-    🔖 **Total Booking:** ${totalBookings} reservasi`
+    type: 'analytics',
+    data: {
+      period: {
+        start: start_date,
+        end: end_date,
+        days: daysDiff
+      },
+      revenue: {
+        total: totalRevenue,
+        average_per_booking: Math.round(totalRevenue / totalBookings)
+      },
+      bookings: {
+        total: totalBookings,
+        paid: paidBookings,
+        pending: totalBookings - paidBookings
+      },
+      occupancy: {
+        rate: occupancyRate,
+        rooms_available: totalRooms || 0,
+        capacity: capacity
+      }
+    }
   };
 }
 
@@ -274,7 +309,6 @@ async function guestProfilerTool(args: any) {
   const { data: roleData } = await supabase.from('user_roles').select('hotel_id').eq('user_id', session?.user.id).maybeSingle();
   const hotelId = roleData?.hotel_id;
 
-  // 1. Cari ID Tamu berdasarkan Nama atau Email
   const { data: guests } = await supabase
     .from('guests')
     .select('*')
@@ -283,19 +317,22 @@ async function guestProfilerTool(args: any) {
     .limit(1);
 
   if (!guests || guests.length === 0) {
-    return { message: `Tamu dengan identitas "${guest_identifier}" belum ditemukan di database.` };
+    return { 
+      type: 'info',
+      message: `Tamu dengan identitas "${guest_identifier}" belum ditemukan di database.` 
+    };
   }
 
   const g = guests[0];
 
-  // 2. HITUNG MANUAL DARI TABLE RESERVATIONS
-  // Mengambil history dan melakukan join bertingkat ke rooms -> room_types
   const { data: history } = await supabase
     .from('reservations')
     .select(`
+      id,
       total_price, 
-      check_in_date, 
-      room_id,
+      check_in_date,
+      check_out_date,
+      payment_status,
       rooms (
         room_number, 
         room_types (name)
@@ -304,118 +341,114 @@ async function guestProfilerTool(args: any) {
     .eq('guest_id', g.id)
     .eq('hotel_id', hotelId)
     .neq('payment_status', 'cancelled')
-    .order('check_in_date', { ascending: false });
+    .order('check_in_date', { ascending: false })
+    .limit(5);
 
-  // Hitung statistik
   const calculatedStays = history?.length || 0;
   const calculatedSpend = history?.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0) || 0;
 
-  // 3. AMBIL DATA KUNJUNGAN TERAKHIR (SAFE ACCESS)
-  const lastVisit = history && history.length > 0 ? history[0] : null;
-  let lastRoomInfo = '-';
-  let lastDate = '-';
+  const bookingHistory = history?.map((h: any) => {
+    const roomData = Array.isArray(h.rooms) ? h.rooms[0] : h.rooms;
+    const typeData = roomData?.room_types ? (Array.isArray(roomData.room_types) ? roomData.room_types[0] : roomData.room_types) : null;
+    
+    return {
+      folio: h.id.substring(0, 8).toUpperCase(),
+      check_in: h.check_in_date,
+      check_out: h.check_out_date,
+      room_type: typeData?.name || 'Unknown',
+      room_number: roomData?.room_number || '?',
+      amount: h.total_price,
+      status: h.payment_status
+    };
+  }) || [];
 
-  if (lastVisit) {
-      lastDate = lastVisit.check_in_date;
-
-      // Handle akses data: Supabase bisa mengembalikan object atau array of object untuk relasi
-      // Kita gunakan 'any' untuk casting sementara agar TypeScript tidak error saat akses properti
-      const roomRaw = (lastVisit as any).rooms;
-      
-      // Cek apakah rooms berupa array atau object tunggal
-      const roomData = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
-
-      if (roomData) {
-          const typeRaw = roomData.room_types;
-          // Cek apakah room_types berupa array atau object tunggal
-          const typeData = Array.isArray(typeRaw) ? typeRaw[0] : typeRaw;
-          
-          const rName = typeData?.name || 'Unknown Type';
-          const rNo = roomData.room_number || '?';
-          
-          lastRoomInfo = `${rName} (No. ${rNo})`;
-      }
-  }
-
-  // Format Preferensi
-  let preferencesDisplay = "-";
-  if (g.preferences) {
-    if (typeof g.preferences === 'object' && Object.keys(g.preferences).length > 0) {
-        preferencesDisplay = Object.entries(g.preferences)
-            .map(([key, val]) => `${key}: ${val}`)
-            .join(', ');
-    } else if (typeof g.preferences === 'string') {
-        preferencesDisplay = g.preferences;
-    }
+  let preferencesDisplay = "Tidak ada";
+  if (g.preferences && typeof g.preferences === 'object' && Object.keys(g.preferences).length > 0) {
+    preferencesDisplay = Object.entries(g.preferences)
+      .map(([key, val]) => `${key}: ${val}`)
+      .join(', ');
   }
 
   return {
     success: true,
-    message: `👤 **Profil Tamu & History**
-    \n**Identitas:**
-    • Nama: ${g.title || ''} ${g.full_name}
-    • Tier: ${g.loyalty_tier ? g.loyalty_tier.toUpperCase() : 'BRONZE'}
-    • Kontak: ${g.email} | ${g.phone_number || '-'}
-    \n📊 **Riwayat Menginap (Real-time):**
-    • Total Kunjungan: ${calculatedStays} kali
-    • Total Transaksi: Rp ${calculatedSpend.toLocaleString('id-ID')}
-    • Kunjungan Terakhir: ${lastDate}
-    • Kamar Terakhir: ${lastRoomInfo}
-    \n✨ **Preferensi & Catatan:**
-    ${preferencesDisplay}`
+    type: 'guest_profile',
+    data: {
+      guest: {
+        name: `${g.title || ''} ${g.full_name}`.trim(),
+        email: g.email,
+        phone: g.phone_number || 'Tidak ada',
+        tier: g.loyalty_tier || 'bronze',
+        preferences: preferencesDisplay
+      },
+      statistics: {
+        total_stays: calculatedStays,
+        total_spent: calculatedSpend,
+        last_visit: bookingHistory[0]?.check_in || 'Belum pernah menginap'
+      },
+      booking_history: bookingHistory
+    }
   };
 }
 
-// --- TOOL 6: ROOM INSPECTOR (Cek Status Detail Kamar - FIXED) ---
+// --- TOOL 6: ROOM INSPECTOR (Cek Status Detail Kamar) ---
 async function roomInspectorTool(args: any) {
     const supabase = await getSupabase();
-    // 1. Bersihkan input user (hapus spasi depan/belakang)
     const rawInput = String(args.room_number || '').trim();
   
     const { data: { session } } = await supabase.auth.getSession();
     const { data: roleData } = await supabase.from('user_roles').select('hotel_id').eq('user_id', session?.user.id).maybeSingle();
     const hotelId = roleData?.hotel_id;
 
-    if (!hotelId) return { message: "Gagal: User tidak terhubung dengan Hotel ID." };
+    if (!hotelId) return { type: 'error', message: "User tidak terhubung dengan Hotel ID." };
 
-    // 2. Query dengan Wildcard & Perbaikan Nama Relasi
     const { data: rooms, error } = await supabase
         .from('rooms')
-        // [FIX] Gunakan 'room_types' (nama tabel asli) dan alias 'room_type' biar properti di bawah tidak error
         .select(`
             *, 
-            room_type:room_types(name)
+            room_type:room_types(name, price_per_night, capacity)
         `)
         .eq('hotel_id', hotelId)
-        // [FIX] Gunakan wildcards (%) agar "101A" bisa match dengan "Room 101A" atau "101A "
         .ilike('room_number', `%${rawInput}%`)
-        .limit(1); // Ambil 1 saja
+        .limit(1);
 
     if (error) {
         console.error("❌ Error Room Inspector:", error);
-        return { message: "Terjadi kesalahan saat mencari data kamar." };
+        return { type: 'error', message: "Terjadi kesalahan saat mencari data kamar." };
     }
 
     const room = rooms && rooms.length > 0 ? rooms[0] : null;
 
     if (!room) {
-        return { message: `Kamar dengan nomor yang mengandung "${rawInput}" tidak ditemukan.` };
+        return { 
+          type: 'info',
+          message: `Kamar dengan nomor yang mengandung "${rawInput}" tidak ditemukan.` 
+        };
     }
 
-    // [FIX] Handling aman jika room_type null (misal relasi putus)
     // @ts-ignore
     const typeName = room.room_type?.name || 'Tipe Tidak Diketahui';
+    // @ts-ignore
+    const capacity = room.room_type?.capacity || '-';
+    // @ts-ignore
+    const price = room.room_type?.price_per_night || 0;
 
     return { 
-        success: true, 
-        message: `🏠 **Inspeksi Kamar ${room.room_number}**
-        \nTipe: ${typeName}
-        Status: ${room.status.toUpperCase()}
-        Kebersihan: ${room.cleaning_status.toUpperCase()}
-        Catatan: ${room.special_notes || '-'}` 
+        success: true,
+        type: 'room_inspection',
+        data: {
+          room_number: room.room_number,
+          room_type: typeName,
+          status: room.status,
+          cleaning_status: room.cleaning_status,
+          floor: room.floor_number || '-',
+          wing: room.wing || '-',
+          capacity: capacity,
+          price_per_night: price,
+          furniture_condition: room.furniture_condition || '-',
+          special_notes: room.special_notes || 'Tidak ada catatan'
+        }
     };
 }
-
 
 // ============================================================================
 // 🧠 MAIN AI HANDLER
@@ -430,16 +463,16 @@ export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) 
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    // SYSTEM PROMPT: Menginstruksikan AI agar pintar mengekstrak data
     const systemMessage: OpenAIMessage = { 
         role: "system", 
         content: `Kamu adalah 'RoomMaster AI', asisten Front Office Hotel yang efisien. Hari ini: ${today}.
         
         INSTRUKSI PENTING:
-        1. **Smart Booking:** Jika user memberikan perintah booking lengkap (contoh: "Book Deluxe untuk Budi b@gmail.com 08123 besok"), JANGAN tanya satu-satu. Langsung ekstrak semua data (Nama, Email, HP, Tanggal, Tipe) dan panggil tool 'confirm_booking_details'.
-        2. **Validasi:** Selalu panggil 'confirm_booking_details' dulu sebelum 'create_reservation'. Jangan langsung create tanpa konfirmasi user.
-        3. **Eksekusi:** Jika user sudah menjawab "Ya/Oke/Benar" pada konfirmasi, BARU panggil 'create_reservation'.
-        4. **Data Kurang:** Jika user tidak memberi Email/HP, isi dengan '-' (dash) di parameter tool, jangan paksa user input kecuali krusial.`
+        1. Smart Booking: Jika user memberikan perintah booking lengkap, langsung ekstrak semua data dan panggil tool 'confirm_booking_details'.
+        2. Validasi: Selalu panggil 'confirm_booking_details' dulu sebelum 'create_reservation'.
+        3. Eksekusi: Jika user sudah konfirmasi "Ya/Oke/Benar", BARU panggil 'create_reservation'.
+        4. Data Kurang: Jika user tidak memberi Email/HP, isi dengan '-' di parameter tool.
+        5. Output: Tool akan mengembalikan data terstruktur. Jangan tambahkan emoji atau formatting berlebihan.`
     };
 
     const tools = [
@@ -578,19 +611,35 @@ export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) 
           actionResult = await roomInspectorTool(args);
           break;
         default:
-          actionResult = { error: "Fungsi tidak dikenal." };
+          actionResult = { type: 'error', message: "Fungsi tidak dikenal." };
       }
 
       if ('error' in actionResult && actionResult.error) {
-           return { role: 'assistant', content: `Error: ${actionResult.error}` };
+           return { role: 'assistant', content: actionResult.error, data: null, type: 'error' };
       }
-      return { role: 'assistant', content: actionResult?.message || "Selesai." };
+      
+      return { 
+        role: 'assistant', 
+        content: actionResult?.message || "Selesai.",
+        data: actionResult?.data || null,
+        type: actionResult?.type || 'text'
+      };
     }
 
-    return { role: 'assistant', content: responseMessage.content || "Maaf, saya tidak mengerti." };
+    return { 
+      role: 'assistant', 
+      content: responseMessage.content || "Maaf, saya tidak mengerti.",
+      data: null,
+      type: 'text'
+    };
 
   } catch (error) {
     console.error("AI Error:", error);
-    return { role: 'assistant', content: "Maaf, sistem AI sedang gangguan. Coba lagi nanti." };
+    return { 
+      role: 'assistant', 
+      content: "Maaf, sistem AI sedang gangguan. Coba lagi nanti.",
+      data: null,
+      type: 'error'
+    };
   }
 }
