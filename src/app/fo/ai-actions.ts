@@ -90,7 +90,7 @@ async function confirmBookingDetailsTool(args: any) {
     const room = await findAvailableRoomInternal(supabase, hotelId, check_in, check_out, room_type_name);
 
     if (!room) {
-        return { message: `❌ Mohon maaf, tidak ada kamar tipe '${room_type_name}' yang tersedia pada tanggal ${check_in} s.d ${check_out}.` };
+        return { message: `Mohon maaf, tidak ada kamar tipe '${room_type_name}' yang tersedia pada tanggal ${check_in} s.d ${check_out}.` };
     }
 
     const nights = calculateNights(check_in, check_out);
