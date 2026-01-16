@@ -14,7 +14,7 @@ import {
   IconUser, IconMail, IconPhone, IconCalendar, IconCoin, IconHome,
   IconBuildingStore, IconBrush, IconTrendingUp, IconReceipt
 } from '@tabler/icons-react';
-import { chatWithAI } from '../../ai-actions';
+import { chatWithAI } from '@/app/fo/ai-agent/actions';
 
 interface ChatMessage {
   type: 'ai' | 'user' | 'system';

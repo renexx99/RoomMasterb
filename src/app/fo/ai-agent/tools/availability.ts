@@ -1,6 +1,7 @@
 import { getSupabase, calculateNights, findAvailableRoomInternal } from '../utils';
+import { ToolExecutionResult } from '../types';
 
-export async function checkAvailabilityTool(args: any) {
+export async function checkAvailabilityTool(args: any): Promise<ToolExecutionResult> {
   const supabase = await getSupabase();
   const { check_in, check_out, room_type_name } = args;
   
@@ -33,7 +34,7 @@ export async function checkAvailabilityTool(args: any) {
   };
 }
 
-export async function roomInspectorTool(args: any) {
+export async function roomInspectorTool(args: any): Promise<ToolExecutionResult> {
     const supabase = await getSupabase();
     const rawInput = String(args.room_number || '').trim();
   

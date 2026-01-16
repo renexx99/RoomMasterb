@@ -1,6 +1,7 @@
 import { getSupabase } from '../utils';
+import { ToolExecutionResult } from '../types';
 
-export async function analyticsReporterTool(args: any) {
+export async function analyticsReporterTool(args: any): Promise<ToolExecutionResult> {
   const supabase = await getSupabase();
   const { start_date, end_date } = args;
   

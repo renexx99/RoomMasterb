@@ -1,13 +1,14 @@
 import { getSupabase, calculateNights, findAvailableRoomInternal } from '../utils';
+import { ToolExecutionResult } from '../types';
 
-export async function confirmBookingDetailsTool(args: any) {
+export async function confirmBookingDetailsTool(args: any): Promise<ToolExecutionResult> {
     const supabase = await getSupabase();
     const { guest_name, user_email, phone_number, room_type_name, check_in, check_out } = args;
 
     console.log("🤖 AI Konfirmasi Booking:", args);
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return { error: "User tidak login." };
+    if (!session) return { type: 'error', message: "User tidak login." };
 
     const { data: roleData } = await supabase.from('user_roles').select('hotel_id').eq('user_id', session.user.id).maybeSingle();
     const hotelId = roleData?.hotel_id;
@@ -43,7 +44,7 @@ export async function confirmBookingDetailsTool(args: any) {
     };
 }
 
-export async function createReservationTool(args: any) {
+export async function createReservationTool(args: any): Promise<ToolExecutionResult> {
   const supabase = await getSupabase();
   const { guest_name, user_email, phone_number, room_type_name, check_in, check_out, payment_method } = args;
 

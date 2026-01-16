@@ -1,6 +1,7 @@
 import { getSupabase } from '../utils';
+import { ToolExecutionResult } from '../types';
 
-export async function guestProfilerTool(args: any) {
+export async function guestProfilerTool(args: any): Promise<ToolExecutionResult> {
   const supabase = await getSupabase();
   const { guest_identifier } = args;
 
