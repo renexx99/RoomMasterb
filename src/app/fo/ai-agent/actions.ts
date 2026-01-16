@@ -12,22 +12,21 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// (HAPUS interface OpenAIMessage lokal yang sebelumnya ada disini)
-
 export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) {
   try {
     const today = new Date().toISOString().split('T')[0];
     
+    // PERBAIKAN: Instruksi lebih spesifik untuk membedakan fase Draft vs Eksekusi
     const systemMessage: OpenAIMessage = { 
         role: "system", 
-        content: `Kamu adalah 'RoomMaster AI', asisten Front Office Hotel yang efisien. Hari ini: ${today}.
+        content: `Kamu adalah 'RoomMaster AI', asisten Front Office Hotel. Hari ini: ${today}.
         
-        INSTRUKSI PENTING:
-        1. Smart Booking: Jika user memberikan perintah booking lengkap, langsung ekstrak semua data dan panggil tool 'confirm_booking_details'.
-        2. Validasi: Selalu panggil 'confirm_booking_details' dulu sebelum 'create_reservation'.
-        3. Eksekusi: Jika user sudah konfirmasi "Ya/Oke/Benar", BARU panggil 'create_reservation'.
-        4. Data Kurang: Jika user tidak memberi Email/HP, isi dengan '-' di parameter tool.
-        5. Output: Tool akan mengembalikan data terstruktur. Jangan tambahkan emoji atau formatting berlebihan.`
+        SOP RESERVASI (PENTING):
+        1. FASE DRAFT: Jika user baru meminta booking atau bertanya ketersediaan, panggil 'confirm_booking_details'.
+        2. FASE EKSEKUSI: Jika user berkata "Konfirmasi", "Lanjut", "Buat", atau "Benar" DAN data (Nama, Kamar, Tanggal) sudah ada di chat sebelumnya, JANGAN panggil 'confirm_booking_details' lagi. LANGSUNG panggil 'create_reservation'.
+        3. DATA: Jika user tidak memberi Email/HP, isi parameter dengan '-'.
+        
+        Ingat: Jangan looping di fase draft. Jika user sudah setuju, segera buat reservasi.`
     };
 
     const messages = [
@@ -50,7 +49,6 @@ export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) 
       const args = JSON.parse((toolCall as any).function.arguments);
       const functionName = (toolCall as any).function.name;
 
-      // Gunakan tipe ToolExecutionResult agar autocomplete jalan
       let actionResult: ToolExecutionResult | undefined;
 
       switch (functionName) {
@@ -87,7 +85,7 @@ export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) 
       
       return { 
         role: 'assistant', 
-        content: actionResult?.message || "Selesai.",
+        content: actionResult?.message || "Permintaan diproses.",
         data: actionResult?.data || null,
         type: actionResult?.type || 'text'
       };

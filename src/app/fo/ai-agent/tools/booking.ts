@@ -28,6 +28,8 @@ export async function confirmBookingDetailsTool(args: any): Promise<ToolExecutio
     return {
         success: true,
         type: 'confirmation',
+        // PERBAIKAN: Menambahkan 'message' agar tersimpan di history chat AI sebagai konteks
+        message: `Saya telah membuat draft booking untuk ${guest_name} di kamar ${room.room_type.name}. Silakan konfirmasi untuk melanjutkan finalisasi reservasi.`,
         data: {
             guest_name,
             email: user_email && user_email !== '-' ? user_email : 'Tidak ada',
@@ -117,6 +119,7 @@ export async function createReservationTool(args: any): Promise<ToolExecutionRes
   return { 
     success: true,
     type: 'reservation_success',
+    message: `Reservasi berhasil dibuat dengan nomor folio ${reservation.id.substring(0, 8).toUpperCase()}.`,
     data: {
       reservation_id: reservation.id,
       folio_number: reservation.id.substring(0, 8).toUpperCase(),

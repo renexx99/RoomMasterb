@@ -629,7 +629,16 @@ export function AICopilotWidget() {
   };
 
   const handleConfirmAction = (data: any) => {
-    const confirmPrompt = `Ya, konfirmasi booking untuk ${data.guest_name}, kamar ${data.room_type}, check-in ${data.check_in}. Lanjutkan!`;
+    const confirmPrompt = `Konfirmasi valid. Segera eksekusi reservasi (create_reservation) untuk:
+    - Nama: ${data.guest_name}
+    - Email: ${data.email}
+    - HP: ${data.phone}
+    - Tipe Kamar: ${data.room_type}
+    - Check-in: ${data.check_in}
+    - Check-out: ${data.check_out}
+    
+    Semua data sudah benar. Proses sekarang!`;
+    
     handleSendMessage(confirmPrompt);
   };
 
