@@ -7,6 +7,7 @@ import {
   Box, Textarea, Tooltip, Transition, Loader, Button, Table, Card, 
   Divider, SimpleGrid, Alert, RingProgress, Center
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import {
   IconSparkles, IconMaximize, IconMinimize, IconX, IconSend, IconRobot, 
   IconUserSearch, IconChartBar, IconBed, IconBulb, IconChevronRight,
@@ -15,6 +16,7 @@ import {
   IconBuildingStore, IconBrush, IconTrendingUp, IconReceipt
 } from '@tabler/icons-react';
 import { chatWithAI } from '@/app/fo/ai-agent/actions';
+import { ReservationInvoiceModal } from '../../reservations/components/ReservationInvoiceModal';
 
 interface ChatMessage {
   type: 'ai' | 'user' | 'system';
@@ -63,7 +65,7 @@ interface BookingCardProps {
   isLatest: boolean;
 }
 
-// Komponen untuk menampilkan Konfirmasi Booking (Diperbarui dengan Tombol)
+// Komponen untuk menampilkan Konfirmasi Booking
 function BookingConfirmationCard({ data, onConfirm, onCancel, isLoading, isLatest }: BookingCardProps) {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -181,81 +183,109 @@ function BookingConfirmationCard({ data, onConfirm, onCancel, isLoading, isLates
   );
 }
 
-// Komponen untuk Reservasi Berhasil
+// Komponen untuk Reservasi Berhasil (Updated dengan Modal Invoice)
 function ReservationSuccessCard({ data }: { data: any }) {
-  const handlePrintInvoice = () => {
-    // Redirect ke halaman invoice atau trigger print
-    window.open(`/fo/reservations/${data.reservation_id}/invoice`, '_blank');
+  const [invoiceOpened, { open: openInvoice, close: closeInvoice }] = useDisclosure(false);
+
+  // Mapping data dari AI ke struktur yang diharapkan Modal Invoice
+  const mockReservationDataForModal = {
+    id: data.reservation_id,
+    folio_number: data.folio_number,
+    check_in_date: data.check_in,
+    check_out_date: data.check_out,
+    total_price: data.total_price,
+    status: 'confirmed',
+    payment_status: data.payment_status || 'pending',
+    guest: {
+        full_name: data.guest_name,
+        email: data.email || '-',
+        phone_number: data.phone || '-'
+    },
+    room: {
+        room_number: data.room_number,
+        room_type: {
+            name: data.room_type,
+            price_per_night: data.total_price / (data.nights || 1)
+        }
+    }
   };
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder style={{ borderColor: '#12b886' }}>
-      <Group justify="space-between" mb="md">
-        <Group gap="xs">
-          <ThemeIcon color="teal" variant="light" size="lg" radius="md">
-            <IconCheck size={20} />
-          </ThemeIcon>
-          <div>
-            <Text fw={700} size="sm" c="teal">Reservasi Berhasil!</Text>
-            <Text size="xs" c="dimmed">Booking telah disimpan ke sistem</Text>
-          </div>
+    <>
+      <Card shadow="sm" padding="lg" radius="md" withBorder style={{ borderColor: '#12b886' }}>
+        <Group justify="space-between" mb="md">
+          <Group gap="xs">
+            <ThemeIcon color="teal" variant="light" size="lg" radius="md">
+              <IconCheck size={20} />
+            </ThemeIcon>
+            <div>
+              <Text fw={700} size="sm" c="teal">Reservasi Berhasil!</Text>
+              <Text size="xs" c="dimmed">Booking telah disimpan ke sistem</Text>
+            </div>
+          </Group>
+          <Badge color="teal" variant="filled">Sukses</Badge>
         </Group>
-        <Badge color="teal" variant="filled">Sukses</Badge>
-      </Group>
 
-      <Divider mb="md" />
+        <Divider mb="md" />
 
-      <Box mb="md">
-        <Text size="xs" c="dimmed" mb={4}>Nomor Booking</Text>
-        <Text size="xl" fw={700} ff="monospace" c="teal">#{data.folio_number}</Text>
-      </Box>
-
-      <SimpleGrid cols={2} spacing="xs" mb="md">
-        <Box>
-          <Group gap={6} mb={4}>
-            <IconUser size={14} color="gray" />
-            <Text size="xs" c="dimmed">Tamu</Text>
-          </Group>
-          <Text size="sm" fw={500}>{data.guest_name}</Text>
+        <Box mb="md">
+          <Text size="xs" c="dimmed" mb={4}>Nomor Booking</Text>
+          <Text size="xl" fw={700} ff="monospace" c="teal">#{data.folio_number}</Text>
         </Box>
 
-        <Box>
-          <Group gap={6} mb={4}>
-            <IconHome size={14} color="gray" />
-            <Text size="xs" c="dimmed">Kamar</Text>
-          </Group>
-          <Text size="sm" fw={500}>{data.room_number} ({data.room_type})</Text>
-        </Box>
+        <SimpleGrid cols={2} spacing="xs" mb="md">
+          <Box>
+            <Group gap={6} mb={4}>
+              <IconUser size={14} color="gray" />
+              <Text size="xs" c="dimmed">Tamu</Text>
+            </Group>
+            <Text size="sm" fw={500}>{data.guest_name}</Text>
+          </Box>
 
-        <Box>
-          <Group gap={6} mb={4}>
-            <IconCalendar size={14} color="gray" />
-            <Text size="xs" c="dimmed">Periode</Text>
-          </Group>
-          <Text size="sm" fw={500}>
-            {new Date(data.check_in).toLocaleDateString('id-ID')} - {new Date(data.check_out).toLocaleDateString('id-ID')}
-          </Text>
-        </Box>
+          <Box>
+            <Group gap={6} mb={4}>
+              <IconHome size={14} color="gray" />
+              <Text size="xs" c="dimmed">Kamar</Text>
+            </Group>
+            <Text size="sm" fw={500}>{data.room_number} ({data.room_type})</Text>
+          </Box>
 
-        <Box>
-          <Group gap={6} mb={4}>
-            <IconCoin size={14} color="gray" />
-            <Text size="xs" c="dimmed">Total</Text>
-          </Group>
-          <Text size="sm" fw={700} c="teal">Rp {data.total_price.toLocaleString('id-ID')}</Text>
-        </Box>
-      </SimpleGrid>
+          <Box>
+            <Group gap={6} mb={4}>
+              <IconCalendar size={14} color="gray" />
+              <Text size="xs" c="dimmed">Periode</Text>
+            </Group>
+            <Text size="sm" fw={500}>
+              {new Date(data.check_in).toLocaleDateString('id-ID')} - {new Date(data.check_out).toLocaleDateString('id-ID')}
+            </Text>
+          </Box>
 
-      <Button 
-        fullWidth 
-        leftSection={<IconFileInvoice size={16} />}
-        color="teal"
-        variant="light"
-        onClick={handlePrintInvoice}
-      >
-        Lihat & Cetak Invoice
-      </Button>
-    </Card>
+          <Box>
+            <Group gap={6} mb={4}>
+              <IconCoin size={14} color="gray" />
+              <Text size="xs" c="dimmed">Total</Text>
+            </Group>
+            <Text size="sm" fw={700} c="teal">Rp {data.total_price.toLocaleString('id-ID')}</Text>
+          </Box>
+        </SimpleGrid>
+
+        <Button 
+          fullWidth 
+          leftSection={<IconFileInvoice size={16} />}
+          color="teal"
+          variant="light"
+          onClick={openInvoice}
+        >
+          Lihat Invoice
+        </Button>
+      </Card>
+
+      <ReservationInvoiceModal
+        opened={invoiceOpened}
+        onClose={closeInvoice}
+        reservation={mockReservationDataForModal as any}
+      />
+    </>
   );
 }
 
@@ -577,14 +607,12 @@ export function AICopilotWidget() {
   };
 
   const handleSendMessage = async (overrideMessage?: string | any) => {
-    // Check if overrideMessage is actually a string (not an Event object)
     const messageToSend = (typeof overrideMessage === 'string' && overrideMessage) 
       ? overrideMessage 
       : chatMessage;
 
     if (!messageToSend.trim() || loadingAI) return;
 
-    // Only clear input if we sent what was in the input box
     if (messageToSend === chatMessage) {
         setChatMessage('');
     }
@@ -629,6 +657,7 @@ export function AICopilotWidget() {
   };
 
   const handleConfirmAction = (data: any) => {
+    // Prompt yang tegas untuk memicu create_reservation dan menghindari loop
     const confirmPrompt = `Konfirmasi valid. Segera eksekusi reservasi (create_reservation) untuk:
     - Nama: ${data.guest_name}
     - Email: ${data.email}
@@ -656,7 +685,6 @@ export function AICopilotWidget() {
   const renderMessageContent = (msg: ChatMessage, index: number) => {
     const isLatest = index === chatHistory.length - 1;
 
-    // Render berdasarkan responseType
     if (msg.responseType === 'confirmation' && msg.data) {
       return (
         <BookingConfirmationCard 
@@ -689,7 +717,6 @@ export function AICopilotWidget() {
       return <RoomInspectionCard data={msg.data} />;
     }
 
-    // Default text bubble untuk response type lainnya
     return (
       <Paper
         p="xs"
