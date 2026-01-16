@@ -9,7 +9,7 @@ import {
 import { 
   IconTrendingUp, IconAlertCircle, IconSparkles, IconSend, IconRobot 
 } from '@tabler/icons-react';
-import { chatWithAI } from '../../ai-actions'; // Import Server Action yang sama dengan Widget
+import { chatWithAI } from '@/app/fo/ai-agent/actions'; // Import Server Action yang sama dengan Widget
 
 // --- Tipe Data untuk Chat ---
 interface ChatMessage {

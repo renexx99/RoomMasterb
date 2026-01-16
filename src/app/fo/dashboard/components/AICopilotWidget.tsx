@@ -55,8 +55,16 @@ const QUICK_PROMPTS = [
   }
 ];
 
-// Komponen untuk menampilkan Konfirmasi Booking
-function BookingConfirmationCard({ data }: { data: any }) {
+interface BookingCardProps {
+  data: any;
+  onConfirm: (data: any) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  isLatest: boolean;
+}
+
+// Komponen untuk menampilkan Konfirmasi Booking (Diperbarui dengan Tombol)
+function BookingConfirmationCard({ data, onConfirm, onCancel, isLoading, isLatest }: BookingCardProps) {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Group justify="space-between" mb="md">
@@ -147,11 +155,28 @@ function BookingConfirmationCard({ data }: { data: any }) {
         </Group>
       </Box>
 
-      <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light" mt="md">
-        <Text size="xs">
-          Ketik <strong>"Ya"</strong> atau <strong>"Konfirmasi"</strong> untuk melanjutkan pemesanan
-        </Text>
-      </Alert>
+      <Divider my="md" />
+      
+      <Group grow>
+        <Button 
+          color="red" 
+          variant="light" 
+          leftSection={<IconX size={16} />}
+          onClick={onCancel}
+          disabled={isLoading || !isLatest}
+        >
+          Batal
+        </Button>
+        <Button 
+          color="teal" 
+          leftSection={<IconCheck size={16} />}
+          onClick={() => onConfirm(data)}
+          loading={isLoading}
+          disabled={!isLatest}
+        >
+          Konfirmasi
+        </Button>
+      </Group>
     </Card>
   );
 }
@@ -551,15 +576,22 @@ export function AICopilotWidget() {
     }, 100);
   };
 
-  const handleSendMessage = async () => {
-    if (!chatMessage.trim() || loadingAI) return;
+  const handleSendMessage = async (overrideMessage?: string | any) => {
+    // Check if overrideMessage is actually a string (not an Event object)
+    const messageToSend = (typeof overrideMessage === 'string' && overrideMessage) 
+      ? overrideMessage 
+      : chatMessage;
 
-    const userMsg = chatMessage;
-    setChatMessage('');
+    if (!messageToSend.trim() || loadingAI) return;
+
+    // Only clear input if we sent what was in the input box
+    if (messageToSend === chatMessage) {
+        setChatMessage('');
+    }
     
     setChatHistory(prev => [...prev, {
       type: 'user',
-      content: userMsg,
+      content: messageToSend,
       timestamp: new Date(),
     }]);
 
@@ -574,7 +606,7 @@ export function AICopilotWidget() {
         }));
 
       // @ts-ignore
-      const response = await chatWithAI(userMsg, apiHistory);
+      const response = await chatWithAI(messageToSend, apiHistory);
 
       setChatHistory(prev => [...prev, {
         type: 'ai',
@@ -596,6 +628,15 @@ export function AICopilotWidget() {
     }
   };
 
+  const handleConfirmAction = (data: any) => {
+    const confirmPrompt = `Ya, konfirmasi booking untuk ${data.guest_name}, kamar ${data.room_type}, check-in ${data.check_in}. Lanjutkan!`;
+    handleSendMessage(confirmPrompt);
+  };
+
+  const handleCancelAction = () => {
+    handleSendMessage("Batalkan proses booking ini.");
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -603,10 +644,20 @@ export function AICopilotWidget() {
     }
   };
 
-  const renderMessageContent = (msg: ChatMessage) => {
+  const renderMessageContent = (msg: ChatMessage, index: number) => {
+    const isLatest = index === chatHistory.length - 1;
+
     // Render berdasarkan responseType
     if (msg.responseType === 'confirmation' && msg.data) {
-      return <BookingConfirmationCard data={msg.data} />;
+      return (
+        <BookingConfirmationCard 
+          data={msg.data} 
+          onConfirm={handleConfirmAction}
+          onCancel={handleCancelAction}
+          isLoading={loadingAI}
+          isLatest={isLatest}
+        />
+      );
     }
     
     if (msg.responseType === 'reservation_success' && msg.data) {
@@ -801,7 +852,7 @@ export function AICopilotWidget() {
                       maxWidth: msg.type === 'user' ? '85%' : '100%'
                     }}
                   >
-                    {renderMessageContent(msg)}
+                    {renderMessageContent(msg, idx)}
                   </Box>
                 ))}
 
@@ -839,7 +890,7 @@ export function AICopilotWidget() {
                   radius="md" 
                   variant="gradient" 
                   gradient={{ from: 'teal', to: 'cyan' }} 
-                  onClick={handleSendMessage}
+                  onClick={() => handleSendMessage()}
                   loading={loadingAI}
                   disabled={!chatMessage.trim() || loadingAI}
                 >
