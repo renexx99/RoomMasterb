@@ -4,8 +4,8 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import BillingClient from './client';
 import { Reservation, Guest, Room, RoomType, Hotel } from '@/core/types/database';
+import { getBillingStats } from './actions'; // Import action baru
 
-// [PERBAIKAN] Update interface agar cocok dengan ReservationInvoiceModal
 export interface ReservationDetails extends Reservation {
   guest?: Pick<Guest, 'id' | 'full_name' | 'email' | 'phone_number'>;
   room?: Pick<Room, 'id' | 'room_number'> & {
@@ -49,13 +49,12 @@ export default async function BillingPage() {
   // --- AKHIR LOGIKA IMPERSONASI ---
 
   if (!hotelId) {
-    return <BillingClient initialReservations={[]} hotelId={null} />;
+    return <BillingClient initialReservations={[]} hotelId={null} initialStats={{ revenue: 0, occupancy: 0 }} />;
   }
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Fetch Tamu In-House (Check-in <= Today && Check-out >= Today)
-  // [PERBAIKAN] Menambahkan fetch 'hotel(name, address)' dan 'guest.phone_number'
+  // 1. Fetch Tamu In-House (Logic lama tetap ada untuk List di bawah)
   const { data: reservations } = await supabase
     .from('reservations')
     .select(`
@@ -70,10 +69,18 @@ export default async function BillingPage() {
     .neq('payment_status', 'cancelled')
     .order('check_in_date', { ascending: true });
 
+  // 2. Fetch Initial Stats (Default: Bulan Ini)
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  
+  const initialStats = await getBillingStats(hotelId, startOfMonth, endOfMonth);
+
   return (
     <BillingClient 
       initialReservations={(reservations as ReservationDetails[]) || []}
       hotelId={hotelId}
+      initialStats={initialStats}
     />
   );
 }
