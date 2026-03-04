@@ -70,9 +70,9 @@ function AuthBranding() {
         {/* Feature highlights */}
         <Stack gap="sm" mt="xl">
           {[
-            '🏨 Multi-property management',
-            '📊 Real-time analytics',
-            '🔒 Enterprise-grade security',
+            'Multi-property management',
+            'Real-time analytics',
+            'Enterprise-grade security',
           ].map((feature, index) => (
             <Text 
               key={index}

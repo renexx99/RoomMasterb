@@ -1,3 +1,4 @@
+// src/app/fo/reservations/client.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -19,9 +20,9 @@ import { modals } from '@mantine/modals';
 import { ReservationDetails, GuestOption, RoomWithDetails } from './page';
 import { TimelineView } from './components/TimelineView';
 import { QuickBookingPanel } from './components/QuickBookingPanel';
-import { AISuggestionsPanel, AICoPilotPanel } from './components/AISuggestionsPanel';
+// Hapus import AISuggestionsPanel karena tidak lagi digunakan di tampilan gabungan
+import { AICoPilotPanel } from './components/AISuggestionsPanel';
 import { ReservationFormModal } from './components/ReservationFormModal';
-// Import Invoice Modal
 import { ReservationInvoiceModal } from './components/ReservationInvoiceModal';
 import { deleteReservation } from './actions';
 
@@ -64,7 +65,7 @@ export default function FoReservationsClient({
       border: '1px solid #e9ecef',
     },
     indicator: {
-      background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', // FO Gradient (Teal)
+      background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', 
       boxShadow: '0 2px 4px rgba(20, 184, 166, 0.2)',
     },
     label: {
@@ -89,17 +90,15 @@ export default function FoReservationsClient({
 
   // --- HANDLERS ---
 
-  // Handler saat reservasi sukses dibuat (Menampilkan Invoice)
   const handleReservationCreationSuccess = (newReservation: ReservationDetails) => {
-    router.refresh(); // Refresh data server
+    router.refresh(); 
     setSelectedInvoiceReservation(newReservation);
-    setInvoiceModalOpened(true); // Buka modal invoice
-    setModalOpened(false); // Tutup form modal
+    setInvoiceModalOpened(true); 
+    setModalOpened(false); 
     setReservationToEdit(null);
     setPrefilledData(null);
   };
 
-  // Handler saat klik item reservasi di list/timeline (Menampilkan Invoice)
   const handleReservationClick = (reservation: ReservationDetails) => {
     setSelectedInvoiceReservation(reservation);
     setInvoiceModalOpened(true);
@@ -260,8 +259,7 @@ export default function FoReservationsClient({
                   rooms={rooms}
                   reservations={filteredReservations}
                   onDragCreate={handleDragCreate}
-                  // Mengirim handler klik ke Timeline (Note: TimelineView perlu diupdate untuk menerima prop ini)
-                  // @ts-ignore (Sementara diabaikan sampai TimelineView diupdate)
+                  // @ts-ignore
                   onReservationClick={handleReservationClick}
                 />
               </ScrollArea>
@@ -277,7 +275,6 @@ export default function FoReservationsClient({
                         padding="md" 
                         radius="md" 
                         withBorder
-                        // Klik card membuka Invoice
                         onClick={() => handleReservationClick(res)}
                         style={{ cursor: 'pointer' }}
                         className="hover:bg-gray-50"
@@ -363,19 +360,16 @@ export default function FoReservationsClient({
             </Box>
 
             <ScrollArea style={{ flex: 1 }} p="md">
+              {/* PERUBAHAN: Menghapus <AISuggestionsPanel /> dari mode booking */}
               {rightPanelMode === 'booking' ? (
-                <>
-                  <QuickBookingPanel 
-                    hotelId={hotelId}
-                    guests={guests}
-                    rooms={rooms}
-                    prefilledData={prefilledData}
-                    // Menggunakan handler sukses baru
-                    // @ts-ignore (Sementara diabaikan sampai QuickBookingPanel diupdate)
-                    onSuccess={handleReservationCreationSuccess}
-                  />
-                  <AISuggestionsPanel />
-                </>
+                <QuickBookingPanel 
+                  hotelId={hotelId}
+                  guests={guests}
+                  rooms={rooms}
+                  prefilledData={prefilledData}
+                  // @ts-ignore 
+                  onSuccess={handleReservationCreationSuccess}
+                />
               ) : (
                 <AICoPilotPanel />
               )}
@@ -393,12 +387,11 @@ export default function FoReservationsClient({
         prefilledData={prefilledData}
         guests={guests}
         availableRooms={rooms}
-        // Menggunakan handler sukses baru
-        // @ts-ignore (Sementara diabaikan sampai ReservationFormModal diupdate)
+        // @ts-ignore
         onSuccess={handleReservationCreationSuccess}
       />
 
-      {/* Reservation Invoice Modal (Baru) */}
+      {/* Reservation Invoice Modal */}
       <ReservationInvoiceModal 
         opened={invoiceModalOpened}
         onClose={() => setInvoiceModalOpened(false)}

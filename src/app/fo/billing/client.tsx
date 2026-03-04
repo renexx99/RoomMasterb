@@ -3,12 +3,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import {
-  Container, Box, Group, ThemeIcon, Title, ActionIcon, Text,
-  Paper, Grid, TextInput, Select, SimpleGrid, Card, RingProgress, Center, Loader, rem
+  Box, Group, Text, ActionIcon, Flex,
+  Paper, Grid, TextInput, Select, RingProgress, Center, Loader, Title
 } from '@mantine/core';
-import { DatePickerInput } from '@mantine/dates'; // Pastikan install @mantine/dates
-import { IconArrowLeft, IconCoin, IconSearch, IconCalendarStats, IconChartPie, IconWallet } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
+import { DatePickerInput } from '@mantine/dates';
+import { IconSearch, IconCalendarStats, IconChartPie, IconWallet } from '@tabler/icons-react';
 import { ReservationDetails } from './page';
 import { BillingList } from './components/BillingList';
 import { ReservationInvoiceModal } from '../reservations/components/ReservationInvoiceModal';
@@ -22,9 +21,6 @@ interface ClientProps {
 }
 
 export default function BillingClient({ initialReservations, hotelId, initialStats }: ClientProps) {
-  const router = useRouter();
-  const MAX_WIDTH = 1200;
-
   // --- STATE LIST ---
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRes, setSelectedRes] = useState<ReservationDetails | null>(null);
@@ -91,7 +87,7 @@ export default function BillingClient({ initialReservations, hotelId, initialSta
     }
 
     fetchStats();
-  }, [dateRange, hotelId]); // Trigger when dateRange changes
+  }, [dateRange, hotelId]);
 
   // Filter List Logic
   const filteredReservations = useMemo(() => {
@@ -103,7 +99,6 @@ export default function BillingClient({ initialReservations, hotelId, initialSta
     );
   }, [initialReservations, searchTerm]);
 
-  // Handler Modal
   const handleOpenInvoice = (res: ReservationDetails) => {
     setSelectedRes(res);
     setModalOpened(true);
@@ -116,153 +111,125 @@ export default function BillingClient({ initialReservations, hotelId, initialSta
 
   if (!hotelId) {
     return (
-      <Container size="lg" py="xl">
+      <Box p="lg">
         <Paper withBorder p="xl" ta="center"><Text c="dimmed">Akun tidak terhubung ke hotel.</Text></Paper>
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', padding: '0.75rem 0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <Container fluid px="lg">
-          <Box maw={MAX_WIDTH} mx="auto">
-            <Group justify="space-between" align="center">
-              <Group gap="xs">
-                <ThemeIcon variant="light" color="white" size="lg" radius="md" style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}>
-                  <IconCoin size={20} stroke={1.5} />
-                </ThemeIcon>
-                <div style={{ lineHeight: 1 }}>
-                  <Title order={4} c="white" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.2 }}>Billing & Invoice</Title>
-                  <Text c="white" opacity={0.8} size="xs" mt={2}>Manage payments and revenue</Text>
-                </div>
-              </Group>
-              <ActionIcon variant="white" color="teal" size="lg" radius="md" onClick={() => router.push('/fo/dashboard')} aria-label="Kembali">
-                <IconArrowLeft size={20} />
+    // Penambahan p="lg" (padding large) di wrapper utama agar tidak mentok kiri/kanan/atas/bawah
+    <Box p="lg">
+      
+      {/* HEADER DIHAPUS - Langsung masuk ke konten Statistik & Filter */}
+
+      {/* --- STATISTICS & FILTERS SECTION --- */}
+      <Grid mb="lg" align="stretch">
+        {/* Revenue Card */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper withBorder p="lg" radius="md" h="100%">
+            <Group justify="space-between" mb="md">
+              <Text size="sm" fw={600} c="dimmed" tt="uppercase">Total Revenue</Text>
+              <ActionIcon variant="light" color="teal" size="md" radius="md">
+                <IconWallet size={18} />
               </ActionIcon>
             </Group>
-          </Box>
-        </Container>
-      </div>
-
-      {/* Content */}
-      <Container fluid px="lg" py="md">
-        <Box maw={MAX_WIDTH} mx="auto">
-          
-          {/* --- STATISTICS SECTION --- */}
-          <Title order={5} mb="xs" c="dimmed">Financial Overview</Title>
-          <Grid mb="lg" align="flex-end">
-            <Grid.Col span={{ base: 12, md: 8 }}>
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                  {/* Revenue Card */}
-                  <Card shadow="sm" radius="md" padding="md" withBorder>
-                    <Group justify="space-between" mb="xs">
-                        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Total Revenue (Paid)</Text>
-                        <ThemeIcon color="green" variant="light" size="sm"><IconWallet size={16}/></ThemeIcon>
-                    </Group>
-                    <Group align="flex-end" gap="xs">
-                        {loadingStats ? <Loader size="sm" color="teal" /> : (
-                            <Text fw={700} size="xl" c="teal">
-                            Rp {stats.revenue.toLocaleString('id-ID')}
-                            </Text>
-                        )}
-                    </Group>
-                    <Text size="xs" c="dimmed" mt={4}>
-                        Dalam periode terpilih
-                    </Text>
-                  </Card>
-
-                  {/* Occupancy Card */}
-                  <Card shadow="sm" radius="md" padding="md" withBorder>
-                    <Group justify="space-between">
-                        <div>
-                            <Text size="xs" c="dimmed" fw={700} tt="uppercase">Occupancy Rate</Text>
-                            {loadingStats ? <Loader size="sm" mt="sm" color="blue" /> : (
-                                <Text fw={700} size="xl" mt={4} c="blue">{stats.occupancy}%</Text>
-                            )}
-                            <Text size="xs" c="dimmed" mt={4}>Avg. utilization</Text>
-                        </div>
-                        <RingProgress
-                            size={70}
-                            roundCaps
-                            thickness={6}
-                            sections={[{ value: stats.occupancy, color: 'blue' }]}
-                            label={
-                            <Center>
-                                <IconChartPie size={20} style={{ opacity: 0.5 }} />
-                            </Center>
-                            }
-                        />
-                    </Group>
-                  </Card>
-                </SimpleGrid>
-            </Grid.Col>
-
-            {/* Filters */}
-            <Grid.Col span={{ base: 12, md: 4 }}>
-                <Paper shadow="sm" p="md" radius="md" withBorder h="100%">
-                    <Group mb="xs">
-                        <IconCalendarStats size={18} color="gray"/>
-                        <Text size="sm" fw={500}>Filter Periode</Text>
-                    </Group>
-                    <Select 
-                        data={[
-                            { label: 'Bulan Ini', value: 'this_month' },
-                            { label: 'Bulan Lalu', value: 'last_month' },
-                            { label: 'Tahun Ini', value: 'this_year' },
-                            { label: 'Custom Range', value: 'custom' },
-                        ]}
-                        value={filterType}
-                        onChange={handleFilterChange}
-                        mb="sm"
-                    />
-                    <DatePickerInput
-                        type="range"
-                        placeholder="Pilih rentang tanggal"
-                        value={dateRange}
-                        onChange={(val) => {
-                            setDateRange([val[0] ? new Date(val[0]) : null, val[1] ? new Date(val[1]) : null]);
-                            if(filterType !== 'custom') setFilterType('custom');
-                        }}
-                        clearable={false}
-                        leftSection={<IconCalendarStats size={16}/>}
-                        disabled={filterType !== 'custom'}
-                    />
-                </Paper>
-            </Grid.Col>
-          </Grid>
-
-          {/* --- SEARCH & LIST SECTION --- */}
-          <Title order={5} mb="xs" c="dimmed" mt="xl">Active Billings</Title>
-          <Paper shadow="xs" p="sm" radius="md" withBorder mb="md">
-            <Grid>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
-                        placeholder="Cari tamu aktif atau nomor kamar..."
-                        leftSection={<IconSearch size={16} />}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.currentTarget.value)}
-                    />
-                </Grid.Col>
-            </Grid>
+            <Group align="flex-end" gap="xs">
+              {loadingStats ? <Loader size="sm" color="teal" /> : (
+                <Text fw={700} size="xl" c="teal.7">
+                  Rp {stats.revenue.toLocaleString('id-ID')}
+                </Text>
+              )}
+            </Group>
+            <Text size="xs" c="dimmed" mt={8}>
+              Total dari reservasi yang sudah dibayar
+            </Text>
           </Paper>
+        </Grid.Col>
 
-          {/* List */}
-          <BillingList 
-            reservations={filteredReservations} 
-            onViewInvoice={handleOpenInvoice} 
+        {/* Occupancy Card */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper withBorder p="lg" radius="md" h="100%">
+            <Group justify="space-between" wrap="nowrap">
+              <div>
+                <Text size="sm" fw={600} c="dimmed" tt="uppercase">Occupancy Rate</Text>
+                {loadingStats ? <Loader size="sm" mt="md" color="blue" /> : (
+                  <Text fw={700} size="xl" mt="xs" c="blue.7">{stats.occupancy}%</Text>
+                )}
+                <Text size="xs" c="dimmed" mt={8}>Rata-rata penggunaan kamar</Text>
+              </div>
+              <RingProgress
+                size={85}
+                roundCaps
+                thickness={8}
+                sections={[{ value: stats.occupancy, color: 'blue' }]}
+                label={
+                  <Center>
+                    <IconChartPie size={24} style={{ opacity: 0.5 }} />
+                  </Center>
+                }
+              />
+            </Group>
+          </Paper>
+        </Grid.Col>
+
+        {/* Filters */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper withBorder p="md" radius="md" h="100%">
+            <Flex direction="column" gap="sm" h="100%" justify="center">
+              <Select 
+                data={[
+                  { label: 'Bulan Ini', value: 'this_month' },
+                  { label: 'Bulan Lalu', value: 'last_month' },
+                  { label: 'Tahun Ini', value: 'this_year' },
+                  { label: 'Custom Range', value: 'custom' },
+                ]}
+                value={filterType}
+                onChange={handleFilterChange}
+                size="sm"
+                leftSection={<IconCalendarStats size={16}/>}
+              />
+              <DatePickerInput
+                type="range"
+                placeholder="Pilih rentang tanggal"
+                value={dateRange}
+                onChange={(val) => {
+                  setDateRange([val[0] ? new Date(val[0]) : null, val[1] ? new Date(val[1]) : null]);
+                  if(filterType !== 'custom') setFilterType('custom');
+                }}
+                clearable={false}
+                size="sm"
+                disabled={filterType !== 'custom'}
+              />
+            </Flex>
+          </Paper>
+        </Grid.Col>
+      </Grid>
+
+      {/* --- ACTIVE BILLINGS SECTION --- */}
+      <Paper withBorder p="md" radius="md">
+        <Group justify="space-between" mb="md">
+          <Title order={4} fw={600} c="dark.7">Active Billings</Title>
+          <TextInput
+            placeholder="Cari tamu atau nomor kamar..."
+            leftSection={<IconSearch size={16} />}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.currentTarget.value)}
+            style={{ width: 250 }}
           />
+        </Group>
 
-        </Box>
-      </Container>
+        <BillingList 
+          reservations={filteredReservations} 
+          onViewInvoice={handleOpenInvoice} 
+        />
+      </Paper>
 
-      {/* Modal - Replaced with Invoice Modal */}
       <ReservationInvoiceModal 
         opened={modalOpened} 
         onClose={handleCloseModal} 
         reservation={selectedRes}
       />
-    </div>
+    </Box>
   );
 }
