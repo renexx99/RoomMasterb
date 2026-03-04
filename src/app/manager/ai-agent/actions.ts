@@ -6,8 +6,8 @@ import { AI_TOOLS_DEFINITION } from '@/app/fo/ai-agent/definitions';
 import { analyticsReporterTool } from '@/app/fo/ai-agent/tools/analytics';
 import { checkAvailabilityTool, roomInspectorTool } from '@/app/fo/ai-agent/tools/availability';
 import { guestProfilerTool } from '@/app/fo/ai-agent/tools/guests';
-// Import tools booking dari FO
-import { searchRoomsTool, bookRoomTool } from '@/app/fo/ai-agent/tools/booking';
+// PERBAIKAN: Import tools booking yang benar (berasal dari FO atau Manager sama saja)
+import { confirmBookingDetailsTool, createReservationTool } from '@/app/fo/ai-agent/tools/booking';
 import { OpenAIMessage, ToolExecutionResult } from '@/app/fo/ai-agent/types';
 
 const openai = new OpenAI({
@@ -18,14 +18,19 @@ export async function chatWithManagerAI(userMessage: string, history: OpenAIMess
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    // System Prompt digabung: FO + Manajerial
+    // PERBAIKAN: System Prompt digabung dengan SOP Reservasi agar agent tidak looping
     const systemMessage: OpenAIMessage = { 
         role: "system", 
         content: `Kamu adalah 'RoomMaster AI', asisten General Manager Hotel. Hari ini: ${today}.
         
         Kamu memiliki akses PENUH ke:
-        1. **Operasional (seperti Front Office):** Mencari kamar (search_rooms), membuat reservasi tamu (book_room), mengecek ketersediaan (check_availability), dan inspeksi kamar (room_inspector).
+        1. **Operasional (seperti Front Office):** Membuat draft booking (confirm_booking_details), mengeksekusi reservasi (create_reservation), mengecek ketersediaan (check_availability), dan inspeksi kamar (room_inspector).
         2. **Manajerial & Reporting:** Menganalisa laporan revenue dan okupansi hotel (analytics_reporter), serta memantau profil lengkap tamu VIP (guest_profiler).
+
+        SOP RESERVASI (PENTING):
+        1. FASE DRAFT: Jika user baru meminta booking atau bertanya ketersediaan, panggil 'confirm_booking_details'.
+        2. FASE EKSEKUSI: Jika user berkata "Konfirmasi", "Lanjut", "Buat", atau "Benar" DAN data (Nama, Kamar, Tanggal) sudah ada di chat sebelumnya, JANGAN panggil 'confirm_booking_details' lagi. LANGSUNG panggil 'create_reservation'.
+        3. DATA: Jika user tidak memberi Email/HP, isi parameter dengan '-'.
 
         Berikan respon yang profesional, efisien, dan strategis. Jangan ragu memanggil tools yang sesuai dengan permintaan Manager, baik itu untuk sekadar memesankan kamar untuk relasi Manager, maupun menarik laporan bulanan.`
     };
@@ -52,13 +57,13 @@ export async function chatWithManagerAI(userMessage: string, history: OpenAIMess
 
       let actionResult: ToolExecutionResult | undefined;
 
-      // Semua tool FO dan Manager dimasukkan
+      // PERBAIKAN: Sesuaikan pemanggilan switch case dengan nama tool yang benar
       switch (functionName) {
-        case "search_rooms":
-          actionResult = await searchRoomsTool(args);
+        case "confirm_booking_details":
+          actionResult = await confirmBookingDetailsTool(args);
           break;
-        case "book_room":
-          actionResult = await bookRoomTool(args);
+        case "create_reservation":
+          actionResult = await createReservationTool(args);
           break;
         case "analytics_reporter":
           actionResult = await analyticsReporterTool(args);
