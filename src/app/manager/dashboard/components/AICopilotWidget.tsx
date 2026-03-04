@@ -1,299 +1,319 @@
+// src/app/manager/dashboard/components/AICopilotWidget.tsx
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Paper, Group, ThemeIcon, Text, Badge, ActionIcon, ScrollArea, Stack,
-  Box, Button, Textarea, Tooltip, Transition, Loader
+  Box, Textarea, Tooltip, Transition, Loader, Button, SimpleGrid, Card, Divider, Table
 } from '@mantine/core';
 import {
-  IconSparkles, IconMaximize, IconMinimize, IconX, IconAlertCircle,
-  IconSend, IconGift
+  IconSparkles, IconMaximize, IconMinimize, IconX, IconSend, IconRobot, 
+  IconChartBar, IconUserSearch, IconTrendingUp, IconBed, IconBuildingStore,
+  IconHome, IconCoin, IconUser, IconMail, IconPhone
 } from '@tabler/icons-react';
-// Import Server Action baru (pastikan file actions.ts sudah dibuat di folder parent)
-import { chatWithStandardLLM } from '../actions'; 
+import { chatWithManagerAI } from '../../ai-agent/actions'; // Import server action baru
 
 interface ChatMessage {
   type: 'ai' | 'user' | 'system';
   content: string;
   timestamp: Date;
+  data?: any;
+  responseType?: string;
 }
 
-const aiInsights = [
-    {
-      id: 1,
-      type: 'pricing',
-      priority: 'high',
-      title: 'Dynamic Pricing Alert',
-      description: 'Weekend demand surge predicted (+42%). Optimize Deluxe pricing.',
-      impact: '+Rp 3.2M',
-      icon: IconSparkles,
-      color: 'yellow',
-      actionLabel: 'Apply',
-    },
-    {
-      id: 2,
-      type: 'loyalty',
-      priority: 'medium',
-      title: 'VIP Guest Incoming',
-      description: 'Budi Hartono (Rp 12M LTV) arrives tomorrow. Prepare perks.',
-      impact: '94% retention',
-      icon: IconGift,
-      color: 'pink',
-      actionLabel: 'Approve',
-    },
-    {
-      id: 3,
-      type: 'maintenance',
-      priority: 'urgent',
-      title: 'Room 303 Alert',
-      description: 'Maintenance exceeds 72h. Contact housekeeping now.',
-      impact: '-Rp 850K/day',
-      icon: IconAlertCircle,
-      color: 'red',
-      actionLabel: 'Escalate',
-    },
+// Prompt khusus Manager
+const QUICK_PROMPTS = [
+  {
+    label: 'Laporan Revenue',
+    text: 'Buatkan ringkasan performa hotel (Revenue & Occupancy) untuk periode [Bulan Ini].',
+    icon: <IconChartBar size={14} />,
+    color: 'blue',
+    desc: 'Analisa pendapatan & okupansi'
+  },
+  {
+    label: 'Inspeksi Kamar',
+    text: 'Bagaimana status ketersediaan dan kebersihan kamar secara keseluruhan hari ini?',
+    icon: <IconBuildingStore size={14} />,
+    color: 'indigo',
+    desc: 'Cek status properti'
+  },
+  {
+    label: 'Cek Tamu VIP',
+    text: 'Cari profil tamu atas nama [Nama Tamu], lihat riwayat transaksi dan preferensinya.',
+    icon: <IconUserSearch size={14} />,
+    color: 'violet',
+    desc: 'Analisis profitabilitas tamu'
+  }
 ];
+
+// --- Sub-Components untuk Data (Menggunakan Tema Biru) ---
+function AnalyticsCard({ data }: { data: any }) {
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder style={{ borderColor: '#339af0' }}>
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon color="blue" variant="light" size="lg" radius="md">
+            <IconChartBar size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm">Laporan Kinerja Manajerial</Text>
+            <Text size="xs" c="dimmed">
+              {new Date(data.period.start).toLocaleDateString('id-ID')} - {new Date(data.period.end).toLocaleDateString('id-ID')}
+            </Text>
+          </div>
+        </Group>
+        <Badge color="blue" variant="filled">{data.period.days} Hari</Badge>
+      </Group>
+
+      <SimpleGrid cols={2} spacing="md" mb="md">
+        <Card padding="sm" radius="md" withBorder>
+          <Group gap={8} mb={4}>
+            <IconTrendingUp size={16} color="blue" />
+            <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Total Revenue</Text>
+          </Group>
+          <Text size="xl" fw={700} c="blue">Rp {data.revenue.total.toLocaleString('id-ID')}</Text>
+          <Text size="xs" c="dimmed">Avg/Booking: Rp {data.revenue.average_per_booking.toLocaleString('id-ID')}</Text>
+        </Card>
+
+        <Card padding="sm" radius="md" withBorder>
+          <Group gap={8} mb={4}>
+            <IconBed size={16} color="indigo" />
+            <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Occupancy</Text>
+          </Group>
+          <Text size="xl" fw={700} c="indigo">{data.occupancy.rate}%</Text>
+          <Text size="xs" c="dimmed">{data.bookings.total} of {data.occupancy.capacity} capacity</Text>
+        </Card>
+      </SimpleGrid>
+
+      <Table>
+        <Table.Tbody>
+          <Table.Tr>
+            <Table.Td>Total Bookings</Table.Td>
+            <Table.Td ta="right" fw={600}>{data.bookings.total}</Table.Td>
+          </Table.Tr>
+          <Table.Tr>
+            <Table.Td>Paid Bookings</Table.Td>
+            <Table.Td ta="right" fw={600} c="teal">{data.bookings.paid}</Table.Td>
+          </Table.Tr>
+        </Table.Tbody>
+      </Table>
+    </Card>
+  );
+}
+
+function GuestProfileCard({ data }: { data: any }) {
+    return (
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Group justify="space-between" mb="md">
+          <Group gap="xs">
+            <ThemeIcon color="violet" variant="light" size="lg" radius="md">
+              <IconUser size={20} />
+            </ThemeIcon>
+            <div>
+              <Text fw={700} size="sm">Profil Tamu</Text>
+              <Text size="xs" c="dimmed">{data.guest.name}</Text>
+            </div>
+          </Group>
+          <Badge color="violet" variant="light" tt="uppercase">{data.guest.tier}</Badge>
+        </Group>
+        <SimpleGrid cols={3} spacing="xs" mb="md">
+          <Box ta="center">
+            <Text size="xl" fw={700} c="violet">{data.statistics.total_stays}</Text>
+            <Text size="xs" c="dimmed">Menginap</Text>
+          </Box>
+          <Box ta="center">
+            <Text size="xl" fw={700} c="blue">Rp {(data.statistics.total_spent / 1000000).toFixed(1)}jt</Text>
+            <Text size="xs" c="dimmed">Total Transaksi</Text>
+          </Box>
+          <Box ta="center">
+            <Text size="xs" fw={700} c="indigo">{new Date(data.statistics.last_visit).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}</Text>
+            <Text size="xs" c="dimmed">Kunjungan Terakhir</Text>
+          </Box>
+        </SimpleGrid>
+      </Card>
+    );
+}
 
 export function AICopilotWidget() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [activeInsights, setActiveInsights] = useState([true, true, true]);
-  const [isLoading, setIsLoading] = useState(false); // State untuk loading indicator
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
+  
+  const viewport = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleInsightAction = (id: number) => {
-    setActiveInsights(prev => {
-      const updated = [...prev];
-      updated[id - 1] = false;
-      return updated;
-    });
-    
-    // Simulasi action lokal (karena ini dumb bot, dia tidak connect ke backend sebenarnya)
-    const insight = aiInsights.find(i => i.id === id);
-    if (insight) {
-      setChatHistory(prev => [...prev, {
-        type: 'system',
-        content: `[System Log] Action "${insight.actionLabel}" clicked locally. (Note: Standard AI might not be aware of this action)`,
-        timestamp: new Date(),
-      }]);
+  useEffect(() => {
+    if (viewport.current) {
+      viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
     }
+  }, [chatHistory, isWidgetOpen]);
+
+  const handleQuickPrompt = (text: string) => {
+    setChatMessage(text);
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleSendMessage = async () => {
-    if (!chatMessage.trim() || isLoading) return;
+    if (!chatMessage.trim() || loadingAI) return;
 
-    const userMsg = chatMessage;
-    setChatMessage(''); // Clear input langsung
-    setIsLoading(true);
-
-    // 1. Tampilkan pesan user di UI
-    const newUserLog: ChatMessage = {
-      type: 'user',
-      content: userMsg,
-      timestamp: new Date(),
-    };
+    const messageToSend = chatMessage;
+    setChatMessage('');
     
-    // Update history UI segera
-    const updatedHistory = [...chatHistory, newUserLog];
-    setChatHistory(updatedHistory);
+    setChatHistory(prev => [...prev, {
+      type: 'user',
+      content: messageToSend,
+      timestamp: new Date(),
+    }]);
+
+    setLoadingAI(true);
 
     try {
-      // 2. Panggil Server Action "Dumb Bot"
-      // Kita kirim history sebelumnya (tanpa pesan user yg baru saja diketik)
-      const response = await chatWithStandardLLM(userMsg, chatHistory);
-      
-      // 3. Masukkan balasan AI ke UI
+      const apiHistory = chatHistory
+        .filter(msg => msg.type !== 'system')
+        .map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }));
+
+      const response = await chatWithManagerAI(messageToSend, apiHistory as any);
+
       setChatHistory(prev => [...prev, {
-        type: response.type as 'ai' | 'system',
-        content: response.content,
-        timestamp: new Date(response.timestamp)
+        type: 'ai',
+        content: response.content || 'Maaf, saya tidak bisa memproses permintaan itu.',
+        timestamp: new Date(),
+        data: response.data || null,
+        responseType: response.type || 'text'
       }]);
 
-    } catch (err) {
-      console.error(err);
-      setChatHistory(prev => [...prev, {
-        type: 'system',
-        content: "Error: Gagal terhubung ke Standard AI Server.",
-        timestamp: new Date()
-      }]);
+    } catch (e) {
+      setChatHistory(prev => [...prev, { type: 'system', content: 'Terjadi kesalahan saat menghubungkan ke AI Agent.', timestamp: new Date() }]);
     } finally {
-      setIsLoading(false);
+      setLoadingAI(false);
     }
   };
 
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [chatHistory, isLoading]);
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+  };
+
+  const renderMessageContent = (msg: ChatMessage) => {
+    if (msg.responseType === 'analytics' && msg.data) return <AnalyticsCard data={msg.data} />;
+    if (msg.responseType === 'guest_profile' && msg.data) return <GuestProfileCard data={msg.data} />;
+    // Tampilkan response text biasa jika bukan card
+    return (
+      <Paper p="xs" radius="md" shadow="xs" withBorder={msg.type !== 'user'}
+        bg={msg.type === 'user' ? 'blue' : msg.type === 'system' ? 'red.1' : 'white'}
+        c={msg.type === 'user' ? 'white' : 'black'}
+      >
+        <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</Text>
+        <Text size="xs" c={msg.type === 'user' ? 'blue.1' : 'dimmed'} mt={4} ta="right">
+          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </Paper>
+    );
+  };
 
   return (
     <>
-      {/* Floating Button */}
       {!isWidgetOpen && (
-        <Tooltip label="Open Standard AI (Test Mode)" position="left">
-          <ActionIcon
-            size={60}
-            radius="xl"
-            variant="gradient"
-            gradient={{ from: 'orange', to: 'red' }} // Ubah warna jadi Orange/Red untuk membedakan dari Agentic AI
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              boxShadow: '0 4px 20px rgba(255, 100, 100, 0.4)',
-              cursor: 'pointer',
-              zIndex: 1000,
-            }}
-            onClick={() => setIsWidgetOpen(true)}
-          >
-            {/* Pakai icon Alert/Bug untuk menandakan ini mode testing/baseline */}
-            <IconAlertCircle size={28} stroke={2} />
-          </ActionIcon>
-        </Tooltip>
+        <Transition transition="slide-up" mounted={!isWidgetOpen}>
+          {(styles) => (
+            <Tooltip label="Manager AI Assistant" position="left" withArrow>
+              <ActionIcon
+                style={{ ...styles, position: 'fixed', bottom: 30, right: 30, zIndex: 100, boxShadow: 'var(--mantine-shadow-lg)' }}
+                size={60} radius={60} variant="gradient"
+                gradient={{ from: 'blue', to: 'indigo', deg: 60 }}
+                onClick={() => setIsWidgetOpen(true)}
+              >
+                <IconSparkles size={32} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Transition>
       )}
 
-      {/* Widget Panel */}
-      <Transition mounted={isWidgetOpen} transition="slide-up" duration={300} timingFunction="ease">
+      <Transition transition="slide-up" mounted={isWidgetOpen}>
         {(styles) => (
           <Paper
-            shadow="xl"
-            radius="lg"
+            shadow="xl" radius="lg" withBorder
             style={{
-              ...styles,
-              position: 'fixed',
-              bottom: isMaximized ? 0 : 24,
-              right: isMaximized ? 0 : 24,
-              width: isMaximized ? '100%' : 420,
-              height: isMaximized ? '100vh' : 600,
-              zIndex: 1001,
-              display: 'flex',
-              flexDirection: 'column',
-              background: 'white',
-              border: '2px solid #ff8787', // Border merah muda
-              overflow: 'hidden',
+              ...styles, position: 'fixed', bottom: isMaximized ? 0 : 30, right: isMaximized ? 0 : 30,
+              width: isMaximized ? '100vw' : 450, height: isMaximized ? '100vh' : 650, zIndex: 200,
+              display: 'flex', flexDirection: 'column', overflow: 'hidden'
             }}
           >
-            {/* Header */}
-            <Box style={{ background: 'linear-gradient(135deg, #ff922b 0%, #fa5252 100%)', padding: '12px 16px', borderRadius: isMaximized ? 0 : '12px 12px 0 0' }}>
+            <Box p="sm" bg="blue.7" style={{ color: 'white' }}>
               <Group justify="space-between">
                 <Group gap="xs">
-                  <ThemeIcon size={28} radius="md" color="white" variant="light">
-                    <IconAlertCircle size={16} stroke={2} />
-                  </ThemeIcon>
-                  <div>
-                    <Text size="xs" fw={700} c="white">Standard AI (Baseline)</Text>
-                    <Badge size="xs" variant="light" color="yellow" style={{ height: '16px', padding: '0 6px', color: 'black' }}>NO TOOLS</Badge>
-                  </div>
+                  <ThemeIcon variant="light" color="white" size="md" radius="xl"><IconSparkles size={18} /></ThemeIcon>
+                  <Box>
+                    <Text fw={700} size="sm" c="white">Manager AI Co-pilot</Text>
+                    <Group gap={4}>
+                      <Badge size="xs" color="green" variant="filled">Online</Badge>
+                      <Text size="xs" c="blue.1">Reporting & Analytics</Text>
+                    </Group>
+                  </Box>
                 </Group>
                 <Group gap={4}>
-                  <ActionIcon size={28} variant="subtle" color="white" onClick={() => setIsMaximized(!isMaximized)}>
-                    {isMaximized ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+                  <ActionIcon variant="transparent" color="white" onClick={() => setIsMaximized(!isMaximized)}>
+                    {isMaximized ? <IconMinimize size={18} /> : <IconMaximize size={18} />}
                   </ActionIcon>
-                  <ActionIcon size={28} variant="subtle" color="white" onClick={() => setIsWidgetOpen(false)}>
-                    <IconX size={16} />
-                  </ActionIcon>
+                  <ActionIcon variant="transparent" color="white" onClick={() => setIsWidgetOpen(false)}><IconX size={18} /></ActionIcon>
                 </Group>
               </Group>
             </Box>
 
-            {/* Chat Area */}
-            <ScrollArea style={{ flex: 1, padding: '12px 16px' }} viewportRef={chatScrollRef}>
-              <Stack gap="sm">
-                <Paper p="md" radius="md" style={{ background: 'white', border: '1px solid #e9ecef' }}>
-                  <Group gap="xs" mb="xs">
-                    <ThemeIcon size={28} radius="md" variant="light" color="orange"><IconAlertCircle size={16} /></ThemeIcon>
-                    <Text size="sm" fw={700}>Baseline Mode Active</Text>
-                  </Group>
-                  <Text size="sm" style={{ lineHeight: 1.5 }} c="dimmed">
-                    Mode ini mensimulasikan "Standard Chatbot" tanpa kemampuan Agentic ReAct. Gunakan ini untuk membandingkan kegagalan eksekusi tugas vs Agentic AI.
-                  </Text>
-                </Paper>
-
-                {/* Quick Actions (Visual Only for Baseline) */}
-                {activeInsights.filter(Boolean).length > 0 && (
-                  <Box style={{ opacity: 0.6 }}> 
-                    <Group gap="xs" mb="xs">
-                      <Text size="xs" fw={700} c="dimmed">VISUAL MOCKUP (UNCONNECTED)</Text>
-                    </Group>
-                    <Stack gap={6}>
-                      {aiInsights.map((insight, index) => (
-                        activeInsights[index] && (
-                          <Paper key={insight.id} p="xs" radius="sm" withBorder style={{ borderColor: '#e9ecef', background: 'white' }}>
-                            <Stack gap={6}>
-                              <Group gap="xs" wrap="nowrap" align="flex-start">
-                                <ThemeIcon size={24} radius="sm" variant="light" color="gray">
-                                  <insight.icon size={14} stroke={1.5} />
-                                </ThemeIcon>
-                                <div style={{ flex: 1 }}>
-                                  <Text size="xs" fw={700} c="dimmed">{insight.title}</Text>
-                                  <Text size="10px" c="dimmed">{insight.description}</Text>
-                                </div>
-                              </Group>
-                            </Stack>
-                          </Paper>
-                        )
+            <ScrollArea viewportRef={viewport} style={{ flex: 1, backgroundColor: '#f8f9fa' }} p="md">
+              <Stack gap="md">
+                {chatHistory.length === 0 && (
+                  <Box mt="xs">
+                    <Box style={{ textAlign: 'center', opacity: 0.8, marginBottom: 20 }}>
+                      <ThemeIcon size={64} radius="xl" variant="light" color="blue" mb="sm"><IconRobot size={36} /></ThemeIcon>
+                      <Text fw={600} size="md">Halo, Manager!</Text>
+                      <Text size="xs" c="dimmed">Pilih analisis cepat di bawah ini:</Text>
+                    </Box>
+                    <Stack gap={8}>
+                      {QUICK_PROMPTS.map((prompt, index) => (
+                        <Button key={index} variant="default" size="md" radius="md" fullWidth justify="flex-start"
+                          leftSection={<ThemeIcon size="sm" color={prompt.color} variant="light">{prompt.icon}</ThemeIcon>}
+                          onClick={() => handleQuickPrompt(prompt.text)}
+                          styles={(theme) => ({
+                            root: { height: 'auto', padding: '8px 12px', '&:hover': { borderColor: theme.colors[prompt.color][4] } },
+                            label: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }
+                          })}
+                        >
+                          <Text size="xs" fw={600} c="dark.9">{prompt.label}</Text>
+                          <Text size="10px" c="dimmed" fw={400}>{prompt.desc}</Text>
+                        </Button>
                       ))}
                     </Stack>
                   </Box>
                 )}
-
-                {/* Conversation */}
                 {chatHistory.map((msg, idx) => (
-                  <Box key={idx} style={{ display: 'flex', justifyContent: msg.type === 'user' ? 'flex-end' : 'flex-start' }}>
-                    <Paper 
-                      p="sm" 
-                      radius="md" 
-                      style={{ 
-                        maxWidth: '85%', 
-                        background: msg.type === 'user' ? '#ff922b' : '#f8f9fa', // Warna User jadi Orange di mode ini
-                        color: msg.type === 'user' ? 'white' : 'inherit',
-                        border: msg.type === 'system' ? '1px dashed red' : 'none'
-                      }}
-                    >
-                      <Text size="sm">{msg.content}</Text>
-                    </Paper>
+                  <Box key={idx} style={{ alignSelf: msg.type === 'user' ? 'flex-end' : 'flex-start', maxWidth: msg.type === 'user' ? '85%' : '100%' }}>
+                    {renderMessageContent(msg)}
                   </Box>
                 ))}
-
-                {/* Loading Indicator */}
-                {isLoading && (
-                   <Box style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                    <Paper p="sm" radius="md" style={{ background: '#f8f9fa', maxWidth: '85%' }}>
-                      <Group gap="xs">
-                        <Loader size="xs" color="orange" type="dots" />
-                        <Text size="xs" c="dimmed">Standard AI is generating text...</Text>
-                      </Group>
+                {loadingAI && (
+                  <Box style={{ alignSelf: 'flex-start' }}>
+                    <Paper p="xs" radius="md" bg="white" withBorder>
+                      <Group gap="xs"><Loader size="xs" color="blue" /><Text size="xs" c="dimmed">Menganalisis data...</Text></Group>
                     </Paper>
                   </Box>
                 )}
               </Stack>
             </ScrollArea>
 
-            {/* Input */}
-            <Box p="md" style={{ borderTop: '1px solid #e9ecef', background: 'white' }}>
+            <Box p="sm" style={{ borderTop: '1px solid #e9ecef', background: 'white' }}>
               <Group gap="xs" align="flex-end">
                 <Textarea
-                  placeholder="Test Standard LLM (No Tools)..."
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  minRows={1}
-                  maxRows={3}
-                  autosize
-                  disabled={isLoading}
-                  style={{ flex: 1 }}
-                  onKeyPress={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                  ref={inputRef} placeholder="Tanya tentang laporan, okupansi, dll..."
+                  value={chatMessage} onChange={(e) => setChatMessage(e.target.value)}
+                  minRows={1} maxRows={3} autosize style={{ flex: 1 }} onKeyDown={handleKeyPress} disabled={loadingAI} size="sm"
                 />
-                <ActionIcon 
-                  size={36} 
-                  radius="md" 
-                  variant="gradient" 
-                  gradient={{ from: 'orange', to: 'red' }} 
-                  onClick={handleSendMessage}
-                  loading={isLoading}
-                >
+                <ActionIcon size={36} radius="md" variant="gradient" gradient={{ from: 'blue', to: 'indigo' }} onClick={handleSendMessage} loading={loadingAI} disabled={!chatMessage.trim() || loadingAI}>
                   <IconSend size={18} />
                 </ActionIcon>
               </Group>
