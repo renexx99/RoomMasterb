@@ -5,13 +5,13 @@ import { IconChartBar, IconTrendingUp, IconChartPie } from '@tabler/icons-react'
 
 // --- Grafik 1: Bar Chart Style (Untuk Tren Pendapatan Admin) ---
 const trendData = [
-  { label: 'Sen', value: 45 },
-  { label: 'Sel', value: 52 },
-  { label: 'Rab', value: 38 },
-  { label: 'Kam', value: 65 },
-  { label: 'Jum', value: 85 },
-  { label: 'Sab', value: 90 },
-  { label: 'Min', value: 70 },
+  { label: 'Mon', value: 45 },
+  { label: 'Tue', value: 52 },
+  { label: 'Wed', value: 38 },
+  { label: 'Thu', value: 65 },
+  { label: 'Fri', value: 85 },
+  { label: 'Sat', value: 90 },
+  { label: 'Sun', value: 70 },
 ];
 
 export function AdminRevenueTrend() {
@@ -19,8 +19,8 @@ export function AdminRevenueTrend() {
     <Card shadow="sm" padding="md" radius="md" withBorder style={{ height: 280 }}>
       <Group justify="space-between" mb="md">
         <div>
-          <Text size="sm" fw={700}>Tren Pendapatan (7 Hari)</Text>
-          <Text size="xs" c="dimmed">Analisis mingguan</Text>
+          <Text size="sm" fw={700}>Revenue Trend (7 Days)</Text>
+          <Text size="xs" c="dimmed">Weekly analysis</Text>
         </div>
         <ThemeIcon size={36} radius="md" variant="light" color="teal">
           <IconChartBar size={18} />
@@ -50,7 +50,7 @@ export function AdminRevenueTrend() {
       </Box>
 
       <Group justify="space-between" pt="md" mt="md" style={{ borderTop: '1px solid #e9ecef' }}>
-        <Text size="xs" c="dimmed">Rata-rata: Rp 4.2Jt</Text>
+        <Text size="xs" c="dimmed">Avg: IDR 4.2M</Text>
         <Badge size="sm" variant="light" color="teal" leftSection={<IconTrendingUp size={12} />}>
           +12.5%
         </Badge>
@@ -61,8 +61,8 @@ export function AdminRevenueTrend() {
 
 // --- Grafik 2: Ring Chart Style (Untuk Okupansi Admin) ---
 const occupancyData = [
-  { label: 'Terisi', amount: 15, percentage: 45, color: 'teal' },
-  { label: 'Tersedia', amount: 12, percentage: 35, color: 'blue' },
+  { label: 'Occupied', amount: 15, percentage: 45, color: 'teal' },
+  { label: 'Available', amount: 12, percentage: 35, color: 'blue' },
   { label: 'Maintenance', amount: 3, percentage: 20, color: 'orange' },
 ];
 
@@ -71,8 +71,8 @@ export function AdminOccupancyRing() {
     <Card shadow="sm" padding="md" radius="md" withBorder style={{ height: 280 }}>
       <Group justify="space-between" mb="md">
         <div>
-          <Text size="sm" fw={700}>Status Okupansi</Text>
-          <Text size="xs" c="dimmed">Distribusi kamar saat ini</Text>
+          <Text size="sm" fw={700}>Occupancy Status</Text>
+          <Text size="xs" c="dimmed">Current room distribution</Text>
         </div>
         <ThemeIcon size={36} radius="md" variant="light" color="indigo">
           <IconChartPie size={18} />
@@ -113,7 +113,7 @@ export function AdminOccupancyRing() {
       </Group>
 
       <Group justify="center" pt="md" mt="auto" style={{ borderTop: '1px solid #e9ecef' }}>
-        <Text size="xs" c="dimmed">Okupansi saat ini: <Text span fw={700} c="dark">45%</Text></Text>
+        <Text size="xs" c="dimmed">Current Occupancy: <Text span fw={700} c="dark">45%</Text></Text>
       </Group>
     </Card>
   );

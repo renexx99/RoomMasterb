@@ -20,7 +20,7 @@ export function RecentReservationsTable({ reservations }: TableProps) {
   if (reservations.length === 0) {
     return (
       <Card withBorder radius="md" p="lg">
-        <Text c="dimmed" ta="center">Belum ada reservasi terbaru.</Text>
+        <Text c="dimmed" ta="center">No recent reservations.</Text>
       </Card>
     );
   }
@@ -31,7 +31,7 @@ export function RecentReservationsTable({ reservations }: TableProps) {
         <Text fw={500}>{row.guest?.full_name || 'N/A'}</Text>
       </Table.Td>
       <Table.Td>
-        {new Date(row.check_in_date).toLocaleDateString('id-ID', {
+        {new Date(row.check_in_date).toLocaleDateString('en-US', {
           day: '2-digit',
           month: 'short',
           year: 'numeric'
@@ -51,7 +51,7 @@ export function RecentReservationsTable({ reservations }: TableProps) {
           {row.payment_status}
         </Badge>
       </Table.Td>
-      <Table.Td>Rp {row.total_price.toLocaleString('id-ID')}</Table.Td>
+      <Table.Td>IDR {row.total_price.toLocaleString('en-US')}</Table.Td>
     </Table.Tr>
   ));
 
@@ -60,9 +60,9 @@ export function RecentReservationsTable({ reservations }: TableProps) {
       <Table verticalSpacing="sm" striped highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Tamu</Table.Th>
-            <Table.Th>Check-in</Table.Th>
-            <Table.Th>Status Bayar</Table.Th>
+            <Table.Th>Guest Name</Table.Th>
+            <Table.Th>Arrival Date</Table.Th>
+            <Table.Th>Payment Status</Table.Th>
             <Table.Th>Total</Table.Th>
           </Table.Tr>
         </Table.Thead>

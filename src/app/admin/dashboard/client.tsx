@@ -28,8 +28,8 @@ export default function AdminDashboardClient({ data }: ClientProps) {
     return (
       <Container size="lg" py="xl">
         <Paper withBorder p="xl" ta="center" radius="md" shadow="sm">
-          <Title order={3} mb="sm">Akses Terbatas</Title>
-          <Text c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</Text>
+          <Title order={3} mb="sm">Restricted Access</Title>
+          <Text c="dimmed">Your account is not linked to any property.</Text>
         </Paper>
       </Container>
     );
@@ -60,11 +60,11 @@ export default function AdminDashboardClient({ data }: ClientProps) {
           <Paper p="md" radius="md" shadow="sm" withBorder>
             <Group justify="space-between" mb="md">
               <div>
-                <Text size="sm" fw={700}>Reservasi Terbaru</Text>
-                <Text size="xs" c="dimmed">Aktivitas booking terakhir</Text>
+                <Text size="sm" fw={700}>Recent Bookings</Text>
+                <Text size="xs" c="dimmed">Latest reservation activities</Text>
               </div>
               <Button variant="light" color="teal" size="xs">
-                Lihat Semua
+                View All
               </Button>
             </Group>
             <RecentReservationsTable reservations={recentReservations} />

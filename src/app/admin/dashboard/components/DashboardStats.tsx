@@ -21,19 +21,18 @@ interface StatsProps {
 }
 
 export function DashboardStats({ stats }: StatsProps) {
-  // Data admin dipetakan ke format visual Manajer
   const statData = [
     {
-      title: 'Kamar Tersedia',
+      title: 'Available Rooms',
       value: stats.availableRooms.toString(),
-      change: '-2 Kamar', // Dummy trend
+      change: '-2 Rooms', // Dummy trend
       trend: 'down',
       icon: IconBed,
       color: 'teal',
       progress: 45, // Dummy progress visual
     },
     {
-      title: 'Check-in Hari Ini',
+      title: "Today's Arrivals",
       value: stats.todayCheckIns.toString(),
       change: 'On Track',
       trend: 'neutral',
@@ -42,7 +41,7 @@ export function DashboardStats({ stats }: StatsProps) {
       progress: 75,
     },
     {
-      title: 'Tamu In-House',
+      title: 'In-House Guests',
       value: stats.activeReservations.toString(),
       change: '+12%',
       trend: 'up',
@@ -51,9 +50,9 @@ export function DashboardStats({ stats }: StatsProps) {
       progress: 62,
     },
     {
-      title: 'Total Database Tamu',
+      title: 'Total Guest Database',
       value: stats.totalGuests.toString(),
-      change: '+5 Baru',
+      change: '+5 New',
       trend: 'up',
       icon: IconUsers,
       color: 'violet',
