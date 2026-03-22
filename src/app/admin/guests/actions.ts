@@ -1,83 +1,85 @@
+// src/app/fo/guests/actions.ts
 'use server';
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
-// Helper untuk inisialisasi Supabase di Server Action
 async function getSupabase() {
   const cookieStore = await cookies();
-  
-  // PERBAIKAN: Tambahkan 'as any' untuk membungkam error TypeScript.
-  // Kita sudah melakukan await di atas, jadi cookieStore sudah siap dipakai.
-  return createServerActionClient({ 
-    cookies: () => cookieStore as any 
-  });
+  // @ts-ignore
+  return createServerActionClient({ cookies: () => cookieStore });
 }
 
 export interface GuestData {
+  hotel_id: string;
   full_name: string;
   email: string;
-  phone_number?: string | null;
-  hotel_id: string;
+  phone_number: string;
+  title: string;
+  loyalty_tier: string;
+  preferences?: string[]; // Akan disimpan ke JSONB
 }
 
-// ... sisa kode createGuest, updateGuest, deleteGuest tetap sama ...
-export async function createGuest(data: GuestData) {
+// --- UPDATE GUEST ---
+export async function updateGuestAction(id: string, data: Partial<GuestData>) {
   const supabase = await getSupabase();
-  
+
+  // Konversi array preferences ke JSONB jika ada
+  const payload: any = { ...data };
+  if (data.preferences) {
+    payload.preferences = { tags: data.preferences };
+  }
+
   const { error } = await supabase
     .from('guests')
-    .insert(data);
+    .update(payload)
+    .eq('id', id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/fo/guests');
+  return { success: true };
+}
+
+// --- CREATE GUEST ---
+export async function createGuestAction(data: GuestData) {
+  const supabase = await getSupabase();
+
+  const payload: any = { ...data };
+  if (data.preferences) {
+    payload.preferences = { tags: data.preferences };
+  }
+
+  const { error } = await supabase
+    .from('guests')
+    .insert(payload);
 
   if (error) {
-    if (error.code === '23505') {
-      return { error: 'Email ini sudah terdaftar untuk tamu lain di hotel ini.' };
-    }
+    if (error.code === '23505') return { error: 'Email sudah terdaftar.' };
     return { error: error.message };
   }
 
-  revalidatePath('/admin/guests');
+  revalidatePath('/fo/guests');
   return { success: true };
 }
 
-export async function updateGuest(id: string, data: Partial<GuestData>) {
+// --- FETCH GUEST HISTORY ---
+export async function getGuestHistory(guestId: string) {
   const supabase = await getSupabase();
 
-  const { error } = await supabase
-    .from('guests')
-    .update(data)
-    .eq('id', id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/guests');
-  return { success: true };
-}
-
-export async function deleteGuest(id: string) {
-  const supabase = await getSupabase();
-
-  // 1. Cek apakah tamu memiliki reservasi terkait
-  const { count, error: checkError } = await supabase
+  const { data, error } = await supabase
     .from('reservations')
-    .select('*', { count: 'exact', head: true })
-    .eq('guest_id', id);
+    .select(`
+      id,
+      check_in_date,
+      check_out_date,
+      total_price,
+      room:rooms(room_number, room_type:room_types(name))
+    `)
+    .eq('guest_id', guestId)
+    .order('check_in_date', { ascending: false });
 
-  if (checkError) return { error: checkError.message };
-  
-  if (count && count > 0) {
-    return { error: `Tidak dapat menghapus tamu karena memiliki ${count} reservasi terkait.` };
-  }
-
-  // 2. Hapus tamu jika aman
-  const { error } = await supabase
-    .from('guests')
-    .delete()
-    .eq('id', id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/guests');
-  return { success: true };
+  if (error) return [];
+  return data;
 }

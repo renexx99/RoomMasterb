@@ -2,30 +2,18 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Container,
-  Title,
-  Button,
-  Group,
-  Paper,
-  TextInput,
-  Select,
-  ActionIcon,
-  Text,
-  Grid,
-  Modal,
-  Stack,
-  MultiSelect,
-  Box,
-  ThemeIcon,
+  Container, Group, Paper, TextInput, Select, 
+  Text, Grid, Stack, Box, Button, ScrollArea, Divider,
+  ThemeIcon
 } from '@mantine/core';
-import { IconPlus, IconArrowLeft, IconSearch, IconBed } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
-import { notifications } from '@mantine/notifications';
+import { 
+  IconPlus, IconSearch, IconBed, IconFilter, IconDoor
+} from '@tabler/icons-react';
 import { RoomType } from '@/core/types/database';
 import { RoomWithDetails } from './page';
-import { RoomsTable } from './components/RoomsTable';
+import { RoomListItem } from './components/RoomListItem';
+import { RoomDetailPanel } from './components/RoomDetailPanel';
 import { RoomFormModal } from './components/RoomFormModal';
-import { deleteRoom } from './actions';
 
 interface ClientProps {
   initialRooms: RoomWithDetails[];
@@ -34,225 +22,193 @@ interface ClientProps {
 }
 
 export default function RoomsManagementClient({ initialRooms, roomTypes, hotelId }: ClientProps) {
-  const router = useRouter();
+  const MAX_WIDTH = 1800; // Wide layout for Split View
 
-  // Konsistensi Layout
-  const MAX_WIDTH = 1200;
-
-  // State Data
-  const rooms = initialRooms;
-
-  // UI States
-  const [modalOpened, setModalOpened] = useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [editingItem, setEditingItem] = useState<RoomWithDetails | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<RoomWithDetails | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Filter & Sort States
+  // State
+  const [selectedRoom, setSelectedRoom] = useState<RoomWithDetails | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string | null>(null);
 
-  // --- Logic Filter ---
+  // Modal State
+  const [modalOpened, setModalOpened] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Options
+  const roomTypeOptions = useMemo(() => roomTypes.map(rt => ({ value: rt.id, label: rt.name })), [roomTypes]);
+
+  // Filter Logic
   const filteredRooms = useMemo(() => {
-    let result = [...rooms];
+    let result = [...initialRooms];
 
-    // 1. Search
     if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      result = result.filter(r => r.room_number.toLowerCase().includes(lowerSearch));
+      const lower = searchTerm.toLowerCase();
+      result = result.filter(r => r.room_number.toLowerCase().includes(lower));
     }
 
-    // 2. Status Filter
-    if (statusFilter.length > 0) {
-      result = result.filter(r => statusFilter.includes(r.status));
+    if (filterStatus) {
+      result = result.filter(r => r.status === filterStatus);
     }
 
-    // 3. Type Filter
-    if (typeFilter) {
-      result = result.filter(r => r.room_type_id === typeFilter);
+    if (filterType) {
+      result = result.filter(r => r.room_type_id === filterType);
     }
+
+    // Sort: Room Number Ascending
+    result.sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }));
 
     return result;
-  }, [rooms, searchTerm, statusFilter, typeFilter]);
+  }, [initialRooms, searchTerm, filterStatus, filterType]);
 
-  // --- Handlers ---
-  const handleOpenCreate = () => {
-    setEditingItem(null);
+  // Handlers
+  const handleCreateNew = () => {
+    setSelectedRoom(null); // Reset selection
+    setIsEditing(false);
     setModalOpened(true);
   };
 
-  const handleOpenEdit = (item: RoomWithDetails) => {
-    setEditingItem(item);
-    setModalOpened(true);
-  };
-
-  const handleOpenDelete = (item: RoomWithDetails) => {
-    setDeleteTarget(item);
-    setDeleteModalOpened(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    setIsSubmitting(true);
-    try {
-      const result = await deleteRoom(deleteTarget.id);
-      
-      if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
-      } else {
-        notifications.show({ title: 'Sukses', message: 'Kamar berhasil dihapus', color: 'green' });
-        setDeleteModalOpened(false);
-        setDeleteTarget(null);
-      }
-    } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
-    } finally {
-      setIsSubmitting(false);
+  const handleEditCurrent = () => {
+    if (selectedRoom) {
+      setIsEditing(true);
+      setModalOpened(true);
     }
   };
-
-  // Options for Selects
-  const typeOptions = useMemo(() => roomTypes.map(t => ({ value: t.id, label: t.name })), [roomTypes]);
 
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
         <Paper withBorder p="xl" ta="center" radius="md">
-          <Text c="dimmed">Akun Anda belum terhubung dengan Hotel manapun.</Text>
+          <Text size="lg" fw={500} c="dimmed">
+            Your account is not linked to any property.
+          </Text>
         </Paper>
       </Container>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header Ramping */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-        padding: '0.75rem 0', 
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
-      }}>
-        <Container fluid px="lg">
-          <Box maw={MAX_WIDTH} mx="auto">
-            <Group justify="space-between" align="center">
-              <Group gap="xs">
-                 <ThemeIcon
-                  variant="light"
-                  color="white"
-                  size={34}
-                  radius="md"
-                  style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
-                >
-                  <IconBed size={18} stroke={1.5} />
-                </ThemeIcon>
-                <div style={{ lineHeight: 1 }}>
-                  <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>Manajemen Kamar</Title>
-                  <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>Kelola inventaris kamar fisik dan statusnya</Text>
-                </div>
-              </Group>
-              <Button 
-                leftSection={<IconPlus size={16} />} 
-                onClick={handleOpenCreate} 
-                variant="white" 
-                color="teal"
-                size="xs"
-                radius="md"
-                fw={600}
-              >
-                Tambah Kamar
-              </Button>
-            </Group>
+    <Box style={{ height: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
+      
+      {/* Main Content - Split View */}
+      <Box style={{ flex: 1, overflow: 'hidden' }}>
+        <Container fluid px="md" py="md" style={{ height: '100%' }}>
+          <Box maw={MAX_WIDTH} mx="auto" style={{ height: '100%' }}>
+            <Grid gutter="md" style={{ height: '100%', margin: 0 }}>
+              
+              {/* LEFT: Room List (Sidebar) */}
+              <Grid.Col span={{ base: 12, md: 4, lg: 3 }} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Stack gap="sm" style={{ height: '100%' }}>
+                  
+                  {/* Search & Actions */}
+                  <Paper p="sm" radius="md" withBorder shadow="sm">
+                    <Stack gap="xs">
+                      <TextInput
+                        placeholder="Search room number..."
+                        leftSection={<IconSearch size={14} />}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                        radius="md"
+                      />
+                      <Group grow>
+                        <Select
+                          placeholder="Status"
+                          data={[
+                            { value: 'available', label: 'Available' },
+                            { value: 'occupied', label: 'Occupied' },
+                            { value: 'maintenance', label: 'Maintenance' }
+                          ]}
+                          value={filterStatus}
+                          onChange={setFilterStatus}
+                          clearable
+                          leftSection={<IconFilter size={14} />}
+                          radius="md"
+                        />
+                        <Select
+                          placeholder="Type"
+                          data={roomTypeOptions}
+                          value={filterType}
+                          onChange={setFilterType}
+                          clearable
+                          radius="md"
+                        />
+                      </Group>
+                      
+                      <Divider my={4} />
+                      
+                      <Button 
+                        leftSection={<IconPlus size={16} />} 
+                        onClick={handleCreateNew}
+                        fullWidth
+                        variant="gradient"
+                        gradient={{ from: '#10b981', to: '#059669', deg: 135 }}
+                        radius="md"
+                      >
+                        Add Room
+                      </Button>
+                    </Stack>
+                  </Paper>
+
+                  {/* Scrollable List */}
+                  <Paper withBorder radius="md" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <Box p="xs" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
+                        <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+                          Inventory ({filteredRooms.length})
+                        </Text>
+                      </Box>
+                      <ScrollArea style={{ flex: 1 }} type="auto" offsetScrollbars>
+                        <Stack gap={0}>
+                          {filteredRooms.map((room) => (
+                            <RoomListItem 
+                              key={room.id}
+                              room={room}
+                              selected={selectedRoom?.id === room.id}
+                              onClick={() => setSelectedRoom(room)}
+                            />
+                          ))}
+                          {filteredRooms.length === 0 && (
+                             <Stack align="center" justify="center" py="xl" gap="xs" c="dimmed">
+                                <IconDoor size={32} stroke={1.5} />
+                                <Text size="sm">No rooms found</Text>
+                             </Stack>
+                          )}
+                        </Stack>
+                      </ScrollArea>
+                  </Paper>
+                </Stack>
+              </Grid.Col>
+
+              {/* RIGHT: Room Detail (Main) */}
+              <Grid.Col span={{ base: 12, md: 8, lg: 9 }} style={{ height: '100%' }}>
+                {selectedRoom ? (
+                  <RoomDetailPanel 
+                    room={selectedRoom} 
+                    onEdit={handleEditCurrent}
+                  />
+                ) : (
+                  <Paper h="100%" radius="md" withBorder bg="gray.0">
+                    <Stack align="center" justify="center" h="100%" gap="xs">
+                      <ThemeIcon size={80} radius="xl" variant="light" color="gray" style={{ background: 'white' }}>
+                        <IconBed size={40} />
+                      </ThemeIcon>
+                      <Text size="lg" fw={600} c="dimmed">Select a room to view details</Text>
+                    </Stack>
+                  </Paper>
+                )}
+              </Grid.Col>
+
+            </Grid>
           </Box>
         </Container>
-      </div>
+      </Box>
 
-      {/* Content */}
-      <Container fluid px="lg" py="md">
-        <Box maw={MAX_WIDTH} mx="auto">
-          <Stack gap="md">
-            
-            {/* Filters */}
-            <Paper shadow="xs" p="sm" radius="md" withBorder>
-              <Grid align="flex-end" gutter="sm">
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <TextInput
-                    label="Cari Nomor Kamar"
-                    placeholder="Contoh: 101"
-                    leftSection={<IconSearch size={16} stroke={1.5} />}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.currentTarget.value)}
-                    size="sm"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                   <Select
-                    label="Tipe Kamar"
-                    placeholder="Semua Tipe"
-                    data={typeOptions}
-                    value={typeFilter}
-                    onChange={setTypeFilter}
-                    clearable
-                    searchable
-                    size="sm"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                  <MultiSelect
-                    label="Status Kamar"
-                    placeholder="Filter Status"
-                    data={[
-                      { value: 'available', label: 'Tersedia' },
-                      { value: 'occupied', label: 'Terisi' },
-                      { value: 'maintenance', label: 'Perbaikan' },
-                      { value: 'dirty', label: 'Kotor' },
-                    ]}
-                    value={statusFilter}
-                    onChange={setStatusFilter}
-                    clearable
-                    size="sm"
-                  />
-                </Grid.Col>
-              </Grid>
-            </Paper>
-
-            <RoomsTable 
-              data={filteredRooms}
-              onEdit={handleOpenEdit}
-              onDelete={handleOpenDelete}
-            />
-          </Stack>
-        </Box>
-      </Container>
-
-      {/* Modals */}
-      <RoomFormModal
+      {/* Form Modal */}
+      <RoomFormModal 
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
         hotelId={hotelId}
-        itemToEdit={editingItem}
+        itemToEdit={isEditing ? selectedRoom : null}
         roomTypes={roomTypes}
       />
-
-      <Modal 
-        opened={deleteModalOpened} 
-        onClose={() => setDeleteModalOpened(false)} 
-        title="Konfirmasi Hapus" 
-        centered 
-        size="sm" 
-        radius="md"
-      >
-        <Stack gap="md">
-          <Text size="sm">
-            Apakah Anda yakin ingin menghapus Kamar <strong>{deleteTarget?.room_number}</strong>?
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>Batal</Button>
-            <Button color="red" size="xs" onClick={handleDeleteConfirm} loading={isSubmitting}>Hapus</Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </div>
+    </Box>
   );
 }

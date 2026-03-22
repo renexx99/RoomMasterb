@@ -1,30 +1,29 @@
+// src/app/fo/guests/components/GuestsTable.tsx
 'use client';
 
-import { Table, Group, ActionIcon, Paper, Box, Text } from '@mantine/core';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { Table, Group, ActionIcon, Paper, Text, Avatar, Tooltip } from '@mantine/core';
+import { IconPencil, IconTrash, IconPhone, IconMail } from '@tabler/icons-react';
 import { Guest } from '@/core/types/database';
 
-interface GuestsTableProps {
-  guests: Guest[];
+interface Props {
+  data: Guest[];
   onEdit: (guest: Guest) => void;
   onDelete: (guest: Guest) => void;
 }
 
-export function GuestsTable({ guests, onEdit, onDelete }: GuestsTableProps) {
-  if (guests.length === 0) {
+export function GuestsTable({ data, onEdit, onDelete }: Props) {
+  if (data.length === 0) {
     return (
-      <Paper shadow="sm" p="xl" radius="md" withBorder>
-        <Box ta="center">
-          <Text c="dimmed">Data tamu tidak ditemukan.</Text>
-        </Box>
+      <Paper p="xl" withBorder ta="center" c="dimmed" radius="md">
+        Belum ada data tamu yang ditemukan.
       </Paper>
     );
   }
 
   return (
-    <Paper shadow="sm" p="lg" radius="md" withBorder>
-      <Table striped highlightOnHover withTableBorder withColumnBorders>
-        <Table.Thead>
+    <Paper shadow="sm" radius="md" withBorder style={{ overflow: 'hidden' }}>
+      <Table striped highlightOnHover verticalSpacing="xs">
+        <Table.Thead bg="gray.0">
           <Table.Tr>
             <Table.Th>Nama Lengkap</Table.Th>
             <Table.Th>Email</Table.Th>
@@ -33,29 +32,52 @@ export function GuestsTable({ guests, onEdit, onDelete }: GuestsTableProps) {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {guests.map((guest) => (
+          {data.map((guest) => (
             <Table.Tr key={guest.id}>
-              <Table.Td fw={500}>{guest.full_name}</Table.Td>
-              <Table.Td>{guest.email}</Table.Td>
-              <Table.Td>{guest.phone_number || '-'}</Table.Td>
               <Table.Td>
-                <Group gap="xs" justify="center">
-                  <ActionIcon 
-                    variant="light" 
-                    color="blue" 
-                    onClick={() => onEdit(guest)} 
-                    aria-label={`Edit ${guest.full_name}`}
-                  >
-                    <IconEdit size={16} />
-                  </ActionIcon>
-                  <ActionIcon 
-                    variant="light" 
-                    color="red" 
-                    onClick={() => onDelete(guest)} 
-                    aria-label={`Hapus ${guest.full_name}`}
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
+                <Group gap="sm">
+                  <Avatar color="teal" radius="xl" size="sm">
+                    {guest.full_name.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Text size="sm" fw={500}>
+                    {guest.full_name}
+                  </Text>
+                </Group>
+              </Table.Td>
+              <Table.Td>
+                <Group gap="xs" wrap="nowrap">
+                  <IconMail size={14} style={{ opacity: 0.5 }} />
+                  <Text size="sm">{guest.email}</Text>
+                </Group>
+              </Table.Td>
+              <Table.Td>
+                <Group gap="xs" wrap="nowrap">
+                  <IconPhone size={14} style={{ opacity: 0.5 }} />
+                  <Text size="sm">{guest.phone_number || '-'}</Text>
+                </Group>
+              </Table.Td>
+              <Table.Td>
+                <Group gap={4} justify="center">
+                  <Tooltip label="Edit Tamu">
+                    <ActionIcon 
+                      variant="subtle" 
+                      color="blue" 
+                      size="sm" 
+                      onClick={() => onEdit(guest)}
+                    >
+                      <IconPencil size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Hapus Tamu">
+                    <ActionIcon 
+                      variant="subtle" 
+                      color="red" 
+                      size="sm" 
+                      onClick={() => onDelete(guest)}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Group>
               </Table.Td>
             </Table.Tr>

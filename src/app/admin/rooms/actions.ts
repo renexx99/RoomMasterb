@@ -3,27 +3,32 @@
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { RoomStatus } from '@/core/types/database';
+import { RoomStatus, WingType, FurnitureCondition } from '@/core/types/database';
 
 async function getSupabase() {
   const cookieStore = await cookies();
-  return createServerActionClient({ 
-    cookies: () => cookieStore as any 
-  });
+  // @ts-ignore
+  return createServerActionClient({ cookies: () => cookieStore });
 }
 
-// PERBAIKAN: Menghapus field 'floor'
-export interface RoomData {
+export interface RoomPayload {
   hotel_id: string;
   room_number: string;
   room_type_id: string;
   status: RoomStatus;
+  floor_number: number;
+  wing: WingType | null;
+  furniture_condition: FurnitureCondition;
+  last_renovation_date: string | null;
+  special_notes: string | null;
 }
 
-export async function createRoom(data: RoomData) {
+// --- CRUD Actions ---
+
+export async function createRoomAction(data: RoomPayload) {
   const supabase = await getSupabase();
 
-  // Cek duplikasi nomor kamar di hotel yang sama
+  // Check duplicate
   const { data: existing } = await supabase
     .from('rooms')
     .select('id')
@@ -32,48 +37,59 @@ export async function createRoom(data: RoomData) {
     .single();
 
   if (existing) {
-    return { error: `Nomor kamar ${data.room_number} sudah ada.` };
+    return { error: `Room number ${data.room_number} already exists.` };
   }
 
-  const { error } = await supabase
-    .from('rooms')
-    .insert(data);
-
+  const { error } = await supabase.from('rooms').insert(data);
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/rooms');
+  revalidatePath('/manager/rooms');
   return { success: true };
 }
 
-export async function updateRoom(id: string, data: Partial<RoomData>) {
+export async function updateRoomAction(id: string, data: Partial<RoomPayload>) {
   const supabase = await getSupabase();
-
-  const { error } = await supabase
-    .from('rooms')
-    .update(data)
-    .eq('id', id);
+  const { error } = await supabase.from('rooms').update(data).eq('id', id);
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/rooms');
+  revalidatePath('/manager/rooms');
   return { success: true };
 }
 
-export async function deleteRoom(id: string) {
+export async function deleteRoomAction(id: string) {
   const supabase = await getSupabase();
-
-  const { error } = await supabase
-    .from('rooms')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('rooms').delete().eq('id', id);
 
   if (error) {
-    if (error.code === '23503') { // Foreign Key Violation
-      return { error: 'Tidak dapat menghapus kamar ini karena memiliki riwayat reservasi.' };
+    if (error.code === '23503') {
+      return { error: 'Cannot delete room with existing history/reservations.' };
     }
     return { error: error.message };
   }
 
-  revalidatePath('/admin/rooms');
+  revalidatePath('/manager/rooms');
   return { success: true };
+}
+
+// --- NEW: Get Room History for Detail Panel ---
+export async function getRoomHistory(roomId: string) {
+  const supabase = await getSupabase();
+
+  const { data, error } = await supabase
+    .from('reservations')
+    .select(`
+      id,
+      check_in_date,
+      check_out_date,
+      total_price,
+      payment_status,
+      guest:guests(full_name)
+    `)
+    .eq('room_id', roomId)
+    .order('check_in_date', { ascending: false })
+    .limit(10); // Last 10 reservations
+
+  if (error) return [];
+  return data;
 }

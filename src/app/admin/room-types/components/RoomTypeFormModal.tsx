@@ -1,11 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Stack, TextInput, Button, Group, NumberInput, Textarea } from '@mantine/core';
+import { 
+  Modal, Stack, TextInput, Textarea, NumberInput, Grid, 
+  Select, Switch, MultiSelect, Button, Group, Tabs, Text 
+} from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { RoomType } from '@/core/types/database';
-import { createRoomType, updateRoomType } from '../actions';
+import { createRoomTypeAction, updateRoomTypeAction, RoomTypePayload } from '../actions';
+
+// Constants
+const BED_TYPES = [
+  { value: 'Single', label: 'Single Bed (90cm)' },
+  { value: 'Twin', label: 'Twin Beds (2x 90cm)' },
+  { value: 'Double', label: 'Double Bed (140cm)' },
+  { value: 'Queen', label: 'Queen Bed (160cm)' },
+  { value: 'King', label: 'King Bed (180cm)' },
+  { value: 'Super King', label: 'Super King Bed (200cm)' },
+];
+
+const VIEW_TYPES = [
+  { value: 'City View', label: 'City View' },
+  { value: 'Sea View', label: 'Sea View' },
+  { value: 'Garden View', label: 'Garden View' },
+  { value: 'Pool View', label: 'Pool View' },
+  { value: 'Mountain View', label: 'Mountain View' },
+  { value: 'No View', label: 'No View' },
+];
+
+const COMMON_AMENITIES = [
+  'AC', 'LED TV', 'Free WiFi', 'Mini Bar', 'Coffee Maker',
+  'Safe Box', 'Shower', 'Bathtub', 'Hair Dryer', 'Iron & Board',
+  'Telephone', 'Work Desk', 'Sofa', 'Balcony', 'Kitchenette',
+  'Microwave', 'Refrigerator'
+];
 
 interface Props {
   opened: boolean;
@@ -22,23 +51,44 @@ export function RoomTypeFormModal({ opened, onClose, hotelId, itemToEdit }: Prop
       name: '',
       description: '',
       price_per_night: 0,
-      capacity: 2,
+      capacity: 1,
+      size_sqm: 0,
+      bed_type: '',
+      bed_count: 1,
+      view_type: '',
+      smoking_allowed: false,
+      amenities: [] as string[],
     },
     validate: {
-      name: (value) => (!value ? 'Nama wajib diisi' : null),
-      price_per_night: (value) => (value <= 0 ? 'Harga harus lebih dari 0' : null),
-      capacity: (value) => (value < 1 ? 'Minimal 1 orang' : null),
+      name: (value) => (!value ? 'Room type name is required' : null),
+      price_per_night: (value) => (value <= 0 ? 'Price must be greater than 0' : null),
+      capacity: (value) => (value <= 0 ? 'Minimum capacity is 1' : null),
+      bed_count: (value) => (value < 1 ? 'Minimum 1 bed' : null),
     },
   });
 
   useEffect(() => {
     if (opened) {
       if (itemToEdit) {
+        // Parsing amenities jika disimpan sebagai string JSON di DB lama
+        let amenitiesData: string[] = [];
+        if (Array.isArray(itemToEdit.amenities)) {
+            amenitiesData = itemToEdit.amenities;
+        } else if (typeof itemToEdit.amenities === 'string') {
+            try { amenitiesData = JSON.parse(itemToEdit.amenities); } catch {}
+        }
+
         form.setValues({
           name: itemToEdit.name,
           description: itemToEdit.description || '',
           price_per_night: itemToEdit.price_per_night,
           capacity: itemToEdit.capacity,
+          size_sqm: itemToEdit.size_sqm || 0,
+          bed_type: itemToEdit.bed_type || '',
+          bed_count: itemToEdit.bed_count || 1,
+          view_type: itemToEdit.view_type || '',
+          smoking_allowed: itemToEdit.smoking_allowed || false,
+          amenities: amenitiesData,
         });
       } else {
         form.reset();
@@ -50,87 +100,169 @@ export function RoomTypeFormModal({ opened, onClose, hotelId, itemToEdit }: Prop
   const handleSubmit = async (values: typeof form.values) => {
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: RoomTypePayload = {
         hotel_id: hotelId,
         name: values.name,
-        description: values.description,
+        description: values.description || null,
         price_per_night: values.price_per_night,
         capacity: values.capacity,
+        size_sqm: values.size_sqm || null,
+        bed_type: values.bed_type || null,
+        bed_count: values.bed_count,
+        view_type: values.view_type || null,
+        smoking_allowed: values.smoking_allowed,
+        amenities: values.amenities.length > 0 ? values.amenities : null,
       };
 
       let result;
       if (itemToEdit) {
-        result = await updateRoomType(itemToEdit.id, payload);
+        result = await updateRoomTypeAction(itemToEdit.id, payload);
       } else {
-        result = await createRoomType(payload);
+        result = await createRoomTypeAction(payload);
       }
 
       if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+        notifications.show({ title: 'Failed', message: result.error, color: 'red' });
       } else {
         notifications.show({ 
-          title: 'Sukses', 
-          message: `Tipe Kamar berhasil ${itemToEdit ? 'diperbarui' : 'ditambahkan'}`, 
+          title: 'Success', 
+          message: `Room type successfully ${itemToEdit ? 'updated' : 'created'}`, 
           color: 'green' 
         });
         onClose();
       }
     } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+      notifications.show({ title: 'Error', message: 'System error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal 
-        opened={opened} 
-        onClose={onClose} 
-        title={itemToEdit ? 'Edit Tipe Kamar' : 'Tambah Tipe Kamar'} 
-        centered
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={itemToEdit ? 'Edit Room Type' : 'New Room Type'}
+      size="lg"
+      centered
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="md">
-          <TextInput 
-            label="Nama Tipe" 
-            placeholder="Contoh: Deluxe Room" 
-            required 
-            {...form.getInputProps('name')} 
-          />
-          
-          <Group grow>
-            <NumberInput
-                label="Harga per Malam (Rp)"
-                placeholder="0"
+        <Tabs defaultValue="basic">
+          <Tabs.List>
+            <Tabs.Tab value="basic">Basic Info</Tabs.Tab>
+            <Tabs.Tab value="details">Room Details</Tabs.Tab>
+            <Tabs.Tab value="amenities">Amenities</Tabs.Tab>
+          </Tabs.List>
+
+          <Tabs.Panel value="basic" pt="md">
+            <Stack gap="md">
+              <TextInput
+                label="Room Type Name"
+                placeholder="Standard, Deluxe, Suite..."
                 required
+                {...form.getInputProps('name')}
+              />
+              <Textarea
+                label="Description"
+                placeholder="Brief description of the room type..."
+                minRows={3}
+                {...form.getInputProps('description')}
+              />
+              <Grid>
+                <Grid.Col span={6}>
+                  {/* PERBAIKAN: Menambahkan decimalSeparator="," */}
+                  <NumberInput
+                    label="Price/Night (IDR)"
+                    placeholder="500000"
+                    required
+                    min={1}
+                    step={10000}
+                    thousandSeparator="."
+                    decimalSeparator="," 
+                    hideControls
+                    {...form.getInputProps('price_per_night')}
+                  />
+                </Grid.Col>
+                <Grid.Col span={6}>
+                  <NumberInput
+                    label="Capacity (pax)"
+                    required
+                    min={1}
+                    {...form.getInputProps('capacity')}
+                  />
+                </Grid.Col>
+              </Grid>
+            </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="details" pt="md">
+            <Stack gap="md">
+              <NumberInput
+                label="Room Size (m²)"
+                placeholder="28.5"
                 min={0}
-                hideControls
-                thousandSeparator="."
-                decimalSeparator=","
-                {...form.getInputProps('price_per_night')}
-            />
-            <NumberInput
-                label="Kapasitas (Orang)"
-                placeholder="2"
-                required
-                min={1}
-                {...form.getInputProps('capacity')}
-            />
-          </Group>
+                step={0.5}
+                decimalScale={1}
+                decimalSeparator="," 
+                {...form.getInputProps('size_sqm')}
+              />
+              <Grid>
+                <Grid.Col span={8}>
+                  <Select
+                    label="Bed Type"
+                    placeholder="Select bed type"
+                    data={BED_TYPES}
+                    clearable
+                    {...form.getInputProps('bed_type')}
+                  />
+                </Grid.Col>
+                <Grid.Col span={4}>
+                  <NumberInput
+                    label="Bed Count"
+                    min={1}
+                    {...form.getInputProps('bed_count')}
+                  />
+                </Grid.Col>
+              </Grid>
+              <Select
+                label="View Type"
+                placeholder="Select view"
+                data={VIEW_TYPES}
+                clearable
+                {...form.getInputProps('view_type')}
+              />
+              <Switch
+                label="Smoking Allowed"
+                {...form.getInputProps('smoking_allowed', { type: 'checkbox' })}
+                mt="xs"
+              />
+            </Stack>
+          </Tabs.Panel>
 
-          <Textarea 
-            label="Deskripsi" 
-            placeholder="Fasilitas dan keterangan..." 
-            autosize
-            minRows={3}
-            {...form.getInputProps('description')} 
-          />
+          <Tabs.Panel value="amenities" pt="md">
+            <Stack gap="md">
+              <MultiSelect
+                label="Room Amenities"
+                placeholder="Select amenities"
+                data={COMMON_AMENITIES}
+                searchable
+                {...form.getInputProps('amenities')}
+              />
+              <Text size="xs" c="dimmed">
+                Select all amenities available in this room type
+              </Text>
+            </Stack>
+          </Tabs.Panel>
+        </Tabs>
 
-          <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
-            <Button type="submit" color="teal" loading={isSubmitting}>Simpan</Button>
-          </Group>
-        </Stack>
+        <Group justify="flex-end" mt="xl">
+          <Button variant="default" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isSubmitting} color="teal">
+            {itemToEdit ? 'Update' : 'Save'}
+          </Button>
+        </Group>
       </form>
     </Modal>
   );

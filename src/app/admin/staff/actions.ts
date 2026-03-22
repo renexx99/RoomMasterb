@@ -6,118 +6,72 @@ import { revalidatePath } from 'next/cache';
 
 async function getSupabase() {
   const cookieStore = await cookies();
-  return createServerActionClient({ 
-    cookies: () => cookieStore as any 
-  });
+  return createServerActionClient({ cookies: () => cookieStore as any });
 }
 
-/**
- * Mengupdate profil staf (hanya nama, karena email terikat Auth)
- */
-export async function updateStaffProfile(id: string, fullName: string) {
-  const supabase = await getSupabase();
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({ full_name: fullName })
-    .eq('id', id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/staff');
-  return { success: true };
-}
-
-/**
- * Mendaftarkan data staf ke database (Profiles & User Roles)
- * Dipanggil SETELAH sukses signUp di client-side.
- */
-export async function registerStaffInDb(params: {
-  userId: string;
+export interface UserFormData {
   email: string;
-  fullName: string;
-  roleId: string;
-  hotelId: string;
-}) {
-  const supabase = await getSupabase();
-  const { userId, email, fullName, roleId, hotelId } = params;
+  full_name: string;
+  role_id: string;
+  hotel_id?: string;
+  password?: string;
+}
 
-  // 1. Insert ke tabel profiles
+// --- CREATE USER ---
+export async function createUserAction(data: UserFormData) {
+  // NOTE: This currently simulates DB insertion.
+  // Real implementation requires Supabase Service Role for Auth User creation.
+  
+  return { error: "User creation feature requires Service Role configuration. Please use the Register page for now." };
+}
+
+// --- UPDATE USER ---
+export async function updateUserAction(userId: string, data: Partial<UserFormData>) {
+  const supabase = await getSupabase();
+
+  // 1. Update Profile Name
   const { error: profileError } = await supabase
     .from('profiles')
-    .insert({
-      id: userId,
-      email: email,
-      full_name: fullName,
-      role: null, // Field legacy
-      hotel_id: null, // Field legacy
-    });
+    .update({ full_name: data.full_name })
+    .eq('id', userId);
 
-  if (profileError) return { error: `Gagal membuat profil: ${profileError.message}` };
+  if (profileError) return { error: `Failed to update profile: ${profileError.message}` };
 
-  // 2. Insert ke tabel user_roles
-  const { error: roleError } = await supabase
-    .from('user_roles')
-    .insert({
-      user_id: userId,
-      role_id: roleId,
-      hotel_id: hotelId,
-    });
+  // 2. Update Role & Hotel
+  if (data.role_id) {
+    // Strategy: Delete old role, insert new one (ensure 1 active role)
+    
+    const { error: deleteError } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId);
 
-  if (roleError) return { error: `Gagal menetapkan peran: ${roleError.message}` };
+    if (deleteError) return { error: `Failed to clear old roles: ${deleteError.message}` };
 
-  revalidatePath('/admin/staff');
-  return { success: true };
-}
+    const { error: insertError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role_id: data.role_id,
+        hotel_id: data.hotel_id || null,
+      });
 
-/**
- * Menetapkan (Assign) atau Mengubah Peran Staf
- */
-export async function assignStaffRole(userId: string, roleId: string, hotelId: string) {
-  const supabase = await getSupabase();
-
-  // Upsert: Update jika ada, Insert jika belum (dengan asumsi constraint user_id + hotel_id unik)
-  // Jika constraint belum ada, ini akan insert baris baru. 
-  // Untuk keamanan logika, kita coba DELETE dulu lalu INSERT (atau update jika id diketahui).
-  // Menggunakan upsert pada conflict (user_id, hotel_id) adalah cara terbaik jika constraint ada.
-  // Jika tidak yakin, kita gunakan strategi: Delete existing for this hotel -> Insert new.
-  
-  // Strategi Aman: Hapus role lama user ini di hotel ini, lalu insert baru.
-  // Ini memastikan 1 user hanya punya 1 role per hotel.
-  
-  const { error: deleteError } = await supabase
-    .from('user_roles')
-    .delete()
-    .eq('user_id', userId)
-    .eq('hotel_id', hotelId);
-
-  if (deleteError) return { error: `Gagal menghapus peran lama: ${deleteError.message}` };
-
-  const { error: insertError } = await supabase
-    .from('user_roles')
-    .insert({
-      user_id: userId,
-      role_id: roleId,
-      hotel_id: hotelId,
-    });
-
-  if (insertError) return { error: insertError.message };
+    if (insertError) return { error: `Failed to assign new role: ${insertError.message}` };
+  }
 
   revalidatePath('/admin/staff');
   return { success: true };
 }
 
-/**
- * Menghapus Peran Staf dari Hotel (Revoke Access)
- */
-export async function removeStaffRole(userId: string, hotelId: string) {
+// --- DELETE USER ---
+export async function deleteUserAction(id: string) {
   const supabase = await getSupabase();
 
-  const { error } = await supabase
-    .from('user_roles')
-    .delete()
-    .eq('user_id', userId)
-    .eq('hotel_id', hotelId);
+  // Delete roles first (if not cascaded)
+  await supabase.from('user_roles').delete().eq('user_id', id);
+  
+  // Delete profile
+  const { error } = await supabase.from('profiles').delete().eq('id', id);
 
   if (error) return { error: error.message };
 

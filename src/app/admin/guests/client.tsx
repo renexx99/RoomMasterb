@@ -1,271 +1,224 @@
+// src/app/fo/guests/client.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
 import {
-  Container,
-  Title,
-  Button,
-  Group,
-  Paper,
-  TextInput,
-  Select,
-  ActionIcon,
-  Text,
-  Grid,
-  Modal,
-  Stack,
-  Box,
-  ThemeIcon,
+  Container, Group, Paper, TextInput, Select, 
+  Text, Grid, Stack, Box, Button, 
+  ScrollArea, Avatar, Badge, ThemeIcon, Divider
 } from '@mantine/core';
-import {
-  IconPlus,
-  IconArrowLeft,
-  IconSearch,
-  IconUsersGroup,
+import { 
+  IconPlus, IconSearch, IconUserStar, IconFilter, IconUserOff
 } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
 import { Guest } from '@/core/types/database';
-import { GuestsTable } from './components/GuestsTable';
+import { GuestDetailPanel } from './components/GuestDetailPanel';
 import { GuestFormModal } from './components/GuestFormModal';
-import { notifications } from '@mantine/notifications';
-import { deleteGuest } from './actions';
 
 interface ClientProps {
   initialGuests: Guest[];
   hotelId: string | null;
 }
 
-export default function GuestsManagementClient({ initialGuests, hotelId }: ClientProps) {
-  const router = useRouter();
-
-  // Konsistensi Layout
-  const MAX_WIDTH = 1200;
-
-  // State Data
-  // Diperbarui via props dari Server Component saat revalidatePath
-  const guests = initialGuests;
-
-  // Modal States
-  const [modalOpened, setModalOpened] = useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Guest | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Filter & Sort State
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('name_asc');
-
-  // --- Filter & Sort Logic ---
-  const filteredAndSortedGuests = useMemo(() => {
-    let result = [...guests];
-
-    // Filter
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      result = result.filter(guest =>
-        guest.full_name.toLowerCase().includes(lowerSearch) ||
-        guest.email.toLowerCase().includes(lowerSearch) ||
-        (guest.phone_number && guest.phone_number.includes(searchTerm))
-      );
-    }
-
-    // Sort
-    switch (sortBy) {
-      case 'name_desc':
-        result.sort((a, b) => b.full_name.localeCompare(a.full_name));
-        break;
-      case 'email_asc':
-        result.sort((a, b) => a.email.localeCompare(b.email));
-        break;
-      case 'email_desc':
-        result.sort((a, b) => b.email.localeCompare(a.email));
-        break;
-      case 'created_at_desc':
-        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case 'created_at_asc':
-        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        break;
-      case 'name_asc':
-      default:
-        result.sort((a, b) => a.full_name.localeCompare(b.full_name));
-        break;
-    }
-
-    return result;
-  }, [guests, searchTerm, sortBy]);
-
-  // --- Handlers ---
-
-  const handleOpenCreate = () => {
-    setEditingGuest(null);
-    setModalOpened(true);
-  };
-
-  const handleOpenEdit = (guest: Guest) => {
-    setEditingGuest(guest);
-    setModalOpened(true);
-  };
-
-  const handleOpenDelete = (guest: Guest) => {
-    setDeleteTarget(guest);
-    setDeleteModalOpened(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    setIsSubmitting(true);
-    try {
-      const result = await deleteGuest(deleteTarget.id);
-      
-      if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
-      } else {
-        notifications.show({ title: 'Sukses', message: 'Tamu berhasil dihapus', color: 'green' });
-        setDeleteModalOpened(false);
-        setDeleteTarget(null);
-      }
-    } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+export default function GuestsClient({ initialGuests, hotelId }: ClientProps) {
+  const MAX_WIDTH = 1800; // Lebar maksimal diperbesar agar detail lebih lega
 
   if (!hotelId) {
     return (
       <Container size="lg" py="xl">
-         <Paper withBorder p="xl" ta="center" radius="md">
-           <Text size="lg" fw={500} c="dimmed">
-             Akun Anda belum terhubung dengan Hotel manapun.
-           </Text>
-         </Paper>
+        <Paper withBorder p="xl" ta="center" radius="md">
+          <Text size="lg" fw={500} c="dimmed">
+            Your account is not linked to any property.
+          </Text>
+        </Paper>
       </Container>
     );
   }
 
+  // State
+  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterTier, setFilterTier] = useState<string | null>(null);
+  
+  // Modal State
+  const [modalOpened, setModalOpened] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Filtered guests logic
+  const filteredGuests = useMemo(() => {
+    let result = [...initialGuests];
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter(g => 
+        g.full_name.toLowerCase().includes(lower) ||
+        g.email.toLowerCase().includes(lower) ||
+        (g.phone_number && g.phone_number.includes(searchTerm))
+      );
+    }
+
+    if (filterTier) {
+      result = result.filter(g => g.loyalty_tier === filterTier);
+    }
+
+    return result;
+  }, [initialGuests, searchTerm, filterTier]);
+
+  const getTierColor = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 'diamond': return 'violet';
+      case 'platinum': return 'cyan';
+      case 'gold': return 'yellow';
+      case 'silver': return 'gray';
+      default: return 'blue'; // Bronze
+    }
+  };
+
+  const handleCreateNew = () => {
+    setSelectedGuest(null);
+    setIsEditing(false);
+    setModalOpened(true);
+  };
+
+  const handleEditCurrent = () => {
+    if(selectedGuest) {
+        setIsEditing(true);
+        setModalOpened(true);
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Header Ramping (Admin Green) */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-        padding: '0.75rem 0', 
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
-      }}>
-        <Container fluid px="lg">
-          <Box maw={MAX_WIDTH} mx="auto">
-            <Group justify="space-between" align="center">
-              <Group gap="xs">
-                <ThemeIcon
-                  variant="light"
-                  color="white"
-                  size={34}
-                  radius="md"
-                  style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
-                >
-                  <IconUsersGroup size={18} stroke={1.5} />
-                </ThemeIcon>
-                <div style={{ lineHeight: 1 }}>
-                  <Title order={3} c="white" style={{ fontSize: '1rem', fontWeight: 700 }}>Manajemen Tamu</Title>
-                  <Text c="white" opacity={0.9} size="xs" mt={2} style={{ fontSize: '0.75rem' }}>Kelola database tamu dan riwayat kunjungan</Text>
-                </div>
-              </Group>
-              <Button 
-                leftSection={<IconPlus size={16} />} 
-                onClick={handleOpenCreate} 
-                variant="white" 
-                color="teal"
-                size="xs"
-                radius="md"
-                fw={600}
-              >
-                Tambah Tamu
-              </Button>
-            </Group>
+    <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
+      
+      {/* HEADER DIHAPUS - Langsung ke konten utama */}
+
+      {/* Main Content - Split View */}
+      <Box style={{ flex: 1, overflow: 'hidden' }}>
+        <Container fluid px="md" py="md" style={{ height: '100%' }}>
+          <Box maw={MAX_WIDTH} mx="auto" style={{ height: '100%' }}>
+            <Grid gutter="md" style={{ height: '100%', margin: 0 }}>
+              
+              {/* LEFT: Guest List (30%) */}
+              <Grid.Col span={{ base: 12, md: 4, lg: 3 }} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Stack gap="sm" style={{ height: '100%' }}>
+                  
+                  {/* Search & Action Panel */}
+                  <Paper p="sm" radius="md" withBorder shadow="sm">
+                    <Stack gap="xs">
+                      <TextInput
+                        placeholder="Search name, email, phone..."
+                        leftSection={<IconSearch size={14} />}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                        radius="md"
+                      />
+                      <Group grow>
+                        <Select
+                            placeholder="Filter Tier"
+                            data={['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze']}
+                            value={filterTier}
+                            onChange={setFilterTier}
+                            clearable
+                            leftSection={<IconFilter size={14} />}
+                            radius="md"
+                        />
+                      </Group>
+                      
+                      <Divider my={4} />
+                      
+                      {/* Tombol Tamu Baru dipindah ke sini */}
+                      <Button 
+                        leftSection={<IconPlus size={16} />} 
+                        onClick={handleCreateNew}
+                        fullWidth
+                        variant="gradient"
+                        gradient={{ from: '#10b981', to: '#059669', deg: 135 }}
+                        radius="md"
+                      >
+                        New Guest
+                      </Button>
+                    </Stack>
+                  </Paper>
+
+                  {/* List Scrollable */}
+                  <Paper withBorder radius="md" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <Box p="xs" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
+                        <Text size="xs" fw={700} c="dimmed" tt="uppercase">Guest List ({filteredGuests.length})</Text>
+                      </Box>
+                      <ScrollArea style={{ flex: 1 }} type="auto" offsetScrollbars>
+                        <Stack gap={0}>
+                          {filteredGuests.map((guest) => (
+                            <Box
+                              key={guest.id}
+                              p="sm"
+                              style={{
+                                cursor: 'pointer',
+                                backgroundColor: selectedGuest?.id === guest.id ? 'var(--mantine-color-teal-0)' : 'transparent',
+                                borderBottom: '1px solid var(--mantine-color-gray-2)',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onClick={() => setSelectedGuest(guest)}
+                              className="hover:bg-gray-50"
+                            >
+                              <Group gap="sm" wrap="nowrap">
+                                <Avatar color={getTierColor(guest.loyalty_tier)} radius="xl" size="md">
+                                  {guest.full_name?.charAt(0)}
+                                </Avatar>
+                                <Box style={{ flex: 1, minWidth: 0 }}>
+                                  <Group justify="space-between" align="center" wrap="nowrap" mb={2}>
+                                      <Text fw={600} size="sm" truncate>{guest.full_name}</Text>
+                                      {guest.loyalty_tier !== 'Bronze' && (
+                                        <Badge size="xs" color={getTierColor(guest.loyalty_tier)} variant="light">
+                                            {guest.loyalty_tier}
+                                        </Badge>
+                                      )}
+                                  </Group>
+                                  <Text size="xs" c="dimmed" truncate>{guest.email}</Text>
+                                </Box>
+                              </Group>
+                            </Box>
+                          ))}
+                          {filteredGuests.length === 0 && (
+                              <Stack align="center" justify="center" py="xl" gap="xs" c="dimmed">
+                                  <IconUserOff size={32} stroke={1.5} />
+                                  <Text size="sm">No guests found</Text>
+                              </Stack>
+                          )}
+                        </Stack>
+                      </ScrollArea>
+                  </Paper>
+                </Stack>
+              </Grid.Col>
+
+              {/* RIGHT: Detail View (70%) */}
+              <Grid.Col span={{ base: 12, md: 8, lg: 9 }} style={{ height: '100%' }}>
+                {selectedGuest ? (
+                  <GuestDetailPanel 
+                    guest={selectedGuest} 
+                    onEdit={handleEditCurrent}
+                  />
+                ) : (
+                  <Paper h="100%" radius="md" withBorder bg="gray.0">
+                    <Stack align="center" justify="center" h="100%" gap="xs">
+                      <ThemeIcon size={80} radius="xl" variant="light" color="gray" style={{ background: 'white' }}>
+                        <IconUserStar size={40} />
+                      </ThemeIcon>
+                      <Text size="lg" fw={600} c="dimmed">Select a guest to view details</Text>
+                    </Stack>
+                  </Paper>
+                )}
+              </Grid.Col>
+            </Grid>
           </Box>
         </Container>
-      </div>
+      </Box>
 
-      {/* Main Content */}
-      <Container fluid px="lg" py="md">
-        <Box maw={MAX_WIDTH} mx="auto">
-          <Stack gap="md">
-            
-            {/* Filter Section */}
-            <Paper shadow="xs" p="sm" radius="md" withBorder>
-              <Grid align="flex-end" gutter="sm">
-                <Grid.Col span={{ base: 12, md: 8 }}>
-                  <TextInput
-                    label="Cari Tamu"
-                    placeholder="Cari nama, email, atau no. telepon..."
-                    leftSection={<IconSearch size={16} stroke={1.5} />}
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.currentTarget.value)}
-                    size="sm"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <Select
-                    label="Urutkan"
-                    placeholder="Urutkan berdasarkan"
-                    value={sortBy}
-                    onChange={(value) => setSortBy(value || 'name_asc')}
-                    data={[
-                      { value: 'name_asc', label: 'Nama (A-Z)' },
-                      { value: 'name_desc', label: 'Nama (Z-A)' },
-                      { value: 'email_asc', label: 'Email (A-Z)' },
-                      { value: 'email_desc', label: 'Email (Z-A)' },
-                      { value: 'created_at_desc', label: 'Terbaru Ditambahkan' },
-                      { value: 'created_at_asc', label: 'Terlama Ditambahkan' },
-                    ]}
-                    size="sm"
-                  />
-                </Grid.Col>
-              </Grid>
-            </Paper>
-
-            {/* Tabel Tamu */}
-            <GuestsTable 
-              guests={filteredAndSortedGuests}
-              onEdit={handleOpenEdit}
-              onDelete={handleOpenDelete}
-            />
-          </Stack>
-        </Box>
-      </Container>
-
-      {/* Modal Form (Add/Edit) */}
-      <GuestFormModal
+      {/* Modal */}
+      <GuestFormModal 
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
+        guest={isEditing ? selectedGuest : null}
         hotelId={hotelId}
-        guestToEdit={editingGuest}
       />
-
-      {/* Modal Delete Confirmation */}
-      <Modal 
-        opened={deleteModalOpened} 
-        onClose={() => setDeleteModalOpened(false)} 
-        title="Konfirmasi Hapus Tamu" 
-        centered 
-        size="sm"
-        radius="md"
-      >
-        <Stack gap="md">
-          <Text size="sm">
-            Apakah Anda yakin ingin menghapus data tamu <strong>{deleteTarget?.full_name}</strong>? Tindakan ini tidak dapat dibatalkan.
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="default" size="xs" onClick={() => setDeleteModalOpened(false)} disabled={isSubmitting}>
-              Batal
-            </Button>
-            <Button color="red" size="xs" onClick={handleDeleteConfirm} loading={isSubmitting}>
-              Hapus Tamu
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </div>
+    </Box>
   );
 }

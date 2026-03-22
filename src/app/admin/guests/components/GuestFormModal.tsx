@@ -1,121 +1,125 @@
+// src/app/fo/guests/components/GuestFormModal.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Stack, TextInput, Button, Group } from '@mantine/core';
+import { Modal, Stack, TextInput, Button, Group, Select, TagsInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { IconUser, IconMail, IconPhone } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { Guest } from '@/core/types/database';
-import { createGuest, updateGuest } from '../actions';
+import { createGuestAction, updateGuestAction } from '../actions';
 
-interface GuestFormModalProps {
+interface Props {
   opened: boolean;
   onClose: () => void;
+  guest: Guest | null;
   hotelId: string;
-  guestToEdit: Guest | null;
 }
 
-export function GuestFormModal({ opened, onClose, hotelId, guestToEdit }: GuestFormModalProps) {
+export function GuestFormModal({ opened, onClose, guest, hotelId }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     initialValues: {
+      title: 'Mr.',
       full_name: '',
       email: '',
       phone_number: '',
+      loyalty_tier: 'Bronze',
+      preferences: [] as string[],
     },
     validate: {
-      full_name: (value) => (!value ? 'Nama lengkap harus diisi' : null),
-      email: (value) => {
-        if (!value) return 'Email harus diisi';
-        if (!/^\S+@\S+\.\S+$/.test(value)) return 'Format email tidak valid';
-        return null;
-      },
+      full_name: (v) => (!v ? 'Name is required' : null),
+      email: (v) => (/^\S+@\S+$/.test(v) ? null : 'Invalid email'),
     },
   });
 
-  // Reset form saat modal dibuka/ditutup atau mode edit berubah
   useEffect(() => {
     if (opened) {
-      if (guestToEdit) {
+      if (guest) {
         form.setValues({
-          full_name: guestToEdit.full_name,
-          email: guestToEdit.email,
-          phone_number: guestToEdit.phone_number || '',
+          title: guest.title || 'Mr.',
+          full_name: guest.full_name,
+          email: guest.email,
+          phone_number: guest.phone_number || '',
+          loyalty_tier: guest.loyalty_tier || 'Bronze',
+          preferences: (guest.preferences as any)?.tags || [],
         });
       } else {
         form.reset();
       }
     }
-  }, [opened, guestToEdit]);
+  }, [opened, guest]);
 
   const handleSubmit = async (values: typeof form.values) => {
     setIsSubmitting(true);
     try {
-      const guestData = {
+      const payload = {
+        ...values,
         hotel_id: hotelId,
-        full_name: values.full_name,
-        email: values.email,
-        phone_number: values.phone_number || null,
       };
 
-      let result;
-      if (guestToEdit) {
-        result = await updateGuest(guestToEdit.id, guestData);
+      let res;
+      if (guest) {
+        res = await updateGuestAction(guest.id, payload);
       } else {
-        result = await createGuest(guestData);
+        res = await createGuestAction(payload);
       }
 
-      if (result.error) {
-        notifications.show({ title: 'Gagal', message: result.error, color: 'red' });
+      if (res.error) {
+        notifications.show({ title: 'Failed', message: res.error, color: 'red' });
       } else {
-        notifications.show({ 
-          title: 'Sukses', 
-          message: `Tamu berhasil ${guestToEdit ? 'diperbarui' : 'ditambahkan'}`, 
-          color: 'green' 
-        });
+        notifications.show({ title: 'Success', message: 'Guest data saved', color: 'green' });
         onClose();
+        window.location.reload();
       }
-    } catch (error) {
-      notifications.show({ title: 'Error', message: 'Terjadi kesalahan sistem', color: 'red' });
+    } catch (e) {
+      notifications.show({ title: 'Error', message: 'System error occurred', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal 
-      opened={opened} 
-      onClose={onClose} 
-      title={guestToEdit ? 'Edit Data Tamu' : 'Tambah Tamu Baru'} 
-      centered
-    >
+    <Modal opened={opened} onClose={onClose} title={guest ? 'Edit Guest' : 'New Guest'} centered>
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="md">
-          <TextInput 
-            label="Nama Lengkap" 
-            placeholder="Masukkan nama lengkap" 
-            required 
-            leftSection={<IconUser size={18} stroke={1.5} />} 
-            {...form.getInputProps('full_name')} 
+        <Stack gap="sm">
+          <Group grow>
+            <Select 
+                label="Title" 
+                data={['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']} 
+                {...form.getInputProps('title')} 
+                style={{ maxWidth: 80 }}
+            />
+            <TextInput label="Full Name" required {...form.getInputProps('full_name')} />
+          </Group>
+          
+          <TextInput label="Email" required {...form.getInputProps('email')} />
+          <TextInput label="Phone Number" {...form.getInputProps('phone_number')} />
+          
+          <Select 
+            label="Loyalty Tier" 
+            data={['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']} 
+            {...form.getInputProps('loyalty_tier')} 
           />
-          <TextInput 
-            label="Email" 
-            placeholder="email@tamu.com" 
-            required 
-            leftSection={<IconMail size={18} stroke={1.5} />} 
-            {...form.getInputProps('email')} 
+
+          <TagsInput
+            label="Preferences"
+            placeholder="Select or type then Enter"
+            data={['Non-Smoking', 'High Floor', 'Quiet Room', 'Extra Pillow', 'Near Elevator']}
+            clearable
+            {...form.getInputProps('preferences')}
           />
-          <TextInput 
-            label="Nomor Telepon (Opsional)" 
-            placeholder="0812..." 
-            leftSection={<IconPhone size={18} stroke={1.5} />} 
-            {...form.getInputProps('phone_number')} 
-          />
+
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Batal</Button>
-            <Button type="submit" color="teal" loading={isSubmitting}>
-              {guestToEdit ? 'Update Tamu' : 'Simpan Tamu'}
+            <Button variant="default" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            {/* PERBAIKAN: Menggunakan variant gradient sesuai tema FO */}
+            <Button 
+                type="submit" 
+                loading={isSubmitting} 
+                variant="gradient"
+                gradient={{ from: '#10b981', to: '#059669', deg: 135 }}
+            >
+                Save
             </Button>
           </Group>
         </Stack>

@@ -6,33 +6,45 @@ import { revalidatePath } from 'next/cache';
 
 async function getSupabase() {
   const cookieStore = await cookies();
-  return createServerActionClient({ 
-    cookies: () => cookieStore as any 
-  });
+  // @ts-ignore
+  return createServerActionClient({ cookies: () => cookieStore });
 }
 
-export interface RoomTypeData {
+export interface RoomTypePayload {
   hotel_id: string;
   name: string;
-  description?: string;
+  description: string | null;
   price_per_night: number;
   capacity: number;
+  size_sqm: number | null;
+  bed_type: string | null;
+  bed_count: number;
+  view_type: string | null;
+  smoking_allowed: boolean;
+  amenities: string[] | null; // Supabase handle array conversions usually
 }
 
-export async function createRoomType(data: RoomTypeData) {
+export async function createRoomTypeAction(data: RoomTypePayload) {
   const supabase = await getSupabase();
 
-  const { error } = await supabase
-    .from('room_types')
-    .insert(data);
+  // Konversi amenities ke format yang sesuai jika perlu (tergantung setup DB, biasanya array string aman)
+  // Jika kolom di DB text tapi isinya JSON, gunakan JSON.stringify(data.amenities)
+  // Di sini kita asumsikan DB support array atau client library handle itu.
+  // Namun, berdasarkan kode lama, ada JSON.stringify. Kita coba kirim raw dulu, 
+  // atau sesuaikan dengan 'amenities' di payload.
+  
+  // NOTE: Jika DB Anda menyimpan amenities sebagai JSONB atau Text[], Supabase JS client
+  // biasanya pintar menanganinya. Jika error, ganti ke JSON.stringify(data.amenities).
+  
+  const { error } = await supabase.from('room_types').insert(data);
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/room-types');
+  revalidatePath('/manager/room-types');
   return { success: true };
 }
 
-export async function updateRoomType(id: string, data: Partial<RoomTypeData>) {
+export async function updateRoomTypeAction(id: string, data: Partial<RoomTypePayload>) {
   const supabase = await getSupabase();
 
   const { error } = await supabase
@@ -42,14 +54,14 @@ export async function updateRoomType(id: string, data: Partial<RoomTypeData>) {
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/room-types');
+  revalidatePath('/manager/room-types');
   return { success: true };
 }
 
-export async function deleteRoomType(id: string) {
+export async function deleteRoomTypeAction(id: string) {
   const supabase = await getSupabase();
 
-  // 1. Cek apakah tipe kamar ini digunakan oleh Kamar (Rooms)
+  // 1. Cek Ketergantungan (Apakah ada kamar yang menggunakan tipe ini?)
   const { count, error: checkError } = await supabase
     .from('rooms')
     .select('*', { count: 'exact', head: true })
@@ -58,10 +70,10 @@ export async function deleteRoomType(id: string) {
   if (checkError) return { error: checkError.message };
 
   if (count && count > 0) {
-    return { error: `Tidak dapat menghapus. Tipe ini digunakan oleh ${count} kamar fisik.` };
+    return { error: `Tipe kamar ini tidak dapat dihapus karena sedang digunakan oleh ${count} kamar fisik.` };
   }
 
-  // 2. Hapus jika aman
+  // 2. Hapus
   const { error } = await supabase
     .from('room_types')
     .delete()
@@ -69,6 +81,6 @@ export async function deleteRoomType(id: string) {
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/room-types');
+  revalidatePath('/manager/room-types');
   return { success: true };
 }

@@ -23,6 +23,7 @@ import {
   Button,
   Loader,
   Center,
+  Stack,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -55,24 +56,22 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/admin/dashboard' },
-  { label: 'Tipe Kamar', icon: IconCategory, href: '/admin/room-types' },
-  { label: 'Kamar', icon: IconBed, href: '/admin/rooms' },
-  { label: 'Reservasi', icon: IconCalendarEvent, href: '/admin/reservations' },
-  { label: 'Buku Tamu', icon: IconUsersGroup, href: '/admin/guests' },
-  { label: 'Staf Hotel', icon: IconUsers, href: '/admin/staff' },
+  { label: 'Room Types', icon: IconCategory, href: '/admin/room-types' },
+  { label: 'Rooms', icon: IconBed, href: '/admin/rooms' },
+  { label: 'Guests', icon: IconUsersGroup, href: '/admin/guests' },
+  { label: 'Staff', icon: IconUsers, href: '/admin/staff' },
 ];
 
 // --- Mock Data ---
 const mockNotifications = [
-  { id: 1, title: 'Reservasi Baru', message: 'Budi Santoso - Deluxe Room #101', time: '5 menit lalu', icon: IconCalendar, color: 'blue' },
-  { id: 2, title: 'Pesan Tamu', message: 'Permintaan extra bed kamar 205', time: '1 jam lalu', icon: IconMessage, color: 'green' },
-  { id: 3, title: 'Maintenance', message: 'AC Kamar 303 perlu servis', time: '3 jam lalu', icon: IconInfoCircle, color: 'orange' },
+  { id: 1, title: 'New Reservation', message: 'John Doe - Deluxe Room #101', time: '5 mins ago', icon: IconCalendar, color: 'blue' },
+  { id: 2, title: 'Guest Message', message: 'Extra bed request for Room 205', time: '1 hour ago', icon: IconMessage, color: 'green' },
+  { id: 3, title: 'Maintenance', message: 'AC in Room 303 needs service', time: '3 hours ago', icon: IconInfoCircle, color: 'orange' },
 ];
 
 const searchData = [
   { value: 'Dashboard', href: '/admin/dashboard' },
-  { value: 'Buat Reservasi', href: '/admin/reservations' },
-  { value: 'Cek Kamar', href: '/admin/rooms' },
+  { value: 'Check Rooms', href: '/admin/rooms' },
 ];
 
 const NAVBAR_WIDTH_COLLAPSED = rem(80);
@@ -87,6 +86,31 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [loadingHotel, setLoadingHotel] = useState(true);
   const [isNavbarExpanded, setIsNavbarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [currentDate, setCurrentDate] = useState('');
+  const [greeting, setGreeting] = useState('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const dateOptions: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      };
+      setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
+
+      const hour = now.getHours();
+      if (hour < 12) setGreeting('Good Morning');
+      else if (hour < 18) setGreeting('Good Afternoon');
+      else setGreeting('Good Evening');
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchHotelInfo = async () => {
@@ -116,10 +140,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      notifications.show({ title: 'Sukses', message: 'Berhasil logout', color: 'green' });
+      notifications.show({ title: 'Success', message: 'Logged out successfully', color: 'green' });
       router.push('/auth/login');
     } catch {
-      notifications.show({ title: 'Error', message: 'Gagal logout', color: 'red' });
+      notifications.show({ title: 'Error', message: 'Failed to logout', color: 'red' });
     }
   };
 
@@ -183,15 +207,27 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   transition: 'all 0.2s ease',
                   display: opened ? 'block' : 'initial'
               }}>
-                <Text size="sm" fw={700} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>RoomMaster</Text>
+                <Text size="sm" fw={700} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
+                  {hotelName || 'RoomMaster'}
+                </Text>
+                <Text size="10px" c="dimmed" tt="uppercase" fw={600}>Admin Panel</Text>
               </Box>
             </Group>
+
+            {/* Divider Pemisah */}
+            <Divider orientation="vertical" visibleFrom="md" mx="xs" style={{ height: 24 }} />
+
+            {/* INFO WAKTU & SAPAAN */}
+            <Stack gap={0} visibleFrom="md" style={{ lineHeight: 1 }}>
+                <Text size="xs" c="dimmed" fw={500}>{currentDate}</Text>
+                <Text size="sm" fw={600} c="teal.7">{greeting}, {profile?.full_name?.split(' ')[0]}</Text>
+            </Stack>
           </Group>
 
           {/* Tengah: Search Bar Lebar */}
           <Box style={{ flex: 1, maxWidth: 600 }} visibleFrom="sm" mx="md">
             <Autocomplete
-              placeholder="Cari fitur atau menu..."
+              placeholder="Search features or menu..."
               leftSection={<IconSearch size={16} stroke={1.5} color="var(--mantine-color-gray-6)" />}
               data={searchData.map(item => item.value)}
               value={searchQuery}
@@ -226,7 +262,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               </Popover.Target>
               <Popover.Dropdown p={0}>
                  <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
-                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifikasi</Text>
+                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifications</Text>
                  </Box>
                  <ScrollArea.Autosize mah={300}>
                     {mockNotifications.map((item) => (
