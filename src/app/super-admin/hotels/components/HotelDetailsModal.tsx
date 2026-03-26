@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import { Modal, Group, Text, Button, Stack, Image, Grid, Paper, Badge, ThemeIcon, Divider, NumberFormatter, Select, Box } from '@mantine/core';
 import { IconBed, IconUsers, IconMapPin, IconCash, IconUserCheck, IconEdit, IconTrash, IconLogin, IconBuildingSkyscraper } from '@tabler/icons-react';
-import { HotelWithStats } from '@/core/types/database';
+import { HotelWithStats, HotelWithDetails } from '@/core/types/database';
 import { startImpersonation } from '@/features/auth/hooks/useAuth';
 
 interface Props {
   opened: boolean;
   onClose: () => void;
-  hotel: HotelWithStats | null;
-  onEdit: (hotel: HotelWithStats) => void;
-  onDelete: (hotel: HotelWithStats) => void;
+  hotel: HotelWithDetails | null;
+  onEdit: (hotel: HotelWithDetails) => void;
+  onDelete: (hotel: HotelWithDetails) => void;
 }
 
 export function HotelDetailsModal({ opened, onClose, hotel, onEdit, onDelete }: Props) {
@@ -58,6 +58,49 @@ export function HotelDetailsModal({ opened, onClose, hotel, onEdit, onDelete }: 
               <IconMapPin size={18} style={{ marginTop: 3 }} color="gray" />
               <Text size="sm" c="dimmed" style={{ flex: 1 }}>{hotel.address}</Text>
             </Group>
+
+            <Paper withBorder p="md" radius="md">
+              <Text size="sm" fw={700} mb="xs" c="dimmed" tt="uppercase">Operational Policies</Text>
+              <Grid>
+                <Grid.Col span={6}>
+                  <Text size="xs" c="dimmed">Check-in Time</Text>
+                  <Text fw={600}>{hotel.check_in_time?.substring(0, 5) || '14:00'}</Text>
+                </Grid.Col>
+                <Grid.Col span={6}>
+                  <Text size="xs" c="dimmed">Check-out Time</Text>
+                  <Text fw={600}>{hotel.check_out_time?.substring(0, 5) || '12:00'}</Text>
+                </Grid.Col>
+              </Grid>
+            </Paper>
+
+            <Paper withBorder p="md" radius="md">
+              <Text size="sm" fw={700} mb="sm" c="dimmed" tt="uppercase">Room Types & Pricing</Text>
+              {hotel.room_types && hotel.room_types.length > 0 ? (
+                <Stack gap="xs">
+                  {hotel.room_types.map(rt => (
+                    <Paper key={rt.id} withBorder p="sm" radius="md" bg="gray.0">
+                      <Group justify="space-between" mb="xs">
+                        <Text fw={600} size="sm">{rt.name}</Text>
+                        <Badge size="sm" color="indigo" variant="light">
+                          <NumberFormatter prefix="Rp " value={rt.price_per_night} thousandSeparator="." decimalSeparator="," /> / night
+                        </Badge>
+                      </Group>
+                      <Text size="xs" c="dimmed">Base Price: <NumberFormatter prefix="Rp " value={rt.base_price || 0} thousandSeparator="." decimalSeparator="," /></Text>
+                      {rt.rooms && rt.rooms.length > 0 ? (
+                        <Text size="xs" c="dimmed" mt={4}>
+                          <b>Rooms:</b> {rt.rooms.map(r => r.room_number).join(', ')}
+                        </Text>
+                      ) : (
+                        <Text size="xs" c="dimmed" mt={4} fs="italic">No rooms available</Text>
+                      )}
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Text size="sm" c="dimmed" fs="italic">No room types configured.</Text>
+              )}
+            </Paper>
+
           </Stack>
         </Grid.Col>
 

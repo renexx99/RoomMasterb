@@ -20,7 +20,14 @@ export interface Hotel {
   code?: string | null;
   status: 'active' | 'maintenance' | 'suspended';
   image_url?: string | null;
+  settings?: any; // JSONB column storing policies like checkInTime
+  check_in_time?: string;
+  check_out_time?: string;
   created_at: string;
+}
+
+export interface HotelWithDetails extends HotelWithStats {
+  room_types?: (RoomType & { rooms: Room[] })[];
 }
 
 export interface HotelWithStats extends Hotel {

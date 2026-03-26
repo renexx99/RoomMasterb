@@ -7,14 +7,14 @@ import {
 } from '@mantine/core';
 import { IconPlus, IconSearch, IconBuildingStore, IconSortAscending, IconSortDescending, IconRefresh } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { HotelWithStats } from '@/core/types/database';
 import { HotelFormModal } from './components/HotelFormModal';
 import { HotelCard } from './components/HotelCard';
 import { HotelDetailsModal } from './components/HotelDetailsModal';
 import { deleteHotel } from './actions';
+import { HotelWithStats, HotelWithDetails } from '@/core/types/database';
 
 interface ClientProps {
-  initialHotels: HotelWithStats[];
+  initialHotels: HotelWithDetails[];
 }
 
 export default function HotelsManagementClient({ initialHotels }: ClientProps) {
@@ -22,9 +22,9 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
   const [detailsModalOpened, setDetailsModalOpened] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   
-  const [selectedHotel, setSelectedHotel] = useState<HotelWithStats | null>(null);
-  const [editingItem, setEditingItem] = useState<HotelWithStats | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<HotelWithStats | null>(null);
+  const [selectedHotel, setSelectedHotel] = useState<HotelWithDetails | null>(null);
+  const [editingItem, setEditingItem] = useState<HotelWithDetails | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HotelWithDetails | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,18 +51,18 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
   // Handlers
   const handleCreate = () => { setEditingItem(null); setFormModalOpened(true); };
   
-  const handleCardClick = (hotel: HotelWithStats) => {
+  const handleCardClick = (hotel: HotelWithDetails) => {
     setSelectedHotel(hotel);
     setDetailsModalOpened(true);
   };
 
-  const handleEdit = (hotel: HotelWithStats) => {
+  const handleEdit = (hotel: HotelWithDetails) => {
     setDetailsModalOpened(false);
     setEditingItem(hotel);
     setFormModalOpened(true);
   };
 
-  const handleDelete = (hotel: HotelWithStats) => {
+  const handleDelete = (hotel: HotelWithDetails) => {
     setDetailsModalOpened(false);
     setDeleteTarget(hotel);
     setDeleteModalOpened(true);
@@ -148,8 +148,8 @@ export default function HotelsManagementClient({ initialHotels }: ClientProps) {
                 {filteredHotels.map(hotel => (
                     <HotelCard 
                         key={hotel.id} 
-                        hotel={hotel} 
-                        onClick={handleCardClick} 
+                        hotel={hotel as any} // HotelCard currently expects HotelWithStats, type casting as any to bypass while keeping props, we didn't touch HotelCard because it only shows basics
+                        onClick={() => handleCardClick(hotel)} 
                     />
                 ))}
             </SimpleGrid>

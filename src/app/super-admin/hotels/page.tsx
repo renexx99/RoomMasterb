@@ -2,7 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import HotelsManagementClient from './client';
-import { HotelWithStats } from '@/core/types/database';
+import { HotelWithStats, HotelWithDetails } from '@/core/types/database';
 
 export default async function HotelsPage() {
   const cookieStore = await cookies();
@@ -21,7 +21,7 @@ export default async function HotelsPage() {
   if (error || !hotels) return <div>Error loading hotels</div>;
 
   // 2. Fetch Stats Aggregation
-  const hotelsWithStats: HotelWithStats[] = await Promise.all(
+  const hotelsWithStats: HotelWithDetails[] = await Promise.all(
     hotels.map(async (hotel) => {
       // Count Rooms
       const { count: roomCount } = await supabase
@@ -54,12 +54,19 @@ export default async function HotelsPage() {
       
       const totalRevenue = revenueData?.reduce((sum, res) => sum + (Number(res.total_price) || 0), 0) || 0;
 
+      // Fetch Room Types and Rooms
+      const { data: roomTypes } = await supabase
+        .from('room_types')
+        .select('*, rooms(*)')
+        .eq('hotel_id', hotel.id);
+
       return {
         ...hotel,
         total_rooms: roomCount || 0,
         total_staff: staffCount || 0,
         active_residents: activeResidents || 0,
-        total_revenue: totalRevenue
+        total_revenue: totalRevenue,
+        room_types: roomTypes || []
       };
     })
   );

@@ -44,6 +44,8 @@ export async function createHotelAction(formData: FormData) {
   const code = formData.get('code') as string;
   const address = formData.get('address') as string;
   const status = formData.get('status') as string;
+  const check_in_time = formData.get('check_in_time') as string;
+  const check_out_time = formData.get('check_out_time') as string;
   const imageFile = formData.get('image') as File | null;
 
   let image_url = '';
@@ -63,6 +65,8 @@ export async function createHotelAction(formData: FormData) {
       code,
       address,
       status,
+      check_in_time: check_in_time || '14:00',
+      check_out_time: check_out_time || '12:00',
       image_url: image_url || null,
     });
 
@@ -80,6 +84,8 @@ export async function updateHotelAction(formData: FormData) {
   const code = formData.get('code') as string;
   const address = formData.get('address') as string;
   const status = formData.get('status') as string;
+  const check_in_time = formData.get('check_in_time') as string;
+  const check_out_time = formData.get('check_out_time') as string;
   const imageFile = formData.get('image') as File | null;
 
   const updates: any = {
@@ -87,6 +93,8 @@ export async function updateHotelAction(formData: FormData) {
     code,
     address,
     status,
+    check_in_time: check_in_time || '14:00',
+    check_out_time: check_out_time || '12:00',
   };
 
   if (imageFile && imageFile.size > 0) {

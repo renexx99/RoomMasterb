@@ -6,12 +6,12 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconUpload } from '@tabler/icons-react';
 import { createHotelAction, updateHotelAction } from '../actions';
-import { Hotel } from '@/core/types/database';
+import { Hotel, HotelWithDetails } from '@/core/types/database';
 
 interface Props {
   opened: boolean;
   onClose: () => void;
-  itemToEdit: Hotel | null;
+  itemToEdit: Hotel | HotelWithDetails | null;
 }
 
 export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
@@ -23,6 +23,8 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
       code: '',
       address: '',
       status: 'active',
+      check_in_time: '14:00',
+      check_out_time: '12:00',
       image: null as File | null,
     },
     validate: {
@@ -40,6 +42,8 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
           code: itemToEdit.code || '',
           address: itemToEdit.address,
           status: itemToEdit.status as string,
+          check_in_time: itemToEdit.check_in_time?.substring(0, 5) || '14:00',
+          check_out_time: itemToEdit.check_out_time?.substring(0, 5) || '12:00',
           image: null, 
         });
       } else {
@@ -56,6 +60,8 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
       formData.append('code', values.code);
       formData.append('address', values.address);
       formData.append('status', values.status);
+      formData.append('check_in_time', values.check_in_time);
+      formData.append('check_out_time', values.check_out_time);
       if (values.image) {
         formData.append('image', values.image);
       }
@@ -102,6 +108,15 @@ export function HotelFormModal({ opened, onClose, itemToEdit }: Props) {
           </Grid>
 
           <TextInput label="Full Address" placeholder="Main Street..." required radius="md" {...form.getInputProps('address')} />
+
+          <Grid gutter="md">
+             <Grid.Col span={6}>
+                <TextInput label="Check-in Time" type="time" required radius="md" {...form.getInputProps('check_in_time')} />
+             </Grid.Col>
+             <Grid.Col span={6}>
+                <TextInput label="Check-out Time" type="time" required radius="md" {...form.getInputProps('check_out_time')} />
+             </Grid.Col>
+          </Grid>
 
           <Grid gutter="md">
             <Grid.Col span={6}>
