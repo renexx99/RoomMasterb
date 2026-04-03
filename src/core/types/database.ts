@@ -3,6 +3,9 @@
 // --- Existing Simple Types ---
 export type RoomStatus = 'available' | 'occupied' | 'maintenance';
 export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
+export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+export type LoyaltyLogType = 'earn' | 'redeem' | 'adjust';
+export type LoyaltyLogSource = 'stay' | 'spend' | 'bonus' | 'manual' | 'redeem';
 
 // --- NEW TYPES (Added) ---
 export type BedType = 'Single' | 'Twin' | 'Double' | 'Queen' | 'King' | 'Super King';
@@ -106,7 +109,8 @@ export interface Guest {
   total_stays: number;
   total_spend: number;
   last_visit_at: any;
-  loyalty_tier: string;
+  loyalty_tier: LoyaltyTier;
+  loyalty_points: number;
   preferences: any;
   id: string;
   hotel_id: string;
@@ -115,6 +119,39 @@ export interface Guest {
   phone_number: string | null;
   created_at: string;
   title?: string | null;
+}
+
+export interface LoyaltyPointsLog {
+  id: string;
+  guest_id: string;
+  hotel_id: string;
+  points: number;
+  type: LoyaltyLogType;
+  source: LoyaltyLogSource;
+  description?: string | null;
+  reservation_id?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  // Relations (for queries with joins)
+  guest?: Guest;
+  reservation?: Reservation;
+  creator?: Profile;
+}
+
+export interface LoyaltyConfig {
+  id: string;
+  hotel_id: string;
+  points_per_night: number;
+  points_per_spend_unit: number;
+  spend_unit_amount: number;
+  completion_bonus: number;
+  tier_bronze: number;
+  tier_silver: number;
+  tier_gold: number;
+  tier_platinum: number;
+  tier_diamond: number;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface Reservation {
@@ -242,6 +279,16 @@ export interface Database {
         Update: Partial<Omit<UserRoleAssignment, 'id' | 'created_at' | 'user_id'>>;
       };
     };
+    loyalty_points_log: {
+      Row: LoyaltyPointsLog;
+      Insert: Omit<LoyaltyPointsLog, 'id' | 'created_at' | 'guest' | 'reservation' | 'creator'>;
+      Update: Partial<Omit<LoyaltyPointsLog, 'id' | 'created_at' | 'guest' | 'reservation' | 'creator'>>;
+    };
+    loyalty_config: {
+      Row: LoyaltyConfig;
+      Insert: Omit<LoyaltyConfig, 'id' | 'created_at' | 'updated_at'>;
+      Update: Partial<Omit<LoyaltyConfig, 'id' | 'created_at' | 'hotel_id'>>;
+    };
     Functions: {
         [_ in never]: never
     }
@@ -305,4 +352,13 @@ export const COMMON_AMENITIES = [
   'Kitchenette',
   'Microwave',
   'Refrigerator',
+];
+
+// --- Loyalty Tier Constants ---
+export const LOYALTY_TIERS: { value: LoyaltyTier; label: string; color: string }[] = [
+  { value: 'bronze', label: 'Bronze', color: 'orange' },
+  { value: 'silver', label: 'Silver', color: 'gray' },
+  { value: 'gold', label: 'Gold', color: 'yellow' },
+  { value: 'platinum', label: 'Platinum', color: 'cyan' },
+  { value: 'diamond', label: 'Diamond', color: 'violet' },
 ];

@@ -72,7 +72,7 @@ export function CheckInList({ data, type, onAction, loading }: CheckInListProps)
                   {res.guest?.full_name || 'Unknown Guest'}
                 </Text>
                 <Group gap={6} mt={2}>
-                   {res.guest?.loyalty_tier && res.guest.loyalty_tier !== 'Bronze' && (
+                   {res.guest?.loyalty_tier && res.guest.loyalty_tier !== 'bronze' && (
                       <Badge size="xs" variant="gradient" gradient={{ from: 'violet', to: 'grape' }} leftSection={<IconDiamond size={8}/>}>
                         {res.guest.loyalty_tier}
                       </Badge>

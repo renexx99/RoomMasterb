@@ -54,7 +54,7 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                             
                             <Group gap="xs" mb="md">
                                 <Badge color="white" c="teal.9" variant="white" leftSection={<IconDiamond size={12}/>}>
-                                    {guest.loyalty_tier || 'Bronze'}
+                                    {(guest.loyalty_tier || 'bronze').charAt(0).toUpperCase() + (guest.loyalty_tier || 'bronze').slice(1)}
                                 </Badge>
                                 <Badge color="white" c="teal.8" variant="filled">
                                     Guest Profile

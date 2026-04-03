@@ -42,6 +42,7 @@ import {
   IconSearch,
   IconBell,
   IconInfoCircle,
+  IconStar,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -64,6 +65,7 @@ const navItems: NavItem[] = [
   { label: 'Manage Rooms', icon: IconBed, href: '/manager/rooms' },
   { label: 'Reservations', icon: IconCalendarEvent, href: '/manager/reservations' },
   { label: 'Guest Folio', icon: IconUsersGroup, href: '/manager/guests' },
+  { label: 'Loyalty Program', icon: IconStar, href: '/manager/loyalty' },
 ];
 
 // --- Mock Data Notifikasi & Search ---

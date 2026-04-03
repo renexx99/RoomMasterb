@@ -5,6 +5,7 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { PaymentStatus, PaymentMethod } from '@/core/types/database';
+import { awardStayPoints } from '@/app/manager/loyalty/actions';
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -37,7 +38,6 @@ export async function createReservation(data: ReservationData) {
   if (insertError) return { error: insertError.message };
 
   // 2. Fetch Data Lengkap untuk Invoice (Join Guest, Room, & Hotel)
-  // Ini penting agar Invoice Modal bisa langsung menampilkan data tanpa refresh halaman
   const { data: fullReservation, error: fetchError } = await supabase
     .from('reservations')
     .select(`
@@ -53,8 +53,25 @@ export async function createReservation(data: ReservationData) {
 
   if (fetchError) return { error: "Reservasi dibuat tapi gagal memuat data invoice." };
 
+  // 3. Award loyalty points if payment is 'paid'
+  if (data.payment_status === 'paid' && fullReservation) {
+    try {
+      const checkIn = new Date(data.check_in_date);
+      const checkOut = new Date(data.check_out_date);
+      const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+      await awardStayPoints(
+        data.guest_id,
+        data.hotel_id,
+        insertedId.id,
+        nights,
+        data.total_price
+      );
+    } catch (e) {
+      console.error('Failed to award loyalty points:', e);
+    }
+  }
+
   revalidatePath('/fo/reservations');
-  // Kembalikan data lengkap
   return { success: true, data: fullReservation };
 }
 
@@ -62,12 +79,47 @@ export async function createReservation(data: ReservationData) {
 export async function updateReservation(id: string, data: Partial<ReservationData>) {
   const supabase = await getSupabase();
 
+  // If updating payment_status to 'paid', check if points were already awarded
+  let shouldAwardPoints = false;
+  let existingReservation: any = null;
+
+  if (data.payment_status === 'paid') {
+    const { data: existing } = await supabase
+      .from('reservations')
+      .select('*, guest_id, hotel_id, check_in_date, check_out_date, total_price, payment_status')
+      .eq('id', id)
+      .single();
+
+    if (existing && existing.payment_status !== 'paid') {
+      shouldAwardPoints = true;
+      existingReservation = existing;
+    }
+  }
+
   const { error } = await supabase
     .from('reservations')
     .update(data)
     .eq('id', id);
 
   if (error) return { error: error.message };
+
+  // Award loyalty points if status just changed to 'paid'
+  if (shouldAwardPoints && existingReservation) {
+    try {
+      const checkIn = new Date(existingReservation.check_in_date);
+      const checkOut = new Date(existingReservation.check_out_date);
+      const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+      await awardStayPoints(
+        existingReservation.guest_id,
+        existingReservation.hotel_id,
+        id,
+        nights,
+        existingReservation.total_price
+      );
+    } catch (e) {
+      console.error('Failed to award loyalty points:', e);
+    }
+  }
 
   revalidatePath('/fo/reservations');
   return { success: true };

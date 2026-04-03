@@ -5,14 +5,19 @@ import { useEffect, useState } from 'react';
 import {
   Paper, Group, Avatar, Text, Badge, SimpleGrid, 
   Stack, ThemeIcon, Button, ScrollArea, Timeline, Grid, Box,
-  Card
+  Card, Progress
 } from '@mantine/core';
 import { 
   IconMail, IconPhone, IconDiamond, IconSparkles, 
-  IconHistory, IconTag, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar
+  IconHistory, IconTag, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar,
+  IconStar, IconTrophy, IconArrowUp, IconGift
 } from '@tabler/icons-react';
 import { Guest } from '@/core/types/database';
 import { getGuestHistory } from '../actions';
+import {
+  getTierColor, formatPoints, getTierProgress, getTierBenefits, getTierLabel,
+  DEFAULT_LOYALTY_CONFIG
+} from '@/core/utils/loyalty';
 
 interface Props {
   guest: Guest;
@@ -30,6 +35,7 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
   }, [guest.id]);
 
   const preferences: string[] = (guest.preferences as any)?.tags || [];
+  const progress = getTierProgress(guest.loyalty_points || 0, DEFAULT_LOYALTY_CONFIG);
 
   const aiSuggestions = [
     { text: 'Propose Suite upgrade (78% probability)', color: 'violet', icon: IconSparkles },
@@ -53,10 +59,10 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                             
                             <Group gap="xs" mb="md">
                                 <Badge color="white" c="blue.9" variant="white" leftSection={<IconDiamond size={12}/>}>
-                                    {guest.loyalty_tier || 'Bronze'}
+                                    {getTierLabel(guest.loyalty_tier)}
                                 </Badge>
-                                <Badge color="white" c="blue.8" variant="filled">
-                                    Guest Profile
+                                <Badge color="white" c="blue.8" variant="filled" leftSection={<IconStar size={12}/>}>
+                                    {formatPoints(guest.loyalty_points || 0)} pts
                                 </Badge>
                             </Group>
 
@@ -85,7 +91,7 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                 </Group>
 
                 {/* Stats Bar */}
-                <SimpleGrid cols={3} mt="xl" spacing="lg">
+                <SimpleGrid cols={4} mt="xl" spacing="lg">
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Stays</Text>
                         <Text size="xl" fw={700}>{guest.total_stays || 0}x</Text>
@@ -93,6 +99,10 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Spend</Text>
                         <Text size="xl" fw={700}>Rp {Number(guest.total_spend || 0).toLocaleString('id-ID')}</Text>
+                    </Box>
+                    <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
+                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Loyalty Points</Text>
+                        <Text size="xl" fw={700}>{formatPoints(guest.loyalty_points || 0)}</Text>
                     </Box>
                     <Box>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Last Visit</Text>
@@ -106,9 +116,52 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
             {/* Body Content */}
             <Box p="lg">
                 <Grid gutter="lg">
-                    {/* Left Col: AI & Preferences */}
+                    {/* Left Col: Loyalty, AI & Preferences */}
                     <Grid.Col span={{ base: 12, md: 5 }}>
                         <Stack gap="md">
+
+                            {/* Loyalty Status Card */}
+                            <Card padding="md" radius="md" withBorder bg="blue.0" style={{ borderColor: 'var(--mantine-color-blue-2)' }}>
+                                <Group mb="sm">
+                                    <ThemeIcon color={getTierColor(guest.loyalty_tier)} variant="light"><IconTrophy size={18}/></ThemeIcon>
+                                    <Text fw={700} size="sm" c="blue.9">Loyalty Status</Text>
+                                </Group>
+
+                                <Group justify="space-between" mb="xs">
+                                    <Badge size="lg" color={getTierColor(guest.loyalty_tier)} variant="filled" leftSection={<IconDiamond size={14}/>}>
+                                        {getTierLabel(guest.loyalty_tier)} Tier
+                                    </Badge>
+                                    <Text size="sm" fw={700} c="blue.8">{formatPoints(guest.loyalty_points || 0)} pts</Text>
+                                </Group>
+
+                                {progress.nextTier && (
+                                    <Stack gap={4} mt="xs">
+                                        <Group justify="space-between">
+                                            <Text size="xs" c="dimmed">Progress to {progress.nextTier}</Text>
+                                            <Text size="xs" fw={600} c="blue.7">{progress.progressPercent}%</Text>
+                                        </Group>
+                                        <Progress value={progress.progressPercent} size="md" radius="xl" color={getTierColor(guest.loyalty_tier)} />
+                                        <Text size="xs" c="dimmed" ta="right">
+                                            <IconArrowUp size={10} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                                            {' '}{formatPoints(progress.pointsToNextTier || 0)} pts needed
+                                        </Text>
+                                    </Stack>
+                                )}
+
+                                {/* Tier Benefits */}
+                                <Box mt="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-blue-2)' }}>
+                                    <Group gap={4} mb={4}>
+                                        <IconGift size={14} color="var(--mantine-color-blue-7)" />
+                                        <Text size="xs" fw={600} c="blue.7">Current Benefits</Text>
+                                    </Group>
+                                    <Group gap={4}>
+                                        {getTierBenefits(guest.loyalty_tier || 'bronze').map((benefit, i) => (
+                                            <Badge key={i} size="xs" variant="light" color="blue" radius="sm">{benefit}</Badge>
+                                        ))}
+                                    </Group>
+                                </Box>
+                            </Card>
+
                             {/* AI Recommendations */}
                             <Card padding="md" radius="md" withBorder bg="violet.0" style={{ borderColor: 'var(--mantine-color-violet-2)' }}>
                                 <Group mb="sm">

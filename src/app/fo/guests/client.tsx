@@ -102,7 +102,13 @@ export default function GuestsClient({ initialGuests, hotelId }: ClientProps) {
                       <Group grow>
                         <Select
                             placeholder="Filter Tier"
-                            data={['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze']}
+                            data={[
+                              { value: 'diamond', label: 'Diamond' },
+                              { value: 'platinum', label: 'Platinum' },
+                              { value: 'gold', label: 'Gold' },
+                              { value: 'silver', label: 'Silver' },
+                              { value: 'bronze', label: 'Bronze' },
+                            ]}
                             value={filterTier}
                             onChange={setFilterTier}
                             clearable
@@ -154,9 +160,9 @@ export default function GuestsClient({ initialGuests, hotelId }: ClientProps) {
                                 <Box style={{ flex: 1, minWidth: 0 }}>
                                   <Group justify="space-between" align="center" wrap="nowrap" mb={2}>
                                       <Text fw={600} size="sm" truncate>{guest.full_name}</Text>
-                                      {guest.loyalty_tier !== 'Bronze' && (
+                                      {guest.loyalty_tier !== 'bronze' && (
                                         <Badge size="xs" color={getTierColor(guest.loyalty_tier)} variant="light">
-                                            {guest.loyalty_tier}
+                                            {(guest.loyalty_tier || '').charAt(0).toUpperCase() + (guest.loyalty_tier || '').slice(1)}
                                         </Badge>
                                       )}
                                   </Group>

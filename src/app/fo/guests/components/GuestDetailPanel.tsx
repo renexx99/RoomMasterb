@@ -5,14 +5,19 @@ import { useEffect, useState } from 'react';
 import {
   Paper, Group, Avatar, Text, Badge, SimpleGrid, 
   Stack, ThemeIcon, Button, ScrollArea, Timeline, Grid, Box,
-  Card
+  Card, Progress
 } from '@mantine/core';
 import { 
   IconMail, IconPhone, IconDiamond, IconSparkles, 
-  IconHistory, IconTag, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar
+  IconHistory, IconTag, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar,
+  IconStar, IconTrophy, IconArrowUp, IconGift
 } from '@tabler/icons-react';
 import { Guest } from '@/core/types/database';
 import { getGuestHistory } from '../actions';
+import {
+  getTierColor, formatPoints, getTierProgress, getTierBenefits, getTierLabel,
+  DEFAULT_LOYALTY_CONFIG
+} from '@/core/utils/loyalty';
 
 interface Props {
   guest: Guest;
@@ -30,19 +35,19 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
   }, [guest.id]);
 
   const preferences: string[] = (guest.preferences as any)?.tags || [];
+  const progress = getTierProgress(guest.loyalty_points || 0, DEFAULT_LOYALTY_CONFIG);
 
   const aiSuggestions = [
-    { text: 'Tawarkan upgrade ke Suite (Peluang 78%)', color: 'violet', icon: IconSparkles },
-    { text: 'Pernah komplain soal AC bising - pastikan kamar tenang', color: 'red', icon: IconBolt },
+    { text: 'Propose Suite upgrade (78% probability)', color: 'violet', icon: IconSparkles },
+    { text: 'History of AC noise complaints - assign quiet room', color: 'red', icon: IconBolt },
   ];
 
   return (
     <Paper radius="md" withBorder h="100%" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         
-        {/* PERBAIKAN: offsetScrollbars dihapus agar background full sampai tepi kanan */}
         <ScrollArea style={{ flex: 1 }} type="auto">
             
-            {/* Header Profile - Gradient */}
+            {/* Header Profile - Teal Gradient (FO theme) */}
             <Box p="xl" style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', color: 'white' }}>
                 <Group justify="space-between" align="flex-start" wrap="nowrap">
                     <Group gap="lg" align="flex-start" wrap="nowrap">
@@ -54,10 +59,10 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                             
                             <Group gap="xs" mb="md">
                                 <Badge color="white" c="teal.9" variant="white" leftSection={<IconDiamond size={12}/>}>
-                                    {guest.loyalty_tier || 'Bronze'}
+                                    {getTierLabel(guest.loyalty_tier)}
                                 </Badge>
-                                <Badge color="white" c="teal.8" variant="filled">
-                                    Guest Profile
+                                <Badge color="white" c="teal.8" variant="filled" leftSection={<IconStar size={12}/>}>
+                                    {formatPoints(guest.loyalty_points || 0)} pts
                                 </Badge>
                             </Group>
 
@@ -86,19 +91,23 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                 </Group>
 
                 {/* Stats Bar */}
-                <SimpleGrid cols={3} mt="xl" spacing="lg">
+                <SimpleGrid cols={4} mt="xl" spacing="lg">
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
-                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Menginap</Text>
+                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Stays</Text>
                         <Text size="xl" fw={700}>{guest.total_stays || 0}x</Text>
                     </Box>
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
-                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Pengeluaran</Text>
+                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Spend</Text>
                         <Text size="xl" fw={700}>Rp {Number(guest.total_spend || 0).toLocaleString('id-ID')}</Text>
                     </Box>
+                    <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
+                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Loyalty Points</Text>
+                        <Text size="xl" fw={700}>{formatPoints(guest.loyalty_points || 0)}</Text>
+                    </Box>
                     <Box>
-                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Terakhir Berkunjung</Text>
+                        <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Last Visit</Text>
                         <Text size="xl" fw={700}>
-                            {guest.last_visit_at ? new Date(guest.last_visit_at).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}
+                            {guest.last_visit_at ? new Date(guest.last_visit_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '-'}
                         </Text>
                     </Box>
                 </SimpleGrid>
@@ -107,9 +116,52 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
             {/* Body Content */}
             <Box p="lg">
                 <Grid gutter="lg">
-                    {/* Left Col: AI & Preferences */}
+                    {/* Left Col: Loyalty, AI & Preferences */}
                     <Grid.Col span={{ base: 12, md: 5 }}>
                         <Stack gap="md">
+
+                            {/* Loyalty Status Card */}
+                            <Card padding="md" radius="md" withBorder bg="teal.0" style={{ borderColor: 'var(--mantine-color-teal-2)' }}>
+                                <Group mb="sm">
+                                    <ThemeIcon color={getTierColor(guest.loyalty_tier)} variant="light"><IconTrophy size={18}/></ThemeIcon>
+                                    <Text fw={700} size="sm" c="teal.9">Loyalty Status</Text>
+                                </Group>
+
+                                <Group justify="space-between" mb="xs">
+                                    <Badge size="lg" color={getTierColor(guest.loyalty_tier)} variant="filled" leftSection={<IconDiamond size={14}/>}>
+                                        {getTierLabel(guest.loyalty_tier)} Tier
+                                    </Badge>
+                                    <Text size="sm" fw={700} c="teal.8">{formatPoints(guest.loyalty_points || 0)} pts</Text>
+                                </Group>
+
+                                {progress.nextTier && (
+                                    <Stack gap={4} mt="xs">
+                                        <Group justify="space-between">
+                                            <Text size="xs" c="dimmed">Progress to {progress.nextTier}</Text>
+                                            <Text size="xs" fw={600} c="teal.7">{progress.progressPercent}%</Text>
+                                        </Group>
+                                        <Progress value={progress.progressPercent} size="md" radius="xl" color={getTierColor(guest.loyalty_tier)} />
+                                        <Text size="xs" c="dimmed" ta="right">
+                                            <IconArrowUp size={10} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                                            {' '}{formatPoints(progress.pointsToNextTier || 0)} pts needed
+                                        </Text>
+                                    </Stack>
+                                )}
+
+                                {/* Tier Benefits */}
+                                <Box mt="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-teal-2)' }}>
+                                    <Group gap={4} mb={4}>
+                                        <IconGift size={14} color="var(--mantine-color-teal-7)" />
+                                        <Text size="xs" fw={600} c="teal.7">Current Benefits</Text>
+                                    </Group>
+                                    <Group gap={4}>
+                                        {getTierBenefits(guest.loyalty_tier || 'bronze').map((benefit, i) => (
+                                            <Badge key={i} size="xs" variant="light" color="teal" radius="sm">{benefit}</Badge>
+                                        ))}
+                                    </Group>
+                                </Box>
+                            </Card>
+
                             {/* AI Recommendations */}
                             <Card padding="md" radius="md" withBorder bg="violet.0" style={{ borderColor: 'var(--mantine-color-violet-2)' }}>
                                 <Group mb="sm">
@@ -137,7 +189,7 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                                 <Group gap="xs">
                                     {preferences.length > 0 ? preferences.map((tag, i) => (
                                         <Badge key={i} size="md" variant="light" color="grape" radius="sm">{tag}</Badge>
-                                    )) : <Text c="dimmed" size="sm" fs="italic">Belum ada preferensi tercatat.</Text>}
+                                    )) : <Text c="dimmed" size="sm" fs="italic">No preferences recorded.</Text>}
                                 </Group>
                             </Card>
                         </Stack>
@@ -148,27 +200,27 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                         <Card padding="md" radius="md" withBorder h="100%">
                             <Group mb="lg" justify="space-between">
                                 <Group gap="xs">
-                                    <ThemeIcon color="blue" variant="light"><IconHistory size={18}/></ThemeIcon>
+                                    <ThemeIcon color="teal" variant="light"><IconHistory size={18}/></ThemeIcon>
                                     <Text fw={700} size="sm">Stay History</Text>
                                 </Group>
                                 <Badge variant="light" color="gray">{history.length} Visits</Badge>
                             </Group>
                             
                             {history.length > 0 ? (
-                                <Timeline active={-1} bulletSize={30} lineWidth={2}>
+                                <Timeline active={-1} bulletSize={30} lineWidth={2} color="teal">
                                     {history.map((h) => (
                                         <Timeline.Item 
                                             key={h.id} 
                                             bullet={<IconBed size={14}/>} 
                                             title={
                                                 <Text size="sm" fw={600}>
-                                                    Kamar {h.room?.room_number} <Text span c="dimmed" fw={400}>({h.room?.room_type?.name})</Text>
+                                                    Room {h.room?.room_number} <Text span c="dimmed" fw={400}>({h.room?.room_type?.name})</Text>
                                                 </Text>
                                             }
                                         >
                                             <Text c="dimmed" size="xs" mt={4} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <IconCalendar size={12} />
-                                                {new Date(h.check_in_date).toLocaleDateString('id-ID')} — {new Date(h.check_out_date).toLocaleDateString('id-ID')}
+                                                {new Date(h.check_in_date).toLocaleDateString('en-US')} — {new Date(h.check_out_date).toLocaleDateString('en-US')}
                                             </Text>
                                             <Badge size="sm" color="teal" variant="light" mt="xs">
                                                 Total: Rp {h.total_price?.toLocaleString('id-ID')}
@@ -179,7 +231,7 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                             ) : (
                                 <Stack align="center" justify="center" py="xl" gap="xs">
                                     <IconChartBar size={40} color="var(--mantine-color-gray-4)" />
-                                    <Text c="dimmed" size="sm">Belum ada riwayat menginap.</Text>
+                                    <Text c="dimmed" size="sm">No stay history found.</Text>
                                 </Stack>
                             )}
                         </Card>

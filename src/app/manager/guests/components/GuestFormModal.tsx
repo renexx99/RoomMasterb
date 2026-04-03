@@ -41,7 +41,7 @@ export function GuestFormModal({ opened, onClose, guest, hotelId }: Props) {
           full_name: guest.full_name,
           email: guest.email,
           phone_number: guest.phone_number || '',
-          loyalty_tier: guest.loyalty_tier || 'Bronze',
+          loyalty_tier: guest.loyalty_tier || 'bronze',
           preferences: (guest.preferences as any)?.tags || [],
         });
       } else {
