@@ -1,4 +1,3 @@
-// src/app/housekeeping/dashboard/client.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -10,17 +9,17 @@ import {
   Badge,
   Paper,
   SimpleGrid,
-  SegmentedControl,
-  UnstyledButton,
-  Modal,
+  Menu,
+  ActionIcon,
+  Card,
+  Table,
+  Grid,
   Button,
   Stack,
-  Select,
-  Textarea,
   ThemeIcon,
-  Transition,
+  Modal,
   Title,
-  Progress,
+  Select,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -30,8 +29,7 @@ import {
   IconBed,
   IconTool,
   IconDroplet,
-  IconAlertTriangle,
-  IconArrowRight,
+  IconDots,
   IconFlame,
   IconSparkles,
 } from '@tabler/icons-react';
@@ -47,20 +45,9 @@ interface ClientProps {
   data: HousekeepingDashboardData;
 }
 
-// Status icon mapping
-const STATUS_ICONS: Record<CombinedRoomStatus, React.ComponentType<any>> = {
-  VD: IconSpray,
-  VC: IconCheck,
-  OC: IconBed,
-  OD: IconDroplet,
-  OOO: IconTool,
-};
-
 export default function HousekeepingDashboardClient({ data }: ClientProps) {
   const { stats, rooms } = data;
   const [filter, setFilter] = useState<string>('all');
-  const [selectedRoom, setSelectedRoom] = useState<any>(null);
-  const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [updating, setUpdating] = useState(false);
 
   // Derive combined statuses for all rooms
@@ -75,36 +62,23 @@ export default function HousekeepingDashboardClient({ data }: ClientProps) {
   // Filter rooms
   const filteredRooms = useMemo(() => {
     if (filter === 'all') return roomsWithStatus;
-    return roomsWithStatus.filter((r) => r.combinedStatus === filter);
+    if (['VD', 'VC', 'OC', 'OD', 'OOO'].includes(filter)) {
+      return roomsWithStatus.filter((r) => r.combinedStatus === filter);
+    }
+    // Also allow filtering by base cleaning status if needed
+    return roomsWithStatus.filter((r) => r.cleaning_status === filter);
   }, [roomsWithStatus, filter]);
 
-  // Count by status
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: roomsWithStatus.length };
-    roomsWithStatus.forEach((r) => {
-      counts[r.combinedStatus] = (counts[r.combinedStatus] || 0) + 1;
-    });
-    return counts;
-  }, [roomsWithStatus]);
-
-  const handleRoomTap = (room: any) => {
-    setSelectedRoom(room);
-    openModal();
-  };
-
-  const handleStatusUpdate = async (newCleaningStatus: 'clean' | 'dirty' | 'cleaning' | 'inspected') => {
-    if (!selectedRoom) return;
+  const handleStatusUpdate = async (roomId: string, newCleaningStatus: 'clean' | 'dirty' | 'cleaning' | 'inspected') => {
     setUpdating(true);
     try {
-      const result = await updateRoomCleaningStatus(selectedRoom.id, newCleaningStatus);
+      const result = await updateRoomCleaningStatus(roomId, newCleaningStatus);
       if (result.error) throw new Error(result.error);
       notifications.show({
         title: 'Status Updated',
-        message: `Room ${selectedRoom.room_number} → ${newCleaningStatus.toUpperCase()}`,
+        message: `Room status successfully updated to ${newCleaningStatus.toUpperCase()}`,
         color: 'green',
       });
-      closeModal();
-      // Force page refresh
       window.location.reload();
     } catch (err: any) {
       notifications.show({
@@ -117,160 +91,199 @@ export default function HousekeepingDashboardClient({ data }: ClientProps) {
     }
   };
 
+  const statusOptions = [
+    { value: 'all', label: 'All Rooms' },
+    { value: 'VD', label: 'Vacant Dirty (VD)' },
+    { value: 'VC', label: 'Vacant Clean (VC)' },
+    { value: 'OD', label: 'Occupied Dirty (OD)' },
+    { value: 'OC', label: 'Occupied Clean (OC)' },
+    { value: 'dirty', label: 'All Dirty Status' },
+    { value: 'cleaning', label: 'Currently Cleaning' },
+  ];
+
   return (
-    <Container fluid px="md" py="md">
-      {/* ====== KPI STATS ====== */}
-      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm" mb="md">
-        <StatCard
-          label="Needs Cleaning"
-          value={stats.dirtyRooms}
-          icon={IconFlame}
-          color="red"
-          total={stats.totalRooms}
-        />
-        <StatCard
-          label="In Progress"
-          value={stats.cleaningRooms}
-          icon={IconSpray}
-          color="orange"
-          total={stats.totalRooms}
-        />
-        <StatCard
-          label="Done Today"
-          value={stats.completedToday}
-          icon={IconSparkles}
-          color="teal"
-          total={stats.totalRooms}
-        />
-        <StatCard
-          label="Issues Open"
-          value={stats.openReports}
-          icon={IconAlertTriangle}
-          color="violet"
-          total={stats.totalRooms}
-        />
-      </SimpleGrid>
-
-      {/* ====== FILTER TABS ====== */}
-      <Paper radius="lg" p="xs" mb="md" withBorder style={{ background: 'white' }}>
-        <Group gap="xs" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-          <FilterChip
-            label={`All (${statusCounts['all'] || 0})`}
-            active={filter === 'all'}
-            color="gray"
-            onClick={() => setFilter('all')}
+    <Box style={{ background: '#f8f9fa', minHeight: '100%', padding: '1rem' }}>
+      <Container fluid px={0} py={0}>
+        {/* ====== COMPACT KPI STATS ====== */}
+        <SimpleGrid cols={{ base: 3, sm: 3 }} spacing="sm" mb="lg">
+          <StatCard
+            label="Dirty"
+            value={stats.dirtyRooms}
+            icon={IconFlame}
+            color="red"
           />
-          {(['VD', 'VC', 'OC', 'OD', 'OOO'] as CombinedRoomStatus[]).map((s) => (
-            <FilterChip
-              key={s}
-              label={`${s} (${statusCounts[s] || 0})`}
-              active={filter === s}
-              color={COMBINED_STATUS_CONFIG[s].color}
-              onClick={() => setFilter(s)}
-            />
-          ))}
-        </Group>
-      </Paper>
+          <StatCard
+            label="Cleaning"
+            value={stats.cleaningRooms}
+            icon={IconSpray}
+            color="orange"
+          />
+          <StatCard
+            label="Done"
+            value={stats.completedToday}
+            icon={IconSparkles}
+            color="teal"
+          />
+        </SimpleGrid>
 
-      {/* ====== ROOM GRID ====== */}
-      <SimpleGrid cols={{ base: 3, xs: 4, sm: 5, md: 6, lg: 8 }} spacing="sm">
-        {filteredRooms.map((room) => {
-          const config = COMBINED_STATUS_CONFIG[room.combinedStatus as CombinedRoomStatus];
-          const StatusIcon = STATUS_ICONS[room.combinedStatus as CombinedRoomStatus] || IconBed;
-          return (
-            <UnstyledButton
-              key={room.id}
-              onClick={() => handleRoomTap(room)}
-              style={{ width: '100%' }}
-            >
-              <Paper
-                radius="lg"
-                p="sm"
-                style={{
-                  background: 'white',
-                  border: `2px solid var(--mantine-color-${config.color}-2)`,
-                  textAlign: 'center',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-                className="room-card"
-              >
-                {/* Status indicator dot */}
-                <Box
-                  style={{
-                    position: 'absolute',
-                    top: 6,
-                    right: 6,
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: `var(--mantine-color-${config.color}-5)`,
-                  }}
+        {/* Clean Toolbar */}
+        <Paper p="sm" radius="md" withBorder mb="lg" shadow="sm">
+          <Grid align="center" gutter="sm">
+            <Grid.Col span={{ base: 12, sm: 6 }}>
+              <Text fw={600} size="md">Room Status Overview</Text>
+            </Grid.Col>
+            
+            <Grid.Col span={{ base: 12, sm: 6 }}>
+              <Group justify="flex-end">
+                <Select
+                  placeholder="Filter by Status"
+                  value={filter}
+                  onChange={(val) => setFilter(val || 'all')}
+                  data={statusOptions}
+                  size="sm"
+                  style={{ width: '100%', maxWidth: 250 }}
+                  radius="md"
                 />
-                
-                {/* Room Number */}
-                <Text size="lg" fw={800} c={`${config.color}.7`} style={{ lineHeight: 1 }}>
-                  {room.room_number}
-                </Text>
+              </Group>
+            </Grid.Col>
+          </Grid>
+        </Paper>
 
-                {/* Status Badge */}
-                <Badge
-                  size="xs"
-                  variant="light"
-                  color={config.color}
-                  mt={6}
-                  style={{ fontSize: '9px', padding: '2px 6px' }}
-                >
-                  {room.combinedStatus}
-                </Badge>
+        {/* ====== ROOMS TABLE ====== */}
+        <Paper shadow="sm" radius="md" withBorder style={{ overflow: 'hidden' }}>
+          <Box style={{ overflowX: 'auto' }}>
+            <Table striped highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+              <Table.Thead bg="gray.0">
+                <Table.Tr>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Room</Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Type / Floor</Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Occupancy</Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Condition</Table.Th>
+                  <Table.Th style={{ whiteSpace: 'nowrap' }}>Notes</Table.Th>
+                  <Table.Th ta="right" style={{ whiteSpace: 'nowrap' }}>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredRooms.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={6} ta="center" py="xl" c="dimmed">
+                      No rooms found for the selected filter.
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  filteredRooms.map((room) => {
+                    const combinedConfig = COMBINED_STATUS_CONFIG[room.combinedStatus as CombinedRoomStatus];
+                    const isClean = room.cleaning_status === 'clean' || room.cleaning_status === 'inspected';
+                    const isCleaning = room.cleaning_status === 'cleaning';
 
-                {/* Room Type (truncated) */}
-                <Text size="9px" c="dimmed" mt={2} lineClamp={1}>
-                  {room.room_type?.name}
-                </Text>
-              </Paper>
-            </UnstyledButton>
-          );
-        })}
-      </SimpleGrid>
+                    return (
+                      <Table.Tr key={room.id}>
+                        {/* Room Number */}
+                        <Table.Td>
+                          <Group gap="sm" wrap="nowrap">
+                            <ThemeIcon
+                              color={combinedConfig.color}
+                              variant="light"
+                              radius="md"
+                              size="md"
+                            >
+                              <IconBed size={16} />
+                            </ThemeIcon>
+                            <Text fw={600} size="sm" style={{ whiteSpace: 'nowrap' }}>{room.room_number}</Text>
+                          </Group>
+                        </Table.Td>
 
-      {/* ====== ROOM ACTION MODAL ====== */}
-      <Modal
-        opened={modalOpened}
-        onClose={closeModal}
-        title={null}
-        size="sm"
-        radius="lg"
-        centered
-        overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
-        styles={{
-          header: { display: 'none' },
-          body: { padding: 0 },
-        }}
-      >
-        {selectedRoom && (
-          <RoomActionSheet
-            room={selectedRoom}
-            onClose={closeModal}
-            onUpdate={handleStatusUpdate}
-            updating={updating}
-          />
-        )}
-      </Modal>
+                        {/* Type and Floor */}
+                        <Table.Td>
+                          <Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>{room.room_type?.name || 'Standard'}</Text>
+                          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>Floor {room.floor_number || '-'}</Text>
+                        </Table.Td>
 
-      {/* Hover styles */}
-      <style>{`
-        .room-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .room-card:active {
-          transform: scale(0.97);
-        }
-      `}</style>
-    </Container>
+                        {/* Occupancy */}
+                        <Table.Td>
+                          <Badge
+                            variant="light"
+                            color={room.status === 'occupied' ? 'blue' : 'gray'}
+                            size="sm"
+                            radius="sm"
+                          >
+                            {room.status === 'occupied' ? 'Occupied' : 'Vacant'}
+                          </Badge>
+                        </Table.Td>
+
+                        {/* Combined Status Condition */}
+                        <Table.Td>
+                          <Badge
+                            variant="outline"
+                            color={combinedConfig.color}
+                            size="sm"
+                            radius="sm"
+                          >
+                            {combinedConfig.label} ({room.combinedStatus})
+                          </Badge>
+                        </Table.Td>
+
+                        {/* Notes */}
+                        <Table.Td>
+                          {room.special_notes ? (
+                            <Text size="xs" c="dimmed" lineClamp={2} style={{ minWidth: 150 }}>
+                              {room.special_notes}
+                            </Text>
+                          ) : (
+                            <Text size="xs" c="dimmed" fs="italic" style={{ whiteSpace: 'nowrap' }}>No notes</Text>
+                          )}
+                        </Table.Td>
+
+                        {/* Actions */}
+                        <Table.Td style={{ textAlign: 'right' }}>
+                          <Menu position="bottom-end" shadow="md" width={200} withArrow>
+                            <Menu.Target>
+                              <ActionIcon variant="subtle" color="gray" loading={updating}>
+                                <IconDots size={18} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Label>Update Status</Menu.Label>
+                              {!isCleaning && !isClean && (
+                                <Menu.Item
+                                  leftSection={<IconSpray size={14} />}
+                                  color="orange"
+                                  onClick={() => handleStatusUpdate(room.id, 'cleaning')}
+                                >
+                                  Start Cleaning
+                                </Menu.Item>
+                              )}
+                              {(isCleaning || !isClean) && (
+                                <Menu.Item
+                                  leftSection={<IconCheck size={14} />}
+                                  color="teal"
+                                  onClick={() => handleStatusUpdate(room.id, 'clean')}
+                                >
+                                  Mark as Clean
+                                </Menu.Item>
+                              )}
+                              {isClean && (
+                                <Menu.Item
+                                  leftSection={<IconDroplet size={14} />}
+                                  color="red"
+                                  onClick={() => handleStatusUpdate(room.id, 'dirty')}
+                                >
+                                  Mark as Dirty
+                                </Menu.Item>
+                              )}
+                            </Menu.Dropdown>
+                          </Menu>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })
+                )}
+              </Table.Tbody>
+            </Table>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
 
@@ -281,198 +294,27 @@ function StatCard({
   value,
   icon: Icon,
   color,
-  total,
 }: {
   label: string;
   value: number;
   icon: React.ComponentType<any>;
   color: string;
-  total: number;
 }) {
-  const progress = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
-  
   return (
-    <Paper p="md" radius="md" withBorder style={{ borderColor: '#e9ecef', background: 'white' }}>
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700} style={{ letterSpacing: '0.5px' }}>
+    <Card p="sm" radius="md" withBorder shadow="sm" style={{ backgroundColor: 'white' }}>
+      <Group justify="space-between" align="center" wrap="nowrap">
+        <Box>
+          <Text size="10px" c="dimmed" tt="uppercase" fw={800} style={{ letterSpacing: '0.5px' }} lineClamp={1}>
             {label}
           </Text>
-          <Title order={2} style={{ fontSize: '1.75rem', fontWeight: 700, marginTop: 4 }}>
+          <Title order={3} style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 2 }}>
             {value}
           </Title>
-        </div>
-        <ThemeIcon size={40} radius="md" variant="light" color={color}>
-          <Icon size={20} stroke={1.5} />
+        </Box>
+        <ThemeIcon size={32} radius="md" variant="light" color={color}>
+          <Icon size={16} stroke={2} />
         </ThemeIcon>
       </Group>
-      <Progress value={progress} size="sm" radius="xl" color={color} mt={8} />
-    </Paper>
-  );
-}
-
-function FilterChip({
-  label,
-  active,
-  color,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  color: string;
-  onClick: () => void;
-}) {
-  return (
-    <UnstyledButton onClick={onClick}>
-      <Badge
-        size="lg"
-        variant={active ? 'filled' : 'light'}
-        color={color}
-        radius="lg"
-        style={{
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          fontWeight: active ? 700 : 500,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {label}
-      </Badge>
-    </UnstyledButton>
-  );
-}
-
-function RoomActionSheet({
-  room,
-  onClose,
-  onUpdate,
-  updating,
-}: {
-  room: any;
-  onClose: () => void;
-  onUpdate: (status: 'clean' | 'dirty' | 'cleaning' | 'inspected') => void;
-  updating: boolean;
-}) {
-  const combinedStatus = getCombinedRoomStatus(room.status, room.cleaning_status);
-  const config = COMBINED_STATUS_CONFIG[combinedStatus];
-  const StatusIcon = STATUS_ICONS[combinedStatus] || IconBed;
-
-  // Determine available actions based on current status
-  const getActions = (): { label: string; value: 'clean' | 'dirty' | 'cleaning' | 'inspected'; color: string; icon: React.ComponentType<any> }[] => {
-    switch (room.cleaning_status) {
-      case 'dirty':
-        return [
-          { label: 'Start Cleaning', value: 'cleaning', color: 'orange', icon: IconSpray },
-          { label: 'Mark as Clean', value: 'clean', color: 'teal', icon: IconCheck },
-        ];
-      case 'cleaning':
-        return [
-          { label: 'Mark as Clean', value: 'clean', color: 'teal', icon: IconCheck },
-          { label: 'Mark for Inspection', value: 'inspected', color: 'blue', icon: IconCheck },
-        ];
-      case 'inspected':
-        return [
-          { label: 'Approve (Mark Clean)', value: 'clean', color: 'teal', icon: IconCheck },
-          { label: 'Reject (Mark Dirty)', value: 'dirty', color: 'red', icon: IconSpray },
-        ];
-      case 'clean':
-        return [
-          { label: 'Mark as Dirty', value: 'dirty', color: 'red', icon: IconDroplet },
-        ];
-      default:
-        return [
-          { label: 'Mark as Clean', value: 'clean', color: 'teal', icon: IconCheck },
-          { label: 'Mark as Dirty', value: 'dirty', color: 'red', icon: IconSpray },
-        ];
-    }
-  };
-
-  const actions = getActions();
-
-  return (
-    <Box>
-      {/* Header */}
-      <Box
-        p="lg"
-        style={{
-          background: `linear-gradient(135deg, var(--mantine-color-${config.color}-5), var(--mantine-color-${config.color}-7))`,
-          borderRadius: '16px 16px 0 0',
-          textAlign: 'center',
-        }}
-      >
-        <Text size="sm" c="white" fw={500} style={{ opacity: 0.8 }}>
-          Room
-        </Text>
-        <Text size="2rem" fw={800} c="white" style={{ lineHeight: 1.2 }}>
-          {room.room_number}
-        </Text>
-        <Badge size="lg" variant="white" color={config.color} mt="xs" radius="md">
-          {config.label}
-        </Badge>
-      </Box>
-
-      {/* Room Info */}
-      <Box px="lg" py="sm">
-        <Group justify="space-between" mb="xs">
-          <Text size="xs" c="dimmed">Type</Text>
-          <Text size="sm" fw={600}>{room.room_type?.name || '-'}</Text>
-        </Group>
-        <Group justify="space-between" mb="xs">
-          <Text size="xs" c="dimmed">Floor</Text>
-          <Text size="sm" fw={600}>{room.floor_number || '-'}</Text>
-        </Group>
-        <Group justify="space-between" mb="xs">
-          <Text size="xs" c="dimmed">Occupancy</Text>
-          <Badge size="sm" variant="light" color={room.status === 'occupied' ? 'blue' : 'gray'}>
-            {room.status === 'occupied' ? 'Occupied' : 'Vacant'}
-          </Badge>
-        </Group>
-        {room.special_notes && (
-          <Box mt="xs" p="xs" style={{ background: '#fffbeb', borderRadius: 8, border: '1px solid #fcd34d' }}>
-            <Text size="xs" c="orange.8">
-              📝 {room.special_notes}
-            </Text>
-          </Box>
-        )}
-      </Box>
-
-      {/* Action Buttons */}
-      <Box px="lg" pb="lg">
-        <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb="sm">
-          Quick Actions
-        </Text>
-        <Stack gap="xs">
-          {actions.map((action) => {
-            const ActionIcon = action.icon;
-            return (
-              <Button
-                key={action.value}
-                fullWidth
-                size="md"
-                radius="lg"
-                color={action.color}
-                variant="light"
-                leftSection={<ActionIcon size={18} />}
-                rightSection={<IconArrowRight size={14} />}
-                loading={updating}
-                onClick={() => onUpdate(action.value)}
-                styles={{
-                  root: {
-                    height: 48,
-                    fontWeight: 600,
-                    fontSize: '14px',
-                  },
-                  inner: {
-                    justifyContent: 'space-between',
-                  },
-                }}
-              >
-                {action.label}
-              </Button>
-            );
-          })}
-        </Stack>
-      </Box>
-    </Box>
+    </Card>
   );
 }
