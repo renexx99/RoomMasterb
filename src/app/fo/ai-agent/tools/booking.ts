@@ -25,6 +25,25 @@ export async function confirmBookingDetailsTool(args: any): Promise<ToolExecutio
     const nights = calculateNights(check_in, check_out);
     const totalPrice = nights * room.room_type.price_per_night;
 
+    let finalEmail = user_email && user_email !== '-' ? user_email : null;
+    let finalPhone = phone_number && phone_number !== '-' ? phone_number : null;
+
+    if (!finalEmail || !finalPhone) {
+        const { data: existingGuest } = await supabase
+            .from('guests')
+            .select('email, phone_number')
+            .eq('hotel_id', hotelId)
+            .ilike('full_name', `%${guest_name}%`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+            
+        if (existingGuest) {
+            finalEmail = finalEmail || existingGuest.email;
+            finalPhone = finalPhone || existingGuest.phone_number;
+        }
+    }
+
     return {
         success: true,
         type: 'confirmation',
@@ -32,8 +51,8 @@ export async function confirmBookingDetailsTool(args: any): Promise<ToolExecutio
         message: `Saya telah membuat draft booking untuk ${guest_name} di kamar ${room.room_type.name}. Silakan konfirmasi untuk melanjutkan finalisasi reservasi.`,
         data: {
             guest_name,
-            email: user_email && user_email !== '-' ? user_email : 'Tidak ada',
-            phone: phone_number && phone_number !== '-' ? phone_number : 'Tidak ada',
+            email: finalEmail || 'Tidak ada',
+            phone: finalPhone || 'Tidak ada',
             room_type: room.room_type.name,
             room_number: room.room_number,
             check_in,
@@ -71,13 +90,13 @@ export async function createReservationTool(args: any): Promise<ToolExecutionRes
   if (user_email && user_email !== '-' && user_email.includes('@')) {
       queryGuest = queryGuest.eq('email', user_email);
   } else {
-      queryGuest = queryGuest.ilike('full_name', guest_name);
+      queryGuest = queryGuest.ilike('full_name', `%${guest_name}%`);
       if (phone_number && phone_number !== '-') {
           queryGuest = queryGuest.eq('phone_number', phone_number);
       }
   }
 
-  const { data: existingGuest } = await queryGuest.limit(1).maybeSingle();
+  const { data: existingGuest } = await queryGuest.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
   if (existingGuest) {
     guestId = existingGuest.id;

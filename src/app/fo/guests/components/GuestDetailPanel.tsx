@@ -10,7 +10,7 @@ import {
 import { 
   IconMail, IconPhone, IconDiamond, IconSparkles, 
   IconHistory, IconTag, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar,
-  IconStar, IconTrophy, IconArrowUp, IconGift
+  IconStar, IconTrophy, IconArrowUp, IconGift, IconTrash
 } from '@tabler/icons-react';
 import { Guest } from '@/core/types/database';
 import { getGuestHistory } from '../actions';
@@ -22,9 +22,10 @@ import {
 interface Props {
   guest: Guest;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function GuestDetailPanel({ guest, onEdit }: Props) {
+export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
@@ -48,16 +49,16 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
         <ScrollArea style={{ flex: 1 }} type="auto">
             
             {/* Header Profile - Teal Gradient (FO theme) */}
-            <Box p="xl" style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', color: 'white' }}>
+            <Box p="md" style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0891b2 100%)', color: 'white' }}>
                 <Group justify="space-between" align="flex-start" wrap="nowrap">
-                    <Group gap="lg" align="flex-start" wrap="nowrap">
-                        <Avatar size={90} radius="md" color="white" variant="filled" styles={{ placeholder: { color: '#0891b2' } }}>
+                    <Group gap="md" align="flex-start" wrap="nowrap">
+                        <Avatar size={60} radius="md" color="white" variant="filled" styles={{ placeholder: { color: '#0891b2' } }}>
                             <Text size="xl" fw={700}>{guest.full_name.charAt(0)}</Text>
                         </Avatar>
                         <div>
-                            <Text fz={26} fw={700} lh={1.1} mb={4}>{guest.title} {guest.full_name}</Text>
+                            <Text fz={20} fw={700} lh={1.1} mb={4}>{guest.title} {guest.full_name}</Text>
                             
-                            <Group gap="xs" mb="md">
+                            <Group gap="xs" mb="sm">
                                 <Badge color="white" c="teal.9" variant="white" leftSection={<IconDiamond size={12}/>}>
                                     {getTierLabel(guest.loyalty_tier)}
                                 </Badge>
@@ -78,35 +79,47 @@ export function GuestDetailPanel({ guest, onEdit }: Props) {
                             </Stack>
                         </div>
                     </Group>
-                    <Button 
-                        variant="white" 
-                        color="teal" 
-                        size="sm" 
-                        leftSection={<IconPencil size={16}/>}
-                        onClick={onEdit}
-                        style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-                    >
-                        Edit Profile
-                    </Button>
+                    <Group gap="sm">
+                        <Button 
+                            variant="white" 
+                            color="teal" 
+                            size="xs" 
+                            leftSection={<IconPencil size={14}/>}
+                            onClick={onEdit}
+                            style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                        >
+                            Edit
+                        </Button>
+                        <Button 
+                            variant="filled" 
+                            color="red.7" 
+                            size="xs" 
+                            leftSection={<IconTrash size={14}/>}
+                            onClick={onDelete}
+                            style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                        >
+                            Delete
+                        </Button>
+                    </Group>
                 </Group>
 
                 {/* Stats Bar */}
-                <SimpleGrid cols={4} mt="xl" spacing="lg">
+                <SimpleGrid cols={4} mt="md" spacing="sm">
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Stays</Text>
-                        <Text size="xl" fw={700}>{guest.total_stays || 0}x</Text>
+                        <Text size="lg" fw={700}>{guest.total_stays || 0}x</Text>
                     </Box>
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Spend</Text>
-                        <Text size="xl" fw={700}>Rp {Number(guest.total_spend || 0).toLocaleString('id-ID')}</Text>
+                        <Text size="lg" fw={700}>Rp {Number(guest.total_spend || 0).toLocaleString('id-ID')}</Text>
                     </Box>
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Loyalty Points</Text>
-                        <Text size="xl" fw={700}>{formatPoints(guest.loyalty_points || 0)}</Text>
+                        <Text size="lg" fw={700}>{formatPoints(guest.loyalty_points || 0)}</Text>
                     </Box>
                     <Box>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Last Visit</Text>
-                        <Text size="xl" fw={700}>
+                        <Text size="lg" fw={700}>
                             {guest.last_visit_at ? new Date(guest.last_visit_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '-'}
                         </Text>
                     </Box>

@@ -8,8 +8,8 @@ export const AI_TOOLS_DEFINITION = [
         type: "object",
         properties: {
           guest_name: { type: "string" },
-          user_email: { type: "string", description: "Ekstrak email dari input user jika ada" },
-          phone_number: { type: "string", description: "Ekstrak no HP dari input user jika ada" },
+          user_email: { type: "string", description: "Ekstrak email dari input user jika ada. TIDAK PERLU DITANYAKAN jika tidak ada, cukup isi '-'" },
+          phone_number: { type: "string", description: "Ekstrak no HP dari input user jika ada. TIDAK PERLU DITANYAKAN jika tidak ada, cukup isi '-'" },
           room_type_name: { type: "string" },
           check_in: { type: "string", format: "date" },
           check_out: { type: "string", format: "date" },

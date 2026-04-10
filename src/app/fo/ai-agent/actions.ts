@@ -24,9 +24,9 @@ export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) 
         SOP RESERVASI (PENTING):
         1. FASE DRAFT: Jika user baru meminta booking atau bertanya ketersediaan, panggil 'confirm_booking_details'.
         2. FASE EKSEKUSI: Jika user berkata "Konfirmasi", "Lanjut", "Buat", atau "Benar" DAN data (Nama, Kamar, Tanggal) sudah ada di chat sebelumnya, JANGAN panggil 'confirm_booking_details' lagi. LANGSUNG panggil 'create_reservation'.
-        3. DATA: Jika user tidak memberi Email/HP, isi parameter dengan '-'.
+        3. DATA: DILARANG KERAS menanyakan detail kontak (email/no HP) kepada user jika mereka hanya menyebutkan nama tamu lama. Cukup isi parameter email dan phone dengan '-'. Sistem akan otomatis mencari data tamu tersebut di database.
         
-        Ingat: Jangan looping di fase draft. Jika user sudah setuju, segera buat reservasi.`
+        Ingat: Jangan looping di fase draft. Jangan rewel menanyakan data tamu. Jika user sudah setuju, segera panggil fungsi terkait.`
     };
 
     const messages = [

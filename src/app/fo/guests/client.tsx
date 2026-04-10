@@ -13,6 +13,7 @@ import {
 import { Guest } from '@/core/types/database';
 import { GuestDetailPanel } from './components/GuestDetailPanel';
 import { GuestFormModal } from './components/GuestFormModal';
+import { deleteGuestAction } from './actions';
 
 interface ClientProps {
   initialGuests: Guest[];
@@ -71,6 +72,17 @@ export default function GuestsClient({ initialGuests, hotelId }: ClientProps) {
     if(selectedGuest) {
         setIsEditing(true);
         setModalOpened(true);
+    }
+  };
+
+  const handleDeleteCurrent = async () => {
+    if (selectedGuest && window.confirm(`Apakah Anda yakin ingin menghapus data tamu ${selectedGuest.full_name}?`)) {
+      const res = await deleteGuestAction(selectedGuest.id);
+      if (res.success) {
+        setSelectedGuest(null);
+      } else {
+        alert(res.error || 'Gagal menghapus tamu');
+      }
     }
   };
 
@@ -184,11 +196,12 @@ export default function GuestsClient({ initialGuests, hotelId }: ClientProps) {
               </Grid.Col>
 
               {/* RIGHT: Detail View (70%) */}
-              <Grid.Col span={{ base: 12, md: 8, lg: 9 }} style={{ height: '100%' }}>
+              <Grid.Col span={{ base: 12, md: 8, lg: 9 }} style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {selectedGuest ? (
                   <GuestDetailPanel 
                     guest={selectedGuest} 
                     onEdit={handleEditCurrent}
+                    onDelete={handleDeleteCurrent}
                   />
                 ) : (
                   <Paper h="100%" radius="md" withBorder bg="gray.0">
