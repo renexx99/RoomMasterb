@@ -4,16 +4,19 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Stack, Paper, Group, Text, ThemeIcon, Divider, Textarea, ActionIcon,
-  Box, Loader, ScrollArea, Button, Card, Badge, SimpleGrid, Table, Alert
+  Box, Loader, ScrollArea, Button, Card, Badge, SimpleGrid, Table, Alert,
+  Tooltip
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
   IconSparkles, IconSend, IconRobot, IconBed, IconUserSearch, IconChartBar,
   IconBulb, IconChevronRight, IconCheck, IconX, IconUser, IconMail, IconPhone,
   IconCalendar, IconCoin, IconHome, IconBuildingStore, IconBrush, IconTrendingUp,
-  IconInfoCircle, IconFileInvoice, IconAlertCircle
+  IconInfoCircle, IconFileInvoice, IconAlertCircle,
+  IconMicrophone, IconPlayerStop
 } from '@tabler/icons-react';
 import { chatWithManagerAI } from '../../ai-agent/actions';
+import { useVoiceChat } from '@/app/fo/ai-agent/useVoiceChat';
 import { ReservationInvoiceModal } from './ReservationInvoiceModal';
 
 // --- MOCK DATA UNTUK STATIC SUGGESTION PANEL ---
@@ -330,6 +333,13 @@ export function AICoPilotPanel() {
   const viewport = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Voice chat integration
+  const { voiceState, toggleRecording, voiceError, clearVoiceError } = useVoiceChat({
+    onTranscript: (transcript) => {
+      handleSendMessage(transcript);
+    },
+  });
+
   useEffect(() => {
     if (viewport.current) {
       viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
@@ -529,12 +539,76 @@ export function AICoPilotPanel() {
         </Stack>
       </ScrollArea>
 
+      {/* Voice Indicator */}
+      {voiceState !== 'idle' && (
+        <Box px="sm" py={6} style={{ background: voiceState === 'recording' ? '#fff5f5' : '#eef2ff', borderRadius: 8 }}>
+          <Group gap={6} justify="center">
+            {voiceState === 'recording' && (
+              <>
+                <Box
+                  style={{
+                    width: 8, height: 8, borderRadius: '50%', backgroundColor: '#fa5252',
+                    animation: 'pulse-recording-mgr-res 1.2s ease-in-out infinite',
+                  }}
+                />
+                <Text size="xs" c="red.7" fw={500}>Merekam suara... Tekan mic untuk berhenti</Text>
+              </>
+            )}
+            {voiceState === 'processing' && (
+              <>
+                <Loader size={12} color="blue" />
+                <Text size="xs" c="blue.7" fw={500}>Memproses suara...</Text>
+              </>
+            )}
+          </Group>
+        </Box>
+      )}
+
+      {/* Voice Error */}
+      {voiceError && (
+        <Box px="sm" py={4} style={{ background: '#fff5f5', borderRadius: 8 }}>
+          <Group gap={6} justify="space-between">
+            <Text size="xs" c="red.7">{voiceError}</Text>
+            <ActionIcon size="xs" variant="subtle" color="red" onClick={clearVoiceError}>
+              <IconX size={12} />
+            </ActionIcon>
+          </Group>
+        </Box>
+      )}
+
       {/* Input Area */}
       <Box style={{ marginTop: 'auto' }}>
         <Group gap="xs" align="flex-end">
+          <Tooltip label={voiceState === 'recording' ? 'Berhenti merekam' : voiceState === 'processing' ? 'Memproses...' : 'Bicara ke AI'}>
+            <ActionIcon
+              size={36}
+              radius="md"
+              variant={voiceState === 'recording' ? 'filled' : 'light'}
+              color={voiceState === 'recording' ? 'red' : 'blue'}
+              onClick={toggleRecording}
+              disabled={loadingAI || voiceState === 'processing'}
+              style={{
+                ...(voiceState === 'recording' ? {
+                  animation: 'pulse-recording-mgr-res 1.2s ease-in-out infinite',
+                  boxShadow: '0 0 0 4px rgba(250, 82, 82, 0.2)',
+                } : {
+                  animation: 'pulse-idle-mic-mgr-res 2s infinite',
+                }),
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {voiceState === 'recording' ? (
+                <IconPlayerStop size={18} />
+              ) : voiceState === 'processing' ? (
+                <Loader size={16} color="blue" />
+              ) : (
+                <IconMicrophone size={18} />
+              )}
+            </ActionIcon>
+          </Tooltip>
           <Textarea
             ref={inputRef}
-            placeholder="Ketik perintah laporan, riwayat tamu, atau reservasi..."
+            placeholder={voiceState === 'recording' ? 'Sedang merekam suara...' : 'Ketik atau bicara ke AI...'}
             value={chatMessage}
             onChange={(e) => setChatMessage(e.target.value)}
             minRows={2}
@@ -542,7 +616,7 @@ export function AICoPilotPanel() {
             autosize
             style={{ flex: 1 }}
             onKeyDown={handleKeyPress}
-            disabled={loadingAI}
+            disabled={loadingAI || voiceState === 'recording'}
             size="sm"
           />
           <ActionIcon 
@@ -561,6 +635,19 @@ export function AICoPilotPanel() {
           AI dapat melakukan kesalahan. Cek kembali data analitik.
         </Text>
       </Box>
+
+      {/* CSS Animation for recording pulse */}
+      <style>{`
+        @keyframes pulse-recording-mgr-res {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.05); }
+        }
+        @keyframes pulse-idle-mic-mgr-res {
+          0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+      `}</style>
     </Stack>
   );
 }
