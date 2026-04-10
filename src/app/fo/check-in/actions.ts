@@ -44,13 +44,13 @@ export async function checkOutGuest(reservationId: string, roomId: string) {
   const supabase = await getSupabase();
   const now = new Date().toISOString();
 
-  // 1. Update Room: Set status to 'maintenance' (or available but dirty)
-  // Logic: Guest leaves -> Room becomes Dirty
+  // 1. Update Room: Guest leaves -> Room becomes Vacant Dirty
   const { error: roomError } = await supabase
     .from('rooms')
     .update({ 
-      status: 'available', // Room is physically available, but...
-      cleaning_status: 'dirty' // ...it needs cleaning
+      status: 'available',
+      cleaning_status: 'dirty',
+      updated_at: now,
     })
     .eq('id', roomId);
 
@@ -64,8 +64,28 @@ export async function checkOutGuest(reservationId: string, roomId: string) {
 
   if (resError) return { error: `Failed to update reservation: ${resError.message}` };
 
+  // 3. Auto-generate Housekeeping Task for this room
+  const { data: roomData } = await supabase
+    .from('rooms')
+    .select('hotel_id')
+    .eq('id', roomId)
+    .single();
+
+  if (roomData?.hotel_id) {
+    await supabase.from('housekeeping_tasks').insert({
+      hotel_id: roomData.hotel_id,
+      room_id: roomId,
+      task_type: 'cleaning',
+      priority: 'normal',
+      status: 'pending',
+      notes: `Auto-generated after checkout of reservation ${reservationId}`,
+    });
+  }
+
   revalidatePath('/fo/check-in');
   revalidatePath('/fo/dashboard');
   revalidatePath('/fo/availability');
+  revalidatePath('/housekeeping/dashboard');
+  revalidatePath('/housekeeping/tasks');
   return { success: true };
 }

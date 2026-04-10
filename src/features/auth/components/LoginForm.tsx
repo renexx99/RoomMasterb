@@ -17,8 +17,8 @@ interface LoginFormValues {
 }
 
 // Define roles that require a hotel assignment to function
-// Anda bisa tambahkan 'Housekeeping Supervisor' di sini jika mereka juga bisa login
-const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office']; 
+// Anda bisa tambahkan 'Housekeeping' di sini jika mereka juga bisa login
+const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping']; 
 
 export function LoginForm() {
   const router = useRouter();
@@ -115,8 +115,8 @@ export function LoginForm() {
            effectiveRoleName = hotelSpecificRole.role_name;
            assignedHotelId = hotelSpecificRole.hotel_id;
        } else {
-           // Handle roles lain seperti 'Housekeeping Supervisor' jika tidak ada di ROLES_REQUIRING_HOTEL
-           const otherHotelRole = roles.find(r => r.hotel_id && r.role_name === 'Housekeeping Supervisor');
+           // Handle roles lain seperti 'Housekeeping' jika tidak ada di ROLES_REQUIRING_HOTEL
+           const otherHotelRole = roles.find(r => r.hotel_id && r.role_name === 'Housekeeping');
            if (otherHotelRole) {
              effectiveRoleName = otherHotelRole.role_name;
              assignedHotelId = otherHotelRole.hotel_id;
@@ -145,10 +145,10 @@ export function LoginForm() {
       } else if (effectiveRoleName === 'Front Office' && assignedHotelId) {
         console.log('Front Office logged in, redirecting to /fo/dashboard.');
         router.push('/fo/dashboard');
-      } else if (effectiveRoleName === 'Housekeeping Supervisor' && assignedHotelId) {
-         // Nanti bisa diarahkan ke /housekeeping/dashboard
-         console.warn('Housekeeping logged in, redirecting to /admin/dashboard as placeholder.');
-         router.push('/admin/dashboard'); // Placeholder
+      } else if (effectiveRoleName === 'Housekeeping' && assignedHotelId) {
+         // Route to housekeeping dashboard
+         // Housekeeping role login
+         router.push('/housekeeping/dashboard');
       } else {
          // Fallback jika role tidak terduga (seharusnya sudah ditangani di step 3)
          console.error("Login Error: User has an unhandled effective role:", effectiveRoleName);

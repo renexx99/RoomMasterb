@@ -1,0 +1,40 @@
+.next/types/app/fo/check-in/page.ts(34,29): error TS2344: Type '{ searchParams: { date?: string | undefined; }; }' does not satisfy the constraint 'PageProps'.
+  Types of property 'searchParams' are incompatible.
+    Type '{ date?: string | undefined; }' is missing the following properties from type 'Promise<any>': then, catch, finally, [Symbol.toStringTag]
+src/app/admin/rooms/page.tsx(8,18): error TS2430: Interface 'RoomWithDetails' incorrectly extends interface 'Room'.
+  Types of property 'room_type' are incompatible.
+    Type 'RoomType | null | undefined' is not assignable to type 'RoomType | undefined'.
+      Type 'null' is not assignable to type 'RoomType | undefined'.
+src/app/admin/staff/page.tsx(98,7): error TS2322: Type 'import("C:/Users/mercy/AppData/Local/roommaster/src/app/admin/staff/page").StaffMember[]' is not assignable to type 'import("C:/Users/mercy/AppData/Local/roommaster/src/app/admin/staff/client").StaffMember[]'.
+  Type 'import("C:/Users/mercy/AppData/Local/roommaster/src/app/admin/staff/page").StaffMember' is not assignable to type 'import("C:/Users/mercy/AppData/Local/roommaster/src/app/admin/staff/client").StaffMember'.
+    Types of property 'assignment' are incompatible.
+      Type '(UserRoleAssignment & { role_name?: string | undefined; }) | undefined' is not assignable to type '{ id: string; user_id: string; role_id: string; hotel_id: string | null; role_name: string; } | undefined'.
+        Type 'UserRoleAssignment & { role_name?: string | undefined; }' is not assignable to type '{ id: string; user_id: string; role_id: string; hotel_id: string | null; role_name: string; } | undefined'.
+          Type 'UserRoleAssignment & { role_name?: string | undefined; }' is not assignable to type '{ id: string; user_id: string; role_id: string; hotel_id: string | null; role_name: string; }'.
+            Types of property 'role_name' are incompatible.
+              Type 'string | undefined' is not assignable to type 'string'.
+                Type 'undefined' is not assignable to type 'string'.
+src/app/housekeeping/layout.tsx(262,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { size?: number | undefined; stroke?: number | undefined; }, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.
+    Type '{ size: number; stroke: number; color: string; }' is not assignable to type 'IntrinsicAttributes & { size?: number | undefined; stroke?: number | undefined; }'.
+      Property 'color' does not exist on type 'IntrinsicAttributes & { size?: number | undefined; stroke?: number | undefined; }'.
+  Overload 2 of 2, '(props: { size?: number | undefined; stroke?: number | undefined; }): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.
+    Type '{ size: number; stroke: number; color: string; }' is not assignable to type 'IntrinsicAttributes & { size?: number | undefined; stroke?: number | undefined; }'.
+      Property 'color' does not exist on type 'IntrinsicAttributes & { size?: number | undefined; stroke?: number | undefined; }'.
+src/app/manager/shifts/page.tsx(265,52): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'SetStateAction<Date | null>'.
+  Type 'string' is not assignable to type 'SetStateAction<Date | null>'.
+src/components/Dashboard/MapChart.tsx(22,31): error TS2307: Cannot find module '/mocks/WorldAtlasCountries.json' or its corresponding type declarations.
+src/components/Dashboard/MapChart.tsx(23,10): error TS2614: Module '"./Surface"' has no exported member 'Surface'. Did you mean to use 'import Surface from "./Surface"' instead?
+src/components/Dashboard/RevenueChart.tsx(88,6): error TS2322: Type '{ children: Element[]; className?: string | undefined; style?: MantineStyleProp; __vars?: CssVarsProp | undefined; __size?: string | undefined; ... 64 more ...; component: (<C = "div">(props: PolymorphicComponentProps<...>) => ReactElement<...>) & ... 4 more ... & Record<...>; }' is not assignable to type 'IntrinsicAttributes & BoxProps & ComponentProp<(<C = "div">(props: PolymorphicComponentProps<C, PaperProps>) => ReactElement<...>) & ... 4 more ... & Record<...>> & Omit<...> & { ...; }'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & BoxProps & ComponentProp<(<C = "div">(props: PolymorphicComponentProps<C, PaperProps>) => ReactElement<...>) & ... 4 more ... & Record<...>> & Omit<...> & { ...; }'.
+src/components/Dashboard/SalesChart.tsx(88,6): error TS2322: Type '{ children: Element[]; className?: string | undefined; style?: MantineStyleProp; __vars?: CssVarsProp | undefined; __size?: string | undefined; ... 64 more ...; component: (<C = "div">(props: PolymorphicComponentProps<...>) => ReactElement<...>) & ... 4 more ... & Record<...>; }' is not assignable to type 'IntrinsicAttributes & BoxProps & ComponentProp<(<C = "div">(props: PolymorphicComponentProps<C, PaperProps>) => ReactElement<...>) & ... 4 more ... & Record<...>> & Omit<...> & { ...; }'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & BoxProps & ComponentProp<(<C = "div">(props: PolymorphicComponentProps<C, PaperProps>) => ReactElement<...>) & ... 4 more ... & Record<...>> & Omit<...> & { ...; }'.
+src/components/Dashboard/StatsCard.tsx(15,6): error TS2322: Type '{ children: Element[]; className?: string | undefined; style?: MantineStyleProp; __vars?: CssVarsProp | undefined; __size?: string | undefined; ... 64 more ...; component: (<C = "div">(props: PolymorphicComponentProps<...>) => ReactElement<...>) & ... 4 more ... & Record<...>; }' is not assignable to type 'IntrinsicAttributes & BoxProps & ComponentProp<(<C = "div">(props: PolymorphicComponentProps<C, PaperProps>) => ReactElement<...>) & ... 4 more ... & Record<...>> & Omit<...> & { ...; }'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & BoxProps & ComponentProp<(<C = "div">(props: PolymorphicComponentProps<C, PaperProps>) => ReactElement<...>) & ... 4 more ... & Record<...>> & Omit<...> & { ...; }'.
+src/components/ErrorAlert/ErrorAlert.stories.tsx(1,31): error TS2307: Cannot find module '@storybook/react' or its corresponding type declarations.
+src/components/ReservationChart/ReservationTapeChart.tsx(12,18): error TS2430: Interface 'ChartRoom' incorrectly extends interface 'Room'.
+  Types of property 'room_type' are incompatible.
+    Type 'RoomType | null | undefined' is not assignable to type 'RoomType | undefined'.
+      Type 'null' is not assignable to type 'RoomType | undefined'.
+src/components/RevenueChart/RevenueChart.stories.tsx(1,31): error TS2307: Cannot find module '@storybook/react' or its corresponding type declarations.
+src/components/SalesChart/SalesChart.stories.tsx(1,31): error TS2307: Cannot find module '@storybook/react' or its corresponding type declarations.

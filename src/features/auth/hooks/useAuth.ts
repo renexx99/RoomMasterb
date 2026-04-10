@@ -206,6 +206,7 @@ export const startImpersonation = (hotelId: string, roleName: string) => {
     if (roleName === 'Hotel Manager') window.location.href = '/manager/dashboard';
     else if (roleName === 'Front Office') window.location.href = '/fo/dashboard';
     else if (roleName === 'Hotel Admin') window.location.href = '/admin/dashboard';
+    else if (roleName === 'Housekeeping') window.location.href = '/housekeeping/dashboard';
     else window.location.reload(); 
   }
 };

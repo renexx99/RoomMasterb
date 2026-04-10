@@ -7,6 +7,15 @@ export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 export type LoyaltyLogType = 'earn' | 'redeem' | 'adjust';
 export type LoyaltyLogSource = 'stay' | 'spend' | 'bonus' | 'manual' | 'redeem';
 
+// --- Housekeeping Types ---
+export type HousekeepingTaskType = 'cleaning' | 'inspection' | 'turndown' | 'deep_cleaning';
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+export type MaintenanceCategory = 'plumbing' | 'electrical' | 'furniture' | 'appliance' | 'structural' | 'other';
+export type MaintenanceSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type MaintenanceStatus = 'open' | 'in_progress' | 'resolved' | 'escalated';
+export type CombinedRoomStatus = 'VD' | 'VC' | 'OC' | 'OD' | 'OOO';
+
 // --- NEW TYPES (Added) ---
 export type BedType = 'Single' | 'Twin' | 'Double' | 'Queen' | 'King' | 'Super King';
 export type ViewType = 'City View' | 'Sea View' | 'Garden View' | 'Pool View' | 'Mountain View' | 'No View';
@@ -362,3 +371,91 @@ export const LOYALTY_TIERS: { value: LoyaltyTier; label: string; color: string }
   { value: 'platinum', label: 'Platinum', color: 'cyan' },
   { value: 'diamond', label: 'Diamond', color: 'violet' },
 ];
+
+// --- Housekeeping Interfaces ---
+
+export interface HousekeepingTask {
+  id: string;
+  hotel_id: string;
+  room_id: string;
+  assigned_to: string | null;
+  task_type: HousekeepingTaskType;
+  priority: TaskPriority;
+  status: TaskStatus;
+  notes: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  room?: Room;
+  assignee?: Profile;
+}
+
+export interface MaintenanceReport {
+  id: string;
+  hotel_id: string;
+  room_id: string;
+  reported_by: string;
+  category: MaintenanceCategory;
+  description: string;
+  severity: MaintenanceSeverity;
+  status: MaintenanceStatus;
+  image_url: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  // Relations
+  room?: Room;
+  reporter?: Profile;
+}
+
+// --- Housekeeping Constants ---
+
+export const TASK_TYPES: { value: HousekeepingTaskType; label: string }[] = [
+  { value: 'cleaning', label: 'Regular Cleaning' },
+  { value: 'inspection', label: 'Inspection' },
+  { value: 'turndown', label: 'Turndown Service' },
+  { value: 'deep_cleaning', label: 'Deep Cleaning' },
+];
+
+export const TASK_PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
+  { value: 'low', label: 'Low', color: 'gray' },
+  { value: 'normal', label: 'Normal', color: 'blue' },
+  { value: 'high', label: 'High', color: 'orange' },
+  { value: 'urgent', label: 'Urgent', color: 'red' },
+];
+
+export const MAINTENANCE_CATEGORIES: { value: MaintenanceCategory; label: string }[] = [
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'furniture', label: 'Furniture' },
+  { value: 'appliance', label: 'Appliance' },
+  { value: 'structural', label: 'Structural' },
+  { value: 'other', label: 'Other' },
+];
+
+export const SEVERITY_LEVELS: { value: MaintenanceSeverity; label: string; color: string }[] = [
+  { value: 'low', label: 'Low', color: 'gray' },
+  { value: 'medium', label: 'Medium', color: 'yellow' },
+  { value: 'high', label: 'High', color: 'orange' },
+  { value: 'critical', label: 'Critical', color: 'red' },
+];
+
+/**
+ * Derives the combined hotel-standard room status code from the two DB fields.
+ */
+export function getCombinedRoomStatus(status: RoomStatus, cleaningStatus: string): CombinedRoomStatus {
+  if (status === 'maintenance') return 'OOO';
+  if (status === 'occupied' && cleaningStatus === 'dirty') return 'OD';
+  if (status === 'occupied') return 'OC';
+  if (status === 'available' && cleaningStatus === 'dirty') return 'VD';
+  return 'VC';
+}
+
+export const COMBINED_STATUS_CONFIG: Record<CombinedRoomStatus, { label: string; color: string; description: string }> = {
+  VD: { label: 'Vacant Dirty', color: 'red', description: 'Room available but needs cleaning' },
+  VC: { label: 'Vacant Clean', color: 'teal', description: 'Room ready for check-in' },
+  OC: { label: 'Occupied Clean', color: 'blue', description: 'Guest in room, room is clean' },
+  OD: { label: 'Occupied Dirty', color: 'orange', description: 'Guest in room, needs cleaning' },
+  OOO: { label: 'Out of Order', color: 'gray', description: 'Room under maintenance' },
+};

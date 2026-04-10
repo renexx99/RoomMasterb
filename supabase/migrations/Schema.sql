@@ -61,6 +61,7 @@ CREATE TABLE public.guests (
   preferences jsonb DEFAULT '{}'::jsonb,
   last_visit_at timestamp with time zone,
   title text CHECK (title = ANY (ARRAY['Mr.'::text, 'Mrs.'::text, 'Ms.'::text, 'Dr.'::text, 'Prof.'::text, 'Other'::text])),
+  loyalty_points integer NOT NULL DEFAULT 0,
   CONSTRAINT guests_pkey PRIMARY KEY (id),
   CONSTRAINT guests_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id)
 );
@@ -73,7 +74,78 @@ CREATE TABLE public.hotels (
   code text,
   image_url text,
   settings jsonb DEFAULT '{}'::jsonb,
+  check_in_time time without time zone DEFAULT '14:00:00'::time without time zone,
+  check_out_time time without time zone DEFAULT '12:00:00'::time without time zone,
   CONSTRAINT hotels_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.housekeeping_tasks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  hotel_id uuid NOT NULL,
+  room_id uuid NOT NULL,
+  assigned_to uuid,
+  task_type text NOT NULL DEFAULT 'cleaning'::text CHECK (task_type = ANY (ARRAY['cleaning'::text, 'inspection'::text, 'turndown'::text, 'deep_cleaning'::text])),
+  priority text NOT NULL DEFAULT 'normal'::text CHECK (priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'skipped'::text])),
+  notes text,
+  started_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT housekeeping_tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT housekeeping_tasks_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
+  CONSTRAINT housekeeping_tasks_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.rooms(id),
+  CONSTRAINT housekeeping_tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.loyalty_config (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  hotel_id uuid NOT NULL UNIQUE,
+  points_per_night integer NOT NULL DEFAULT 10,
+  points_per_spend_unit integer NOT NULL DEFAULT 1,
+  spend_unit_amount numeric NOT NULL DEFAULT 100000,
+  completion_bonus integer NOT NULL DEFAULT 50,
+  tier_bronze integer NOT NULL DEFAULT 0,
+  tier_silver integer NOT NULL DEFAULT 500,
+  tier_gold integer NOT NULL DEFAULT 2000,
+  tier_platinum integer NOT NULL DEFAULT 5000,
+  tier_diamond integer NOT NULL DEFAULT 10000,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT loyalty_config_pkey PRIMARY KEY (id),
+  CONSTRAINT loyalty_config_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id)
+);
+CREATE TABLE public.loyalty_points_log (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  guest_id uuid NOT NULL,
+  hotel_id uuid NOT NULL,
+  points integer NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['earn'::text, 'redeem'::text, 'adjust'::text])),
+  source text NOT NULL CHECK (source = ANY (ARRAY['stay'::text, 'spend'::text, 'bonus'::text, 'manual'::text, 'redeem'::text])),
+  description text,
+  reservation_id uuid,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT loyalty_points_log_pkey PRIMARY KEY (id),
+  CONSTRAINT loyalty_points_log_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id),
+  CONSTRAINT loyalty_points_log_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
+  CONSTRAINT loyalty_points_log_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id),
+  CONSTRAINT loyalty_points_log_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.maintenance_reports (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  hotel_id uuid NOT NULL,
+  room_id uuid NOT NULL,
+  reported_by uuid NOT NULL,
+  category text NOT NULL CHECK (category = ANY (ARRAY['plumbing'::text, 'electrical'::text, 'furniture'::text, 'appliance'::text, 'structural'::text, 'other'::text])),
+  description text NOT NULL,
+  severity text NOT NULL DEFAULT 'low'::text CHECK (severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'critical'::text])),
+  status text NOT NULL DEFAULT 'open'::text CHECK (status = ANY (ARRAY['open'::text, 'in_progress'::text, 'resolved'::text, 'escalated'::text])),
+  image_url text,
+  resolved_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT maintenance_reports_pkey PRIMARY KEY (id),
+  CONSTRAINT maintenance_reports_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
+  CONSTRAINT maintenance_reports_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.rooms(id),
+  CONSTRAINT maintenance_reports_reported_by_fkey FOREIGN KEY (reported_by) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.permissions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -111,8 +183,8 @@ CREATE TABLE public.reservations (
   payment_method text CHECK (payment_method = ANY (ARRAY['cash'::text, 'transfer'::text, 'qris'::text, 'credit_card'::text, 'other'::text])),
   CONSTRAINT reservations_pkey PRIMARY KEY (id),
   CONSTRAINT reservations_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
-  CONSTRAINT reservations_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id),
-  CONSTRAINT reservations_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.rooms(id)
+  CONSTRAINT reservations_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.rooms(id),
+  CONSTRAINT reservations_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id)
 );
 CREATE TABLE public.role_permissions (
   role_id uuid NOT NULL,

@@ -16,7 +16,7 @@ interface ProtectedRouteProps {
 }
 
 // Define roles that access the '/admin' path
-const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office']; // Add roles as needed
+const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping']; // Add roles as needed
 
 export function ProtectedRoute({ children, requiredRoleName }: ProtectedRouteProps) {
   const { user, profile, loading, error } = useAuth(); // Include error state
