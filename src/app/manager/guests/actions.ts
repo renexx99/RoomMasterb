@@ -82,3 +82,17 @@ export async function getGuestHistory(guestId: string) {
   if (error) return [];
   return data;
 }
+
+// --- DELETE GUEST ---
+export async function deleteGuestAction(id: string) {
+  const supabase = await getSupabase();
+  const { error } = await supabase
+    .from('guests')
+    .delete()
+    .eq('id', id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/manager/guests');
+  return { success: true };
+}

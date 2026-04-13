@@ -36,7 +36,7 @@ import {
   IconUserCheck,
   IconLogin,
   IconCoin,
-  IconBook2,
+
   IconBell,
   IconInfoCircle,
   IconMessage,
@@ -61,7 +61,7 @@ const navItems: NavItem[] = [
   { label: 'Guest Folio', icon: IconUsersGroup, href: '/fo/guests' },
   { label: 'Room Availability', icon: IconSearch, href: '/fo/availability' },
   { label: 'Billing & Folio', icon: IconCoin, href: '/fo/billing' },
-  { label: 'Guest Log', icon: IconBook2, href: '/fo/log' },
+
 ];
 
 // --- Mock Data ---

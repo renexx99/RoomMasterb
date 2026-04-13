@@ -7,7 +7,7 @@ import { Profile, Role, UserRoleAssignment } from '@/core/types/database';
 
 export interface StaffMember extends Profile {
   assignment?: UserRoleAssignment & {
-    role_name?: string;
+    role_name: string;
   };
 }
 
@@ -56,7 +56,7 @@ export default async function StaffPage() {
     supabase
       .from('roles')
       .select('*')
-      .in('name', ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping Supervisor'])
+      .in('name', ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping'])
       .order('name', { ascending: true }),
 
     // b. Ambil Staf (User Roles di hotel ini join Profiles dan Roles)

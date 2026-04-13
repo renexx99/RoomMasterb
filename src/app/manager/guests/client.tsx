@@ -13,6 +13,7 @@ import {
 import { Guest } from '@/core/types/database';
 import { GuestDetailPanel } from './components/GuestDetailPanel';
 import { GuestFormModal } from './components/GuestFormModal';
+import { deleteGuestAction } from './actions';
 
 interface ClientProps {
   initialGuests: Guest[];
@@ -74,8 +75,19 @@ export default function ManagerGuestsClient({ initialGuests, hotelId }: ClientPr
     }
   };
 
+  const handleDeleteCurrent = async () => {
+    if (selectedGuest && window.confirm(`Are you sure you want to delete guest ${selectedGuest.full_name}?`)) {
+      const res = await deleteGuestAction(selectedGuest.id);
+      if (res.success) {
+        setSelectedGuest(null);
+      } else {
+        alert(res.error || 'Failed to delete guest');
+      }
+    }
+  };
+
   return (
-    <Box style={{ height: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
+    <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
       
       {/* Main Content - Split View */}
       <Box style={{ flex: 1, overflow: 'hidden' }}>
@@ -183,11 +195,12 @@ export default function ManagerGuestsClient({ initialGuests, hotelId }: ClientPr
               </Grid.Col>
 
               {/* RIGHT: Detail View (70%) */}
-              <Grid.Col span={{ base: 12, md: 8, lg: 9 }} style={{ height: '100%' }}>
+              <Grid.Col span={{ base: 12, md: 8, lg: 9 }} style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {selectedGuest ? (
                   <GuestDetailPanel 
                     guest={selectedGuest} 
                     onEdit={handleEditCurrent}
+                    onDelete={handleDeleteCurrent}
                   />
                 ) : (
                   <Paper h="100%" radius="md" withBorder bg="gray.0">

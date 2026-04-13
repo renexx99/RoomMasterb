@@ -37,12 +37,12 @@ import {
   IconBuildingSkyscraper,
   IconCategory,
   IconReportAnalytics,
-  IconCalendarTime,
-  IconChecks,
+
   IconSearch,
   IconBell,
   IconInfoCircle,
   IconStar,
+  IconChecks,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { supabase } from '@/core/config/supabaseClient';
@@ -59,8 +59,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: IconLayoutDashboard, href: '/manager/dashboard' },
   { label: 'Reports', icon: IconReportAnalytics, href: '/manager/reports' },
-  { label: 'Shift', icon: IconCalendarTime, href: '/manager/shifts' },
-  { label: 'Approvals', icon: IconChecks, href: '/manager/approvals' },
+
   { label: 'Room Type', icon: IconCategory, href: '/manager/room-types' },
   { label: 'Manage Rooms', icon: IconBed, href: '/manager/rooms' },
   { label: 'Reservations', icon: IconCalendarEvent, href: '/manager/reservations' },
@@ -78,8 +77,7 @@ const mockNotifications = [
 const searchData = [
   { value: 'Dashboard', href: '/manager/dashboard' },
   { value: 'Reports', href: '/manager/reports' },
-  { value: 'Shift', href: '/manager/shifts' },
-  { value: 'Approvals', href: '/manager/approvals' },
+
 ];
 
 const NAVBAR_WIDTH_COLLAPSED = rem(80);
@@ -107,13 +105,13 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      
+
       // Format Tanggal Bahasa Inggris (e.g., "Thursday, Dec 4, 2025")
-      const dateOptions: Intl.DateTimeFormatOptions = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+      const dateOptions: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
       };
       setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
 
@@ -189,7 +187,7 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
       }}
       padding="0"
       styles={{
-        main: { 
+        main: {
           background: '#f5f6fa',
           transition: 'padding-left 0.25s ease',
           paddingTop: '70px',
@@ -199,11 +197,11 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
       {/* --- HEADER --- */}
       <AppShell.Header style={{ borderBottom: '1px solid #e5e7eb', background: 'white', zIndex: 101 }}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          
+
           {/* BAGIAN KIRI: Logo, Nama Hotel, DAN Sapaan/Tanggal */}
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            
+
             {/* Logo & Hotel Name */}
             <Group gap="xs" wrap="nowrap">
               <Box
@@ -221,13 +219,13 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
               >
                 <IconBuildingSkyscraper size={20} stroke={1.5} color="white" />
               </Box>
-              
+
               <Box visibleFrom="sm" style={{
-                  opacity: isNavbarExpanded ? 1 : 0,
-                  width: isNavbarExpanded ? 'auto' : 0,
-                  overflow: 'hidden',
-                  transition: 'all 0.2s ease',
-                  display: opened ? 'block' : 'initial'
+                opacity: isNavbarExpanded ? 1 : 0,
+                width: isNavbarExpanded ? 'auto' : 0,
+                overflow: 'hidden',
+                transition: 'all 0.2s ease',
+                display: opened ? 'block' : 'initial'
               }}>
                 <Text size="sm" fw={700} style={{ color: '#1e293b', whiteSpace: 'nowrap' }}>
                   {hotelName}
@@ -241,8 +239,8 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
 
             {/* INFO WAKTU & SAPAAN (Pindah ke Kiri - Bahasa Inggris) */}
             <Stack gap={0} visibleFrom="md" style={{ lineHeight: 1 }}>
-                <Text size="xs" c="dimmed" fw={500}>{currentDate}</Text>
-                <Text size="sm" fw={600} c="blue.7">{greeting}, {profile?.full_name?.split(' ')[0]}</Text>
+              <Text size="xs" c="dimmed" fw={500}>{currentDate}</Text>
+              <Text size="sm" fw={600} c="blue.7">{greeting}, {profile?.full_name?.split(' ')[0]}</Text>
             </Stack>
           </Group>
 
@@ -259,14 +257,14 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
               radius="md"
               styles={{
                 input: {
-                    backgroundColor: 'var(--mantine-color-gray-1)', 
-                    border: '1px solid var(--mantine-color-gray-3)',
-                    transition: 'all 0.2s ease',
-                    '&:focus': {
-                        backgroundColor: 'white',
-                        borderColor: '#3b82f6', 
-                        boxShadow: '0 0 0 1px #3b82f6', 
-                    }
+                  backgroundColor: 'var(--mantine-color-gray-1)',
+                  border: '1px solid var(--mantine-color-gray-3)',
+                  transition: 'all 0.2s ease',
+                  '&:focus': {
+                    backgroundColor: 'white',
+                    borderColor: '#3b82f6',
+                    boxShadow: '0 0 0 1px #3b82f6',
+                  }
                 }
               }}
             />
@@ -278,34 +276,34 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
             <Popover width={320} position="bottom-end" withArrow shadow="md">
               <Popover.Target>
                 <Indicator inline label="" size={8} color="red" offset={4} processing>
-                    <ActionIcon variant="subtle" color="gray" size="lg">
-                        <IconBell size={20} stroke={1.5} />
-                    </ActionIcon>
+                  <ActionIcon variant="subtle" color="gray" size="lg">
+                    <IconBell size={20} stroke={1.5} />
+                  </ActionIcon>
                 </Indicator>
               </Popover.Target>
               <Popover.Dropdown p={0}>
-                 <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
-                    <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifications</Text>
-                 </Box>
-                 <ScrollArea.Autosize mah={300}>
-                    {mockNotifications.map((item) => (
-                        <UnstyledButton key={item.id} p="sm" className="hover:bg-gray-50" style={{ width: '100%', borderBottom: '1px solid #f1f3f5' }}>
-                            <Group align="flex-start" wrap="nowrap">
-                                <ThemeIcon variant="light" color={item.color} size="md" radius="md" mt={2}>
-                                    <item.icon size={16} />
-                                </ThemeIcon>
-                                <div style={{ flex: 1 }}>
-                                    <Text size="sm" fw={600}>{item.title}</Text>
-                                    <Text size="xs" c="dimmed" lineClamp={2}>{item.message}</Text>
-                                    <Text size="10px" c="dimmed" mt={2} ta="right">{item.time}</Text>
-                                </div>
-                            </Group>
-                        </UnstyledButton>
-                    ))}
-                 </ScrollArea.Autosize>
-                 <Box p={8} ta="center">
-                    <Button variant="subtle" size="xs" fullWidth color="blue">View All</Button>
-                 </Box>
+                <Box p="sm" bg="gray.0" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+                  <Text size="xs" fw={700} tt="uppercase" c="dimmed">Notifications</Text>
+                </Box>
+                <ScrollArea.Autosize mah={300}>
+                  {mockNotifications.map((item) => (
+                    <UnstyledButton key={item.id} p="sm" className="hover:bg-gray-50" style={{ width: '100%', borderBottom: '1px solid #f1f3f5' }}>
+                      <Group align="flex-start" wrap="nowrap">
+                        <ThemeIcon variant="light" color={item.color} size="md" radius="md" mt={2}>
+                          <item.icon size={16} />
+                        </ThemeIcon>
+                        <div style={{ flex: 1 }}>
+                          <Text size="sm" fw={600}>{item.title}</Text>
+                          <Text size="xs" c="dimmed" lineClamp={2}>{item.message}</Text>
+                          <Text size="10px" c="dimmed" mt={2} ta="right">{item.time}</Text>
+                        </div>
+                      </Group>
+                    </UnstyledButton>
+                  ))}
+                </ScrollArea.Autosize>
+                <Box p={8} ta="center">
+                  <Button variant="subtle" size="xs" fullWidth color="blue">View All</Button>
+                </Box>
               </Popover.Dropdown>
             </Popover>
 
@@ -320,8 +318,8 @@ function ManagerLayoutContent({ children }: { children: React.ReactNode }) {
               </Menu.Target>
               <Menu.Dropdown>
                 <Box p="xs" pb="sm">
-                    <Text size="sm" fw={600}>{profile?.full_name}</Text>
-                    <Text size="xs" c="dimmed">Hotel Manager</Text>
+                  <Text size="sm" fw={600}>{profile?.full_name}</Text>
+                  <Text size="xs" c="dimmed">Hotel Manager</Text>
                 </Box>
                 <Divider mb="xs" />
                 <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={handleLogout}>

@@ -27,13 +27,23 @@ interface Props {
 
 export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
   const [history, setHistory] = useState<any[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   useEffect(() => {
     if (guest.id) {
         setHistory([]); 
-        getGuestHistory(guest.id).then(setHistory);
+        setHistoryLoaded(false);
+        getGuestHistory(guest.id).then((data) => {
+          setHistory(data);
+          setHistoryLoaded(true);
+        });
     }
   }, [guest.id]);
+
+  // Compute stats from actual reservation history data
+  const computedTotalStays = history.length;
+  const computedTotalSpend = history.reduce((sum: number, h: any) => sum + (Number(h.total_price) || 0), 0);
+  const computedLastVisit = history.length > 0 ? history[0]?.check_out_date || history[0]?.check_in_date : null;
 
   const preferences: string[] = (guest.preferences as any)?.tags || [];
   const progress = getTierProgress(guest.loyalty_points || 0, DEFAULT_LOYALTY_CONFIG);
@@ -107,11 +117,11 @@ export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
                 <SimpleGrid cols={4} mt="md" spacing="sm">
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Stays</Text>
-                        <Text size="lg" fw={700}>{guest.total_stays || 0}x</Text>
+                        <Text size="lg" fw={700}>{historyLoaded ? `${computedTotalStays}x` : '...'}</Text>
                     </Box>
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Total Spend</Text>
-                        <Text size="lg" fw={700}>Rp {Number(guest.total_spend || 0).toLocaleString('id-ID')}</Text>
+                        <Text size="lg" fw={700}>{historyLoaded ? `Rp ${computedTotalSpend.toLocaleString('id-ID')}` : '...'}</Text>
                     </Box>
                     <Box style={{ borderRight: '1px solid rgba(255,255,255,0.2)' }}>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Loyalty Points</Text>
@@ -120,7 +130,9 @@ export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
                     <Box>
                         <Text size="xs" tt="uppercase" fw={700} style={{ opacity: 0.7 }}>Last Visit</Text>
                         <Text size="lg" fw={700}>
-                            {guest.last_visit_at ? new Date(guest.last_visit_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '-'}
+                            {historyLoaded
+                              ? (computedLastVisit ? new Date(computedLastVisit).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '-')
+                              : '...'}
                         </Text>
                     </Box>
                 </SimpleGrid>

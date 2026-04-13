@@ -19,10 +19,53 @@ export interface UserFormData {
 
 // --- CREATE USER ---
 export async function createUserAction(data: UserFormData) {
-  // NOTE: This currently simulates DB insertion.
-  // Real implementation requires Supabase Service Role for Auth User creation.
+  if (!data.password) return { error: "Password is required for new users." };
   
-  return { error: "User creation feature requires Service Role configuration. Please use the Register page for now." };
+  // Use a clean client instance to avoid overwriting the current session cookies
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  // 1. Create Auth User
+  const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
+    email: data.email,
+    password: data.password,
+  });
+
+  if (authError) return { error: `Auth Error: ${authError.message}` };
+  if (!authData.user) return { error: "Failed to create user account." };
+
+  const supabase = await getSupabase();
+
+  // 2. Create Profile
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert({
+      id: authData.user.id,
+      email: data.email,
+      full_name: data.full_name,
+    });
+
+  if (profileError) return { error: `Profile Error: ${profileError.message}` };
+
+  // 3. Assign Role if provided
+  if (data.role_id) {
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: authData.user.id,
+        role_id: data.role_id,
+        hotel_id: data.hotel_id || null,
+      });
+
+    if (roleError) return { error: `Role Error: ${roleError.message}` };
+  }
+
+  revalidatePath('/super-admin/users');
+  return { success: true };
 }
 
 // --- UPDATE USER ---
