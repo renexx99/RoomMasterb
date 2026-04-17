@@ -1,165 +1,234 @@
-# RoomMaster - Property Management System 🏨
+# 🏨 RoomMaster — Hotel Property Management System
 
-## 📜 Deskripsi Proyek
+RoomMaster adalah aplikasi web **Property Management System (PMS)** modern yang dirancang untuk mengelola operasional hotel secara terpusat maupun per-properti. Dibangun dengan arsitektur **multi-hotel** dan sistem **Role-Based Access Control (RBAC)** yang granular, RoomMaster memungkinkan berbagai peran staf hotel — mulai dari Super Admin hingga Housekeeping — untuk bekerja dalam satu platform yang terintegrasi.
 
-RoomMaster adalah aplikasi web **Property Management System (PMS)** yang sedang dikembangkan sebagai solusi terintegrasi untuk manajemen jaringan hotel (multi-hotel). Proyek ini dibangun menggunakan tumpukan teknologi modern dengan visi untuk menyediakan platform yang **aman**, **modular**, dan **scalable**, memungkinkan pengelolaan terpusat oleh administrator utama (Super Admin) serta pengelolaan operasional mandiri oleh setiap hotel (melalui Hotel Admin dan peran-peran di bawahnya).
+---
 
-## ✨ Fitur Utama (Pasca Refactor Backend)
-
-Aplikasi ini dirancang dengan dua peran utama saat ini, dengan rencana pengembangan sistem multi-peran yang lebih granular di bawah Hotel Admin:
+## ✨ Fitur Utama
 
 ### 👑 Super Admin
-* **Manajemen Hotel Global:** CRUD (Create, Read, Update, Delete) data properti hotel.
-* **Manajemen User (Administrator Hotel):** Membuat akun untuk Hotel Admin, melihat daftar user, dan **mengelola penetapan peran dan hotel** melalui sistem `user_roles` yang baru. (*Catatan: UI untuk ini sedang direfactor*).
-* **(Rencana)** **Analitik Agregat:** Melihat ringkasan performa seluruh jaringan hotel (okupansi, pendapatan, dll.).
-* **Tidak Lagi Mengelola Operasional:** Fitur manajemen tipe kamar dan kamar telah dipindahkan dari Super Admin ke level Hotel Admin.
+Mengelola seluruh jaringan hotel dari satu dashboard terpusat.
 
-### 🧑‍💼 Hotel Admin & Sub-Roles (Dalam Pengembangan)
-* **Fokus Operasional Hotel:** Mengelola semua aspek operasional hotel yang ditugaskan.
-* **Sistem Multi-Role (Baru):** Fondasi backend telah dibangun untuk mendukung peran berjenjang di bawah Hotel Admin (contoh: Manager, Supervisor, Front Office, Finance) dengan hak akses berbeda (RBAC - Role-Based Access Control). *Implementasi penuh RBAC di frontend dan RLS detail sedang berlangsung.*
-* **Manajemen Master Data Hotel:**
-    * CRUD Tipe Kamar (Standard, Deluxe, Suite, dll.)
-    * CRUD Kamar (Nomor kamar, status: tersedia, terisi, maintenance)
-* **Manajemen Operasional:**
-    * CRUD Tamu
-    * CRUD Reservasi (termasuk pemilihan tamu, kamar, tanggal check-in/out, kalkulasi harga, status pembayaran)
-* **Dashboard Hotel:** Melihat statistik kunci untuk hotel yang dikelola (kamar tersedia, check-in hari ini, dll.).
+| Fitur | Deskripsi |
+|---|---|
+| Manajemen Hotel | CRUD properti hotel (nama, lokasi, kontak, jam operasional) |
+| Manajemen User | Membuat akun staf dan menetapkan peran & hotel melalui sistem `user_roles` |
+| Dashboard Global | Ringkasan statistik seluruh jaringan hotel |
 
-## 🚀 Tumpukan Teknologi (Tech Stack)
+---
 
-* **Frontend:** Next.js (App Router), TypeScript
-* **UI Library:** Mantine UI
-* **Backend & Database:** Supabase
-    * Database: PostgreSQL
-    * Authentication: Supabase Auth
-    * Realtime & Storage: (Potensial digunakan di masa depan)
-    * Keamanan: Row Level Security (RLS)
+### 🧑‍💼 Hotel Admin
+Mengelola master data dan konfigurasi operasional hotel yang ditugaskan.
 
-## 📊 Status Proyek & Progres Terbaru
+| Fitur | Deskripsi |
+|---|---|
+| Tipe Kamar | CRUD tipe kamar (Standard, Deluxe, Suite, dll.) |
+| Manajemen Kamar | CRUD kamar, status kamar (available, occupied, maintenance) |
+| Manajemen Tamu | CRUD data tamu |
+| Manajemen Staf | Kelola daftar staf hotel |
+| Dashboard Hotel | Statistik kunci: kamar tersedia, check-in hari ini, pendapatan |
 
-* Proyek sedang dalam **pengembangan aktif**.
-* **Refactor Backend Besar:** Telah dilakukan restrukturisasi signifikan pada skema database untuk mendukung sistem **multi-role** dan **RBAC**. Ini melibatkan:
-    * Penambahan tabel: `roles`, `permissions`, `role_permissions`, `user_roles`.
-    * Perubahan logika peran dari kolom `role` di tabel `profiles` ke tabel `user_roles`.
-    * Penyesuaian Primary Key dan constraint pada `user_roles`.
-    * Migrasi data peran awal dari `profiles` ke `user_roles`.
-* **Adaptasi Frontend Awal:**
-    * Komponen inti terkait autentikasi (`useAuth`, `LoginForm`, `RegisterForm`, `ProtectedRoute`) telah **diperbarui** untuk menggunakan struktur peran baru dari `user_roles`.
-* **Langkah Berikutnya:**
-    * Menulis ulang **kebijakan RLS** di Supabase agar sesuai dengan skema `user_roles` dan `permissions`.
-    * **Refactor UI** halaman Super Admin User Management (`/super-admin/users`) untuk mengelola peran melalui tabel `user_roles`.
-    * Implementasi penuh **pengecekan izin (permissions)** di frontend dan backend untuk fitur-fitur operasional.
-    * Mengembangkan fitur spesifik untuk sub-role di bawah Hotel Admin.
-    * Mengimplementasikan fitur analitik untuk Super Admin.
+---
 
+### 📋 Hotel Manager
+Mengawasi operasional dan performa hotel secara keseluruhan.
 
-```
-roommaster
-├─ docs
-├─ eslint.config.mjs
-├─ next.config.ts
-├─ package-lock.json
-├─ package.json
-├─ postcss.config.mjs
-├─ public
-│  ├─ assets
-│  ├─ file.svg
-│  ├─ globe.svg
-│  ├─ next.svg
-│  ├─ vercel.svg
-│  └─ window.svg
-├─ README.md
-├─ src
-│  ├─ app
-│  │  ├─ admin
-│  │  │  ├─ dashboard
-│  │  │  │  └─ page.tsx
-│  │  │  ├─ guests
-│  │  │  │  └─ page.tsx
-│  │  │  ├─ layout.tsx
-│  │  │  ├─ reservations
-│  │  │  │  └─ page.tsx
-│  │  │  ├─ room-types
-│  │  │  │  └─ page.tsx
-│  │  │  └─ rooms
-│  │  │     └─ page.tsx
-│  │  ├─ api
-│  │  ├─ auth
-│  │  │  ├─ layout.tsx
-│  │  │  ├─ login
-│  │  │  │  └─ page.tsx
-│  │  │  └─ register
-│  │  │     └─ page.tsx
-│  │  ├─ globals.css
-│  │  ├─ layout.tsx
-│  │  ├─ page.tsx
-│  │  └─ super-admin
-│  │     ├─ dashboard
-│  │     │  └─ page.tsx
-│  │     ├─ hotels
-│  │     │  ├─ page.tsx
-│  │     │  └─ [hotelId]
-│  │     ├─ layout.tsx
-│  │     └─ users
-│  │        └─ page.tsx
-│  ├─ components
-│  │  ├─ charts
-│  │  ├─ feedback
-│  │  ├─ forms
-│  │  └─ layout
-│  ├─ core
-│  │  ├─ config
-│  │  │  ├─ env.ts
-│  │  │  ├─ routes.ts
-│  │  │  └─ supabaseClient.ts
-│  │  ├─ constants
-│  │  │  └─ roles.ts
-│  │  ├─ hooks
-│  │  ├─ providers
-│  │  │  └─ AppProvider.tsx
-│  │  ├─ types
-│  │  │  └─ database.ts
-│  │  └─ utils
-│  ├─ features
-│  │  ├─ admin
-│  │  │  ├─ components
-│  │  │  ├─ hooks
-│  │  │  ├─ models
-│  │  │  ├─ repositories
-│  │  │  └─ services
-│  │  ├─ auth
-│  │  │  ├─ components
-│  │  │  │  ├─ LoginForm.tsx
-│  │  │  │  ├─ ProtectedRoute.tsx
-│  │  │  │  └─ RegisterForm.tsx
-│  │  │  ├─ hooks
-│  │  │  │  └─ useAuth.ts
-│  │  │  ├─ models
-│  │  │  ├─ repositories
-│  │  │  └─ services
-│  │  ├─ guest
-│  │  ├─ master-data
-│  │  │  ├─ hooks
-│  │  │  ├─ models
-│  │  │  ├─ repositories
-│  │  │  └─ services
-│  │  ├─ reservation
-│  │  ├─ room
-│  │  ├─ super-admin
-│  │  │  ├─ components
-│  │  │  ├─ hooks
-│  │  │  ├─ models
-│  │  │  ├─ repositories
-│  │  │  └─ services
-│  │  │     └─ index.ts
-│  │  └─ transaction
-│  ├─ global.css
-│  ├─ lib
-│  └─ middleware.ts
-├─ supabase
-│  └─ migrations
-│     ├─ 001_create_profiles_and_hotels.sql
-│     └─ RBAC_Schema.sql
-└─ tsconfig.json
+| Fitur | Deskripsi |
+|---|---|
+| Dashboard | Overview performa hotel dan KPI harian |
+| Reports | Laporan pendapatan, okupansi, dan aktivitas |
+| Tipe & Kamar | Pantau status tipe kamar dan kamar |
+| Reservasi | Kelola dan pantau semua reservasi |
+| Guest Folio | Data lengkap tamu dan riwayat menginap |
+| Loyalty Program | Kelola program loyalitas tamu |
+
+---
+
+### 🛎️ Front Office (FO)
+Menangani operasional meja depan alias reception desk sehari-hari.
+
+| Fitur | Deskripsi |
+|---|---|
+| Dashboard | Ringkasan aktivitas hari ini |
+| Check-In / Check-Out | Proses check-in dan check-out tamu |
+| Reservasi | Buat dan kelola reservasi |
+| Guest Folio | Lihat dan update data tamu |
+| Room Availability | Cek ketersediaan kamar secara real-time |
+| Billing & Folio | Kelola tagihan dan folio pembayaran tamu |
+
+---
+
+### 🧹 Housekeeping
+Portal khusus untuk tim kebersihan dan pemeliharaan kamar.
+
+| Fitur | Deskripsi |
+|---|---|
+| Dashboard | Ringkasan tugas dan status kamar |
+| My Tasks | Daftar tugas pembersihan yang ditugaskan |
+| Report | Laporkan kerusakan atau masalah di kamar |
+
+---
+
+## 🚀 Tech Stack
+
+| Layer | Teknologi |
+|---|---|
+| **Framework** | [Next.js 15](https://nextjs.org/) (App Router) + React 19 |
+| **Language** | TypeScript |
+| **UI Library** | [Mantine UI v8](https://mantine.dev/) |
+| **Icons** | [Tabler Icons](https://tabler.io/icons) |
+| **Database** | PostgreSQL (via Supabase) |
+| **Auth** | Supabase Auth |
+| **ORM / API Client** | Supabase JS Client v2 |
+| **Data Fetching** | TanStack Query v5 + SWR |
+| **Forms & Validation** | Mantine Form + Zod |
+| **Tables** | Mantine DataTable |
+| **Charts** | ApexCharts + Recharts |
+| **Calendar** | FullCalendar (daygrid, timegrid, resource-timeline) |
+| **AI Integration** | OpenAI API |
+| **Date Utility** | Day.js |
+| **Drag & Drop** | DND Kit |
+| **Styling** | Tailwind CSS v4 + PostCSS Mantine |
+| **Linting** | ESLint (Next.js config) |
+
+---
+
+## 🏗️ Arsitektur Sistem
+
+### Struktur Role (RBAC)
 
 ```
+Super Admin
+└── mengelola seluruh jaringan hotel & user
+
+Hotel Admin          ← ditugaskan ke 1 hotel
+├── Hotel Manager    ← laporan, reservasi, loyalty
+├── Front Office     ← check-in/out, billing, tamu
+└── Housekeeping     ← tugas kebersihan, laporan kamar
+```
+
+Setiap role memiliki panel/dashboard terpisah dengan navigasi dan akses data yang disesuaikan. Proteksi dilakukan lewat:
+- **Middleware Next.js** — memeriksa sesi sebelum halaman di-render
+- **`ProtectedRoute` Component** — validasi `role_name` di sisi client
+- **Supabase Row Level Security (RLS)** — keamanan di level database
+
+### Struktur Database Utama
+
+```
+hotels
+profiles          ← data user (nama, dll.)
+user_roles        ← relasi user ↔ role ↔ hotel
+roles
+permissions
+role_permissions
+room_types        ← tipe kamar per hotel
+rooms             ← kamar individual
+guests            ← data tamu
+reservations      ← data reservasi
+housekeeping_tasks ← tugas housekeeping
+loyalty_members   ← program loyalitas
+```
+
+---
+
+## 📁 Struktur Proyek
+
+```
+src/
+├── app/
+│   ├── super-admin/       # Dashboard, Hotels, Users
+│   ├── admin/             # Dashboard, Room Types, Rooms, Guests, Staff
+│   ├── manager/           # Dashboard, Reports, Rooms, Reservations, Loyalty
+│   ├── fo/                # Dashboard, Check-In, Reservations, Billing
+│   ├── housekeeping/      # Dashboard, Tasks, Report
+│   └── auth/              # Login, Register
+│
+├── features/
+│   ├── auth/              # useAuth, LoginForm, RegisterForm, ProtectedRoute
+│   ├── admin/             # Fitur Hotel Admin
+│   ├── super-admin/       # Fitur Super Admin
+│   ├── master-data/       # Room types, Rooms
+│   ├── guest/             # Manajemen tamu
+│   ├── reservation/       # Manajemen reservasi
+│   ├── room/              # Status & ketersediaan kamar
+│   └── transaction/       # Billing & transaksi
+│
+├── core/
+│   ├── config/            # supabaseClient, env, routes
+│   ├── constants/         # Daftar roles
+│   ├── hooks/             # Shared hooks
+│   ├── providers/         # AppProvider (Mantine, QueryClient, dll.)
+│   └── types/             # database.ts (generated types)
+│
+└── components/
+    ├── charts/
+    ├── feedback/
+    ├── forms/
+    └── layout/
+
+supabase/
+└── migrations/            # SQL schema & migration files
+```
+
+---
+
+## 🛠️ Cara Menjalankan Secara Lokal
+
+### Prasyarat
+
+- Node.js >= 18
+- npm
+- Akun [Supabase](https://supabase.com/) (project aktif)
+
+### Langkah Instalasi
+
+```bash
+# 1. Clone repositori
+git clone <repo-url>
+cd roommaster
+
+# 2. Install dependencies
+npm install
+
+# 3. Setup environment variables
+cp .env.local.example .env.local
+# Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# 4. Jalankan development server
+npm run dev
+```
+
+Buka [http://localhost:3000](http://localhost:3000) di browser.
+
+### Scripts
+
+| Command | Deskripsi |
+|---|---|
+| `npm run dev` | Jalankan dev server (Turbopack) |
+| `npm run build` | Build production (Turbopack) |
+| `npm run start` | Jalankan production server |
+| `npm run lint` | Lint kode dengan ESLint |
+
+---
+
+## 🔐 Environment Variables
+
+Buat file `.env.local` di root project dengan variabel berikut:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+OPENAI_API_KEY=your-openai-key   # Opsional, untuk fitur AI Agent
+```
+
+---
+
+## 📌 Status Proyek
+
+> ⚠️ Proyek ini sedang dalam **pengembangan aktif**.
+
+Beberapa area yang masih dikembangkan:
+- Implementasi penuh kebijakan **RLS** untuk semua peran
+- Penambahan fitur **AI Agent** di panel Manager & FO
+- Pengembangan **Loyalty Program** lebih lanjut
+- Analitik agregat untuk **Super Admin**
