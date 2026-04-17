@@ -90,16 +90,6 @@ export default function TaDashboardClient({ data }: { data: TaDashboardData }) {
 
   return (
     <Box p="xl">
-      {/* Header */}
-      <Stack gap={2} mb="xl">
-        <Text size="xl" fw={800} style={{ color: '#1a1a1a' }}>
-          Dashboard
-        </Text>
-        <Text size="sm" c="dimmed">
-          {stats.hotelName} — Last 30 days overview
-        </Text>
-      </Stack>
-
       {/* Stat Cards */}
       <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} spacing="md" mb="xl">
         <StatCard label="Total Bookings" value={stats.totalBookings} icon={IconCalendarStats} />

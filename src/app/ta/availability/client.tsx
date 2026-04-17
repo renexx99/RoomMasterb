@@ -1,192 +1,254 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
 import {
-  Box,
-  Text,
-  Paper,
-  Table,
-  Badge,
-  Button,
-  Group,
-  Stack,
-  TextInput,
+  TextInput, Select, Box, Badge, ScrollArea, Grid, MultiSelect, Text, Group, ActionIcon, Popover, Loader, Center
 } from '@mantine/core';
-import { IconSearch, IconFilePlus } from '@tabler/icons-react';
-import { RoomTypeAvailability } from './page';
+import '@mantine/dates/styles.css';
+import { DatePicker } from '@mantine/dates';
 
-interface Props {
-  availability: RoomTypeAvailability[];
-  hotelName: string;
+import { IconSearch, IconFilter, IconCalendar, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+
+import { AvailabilityTimeline } from './components/AvailabilityTimeline';
+import { RoomStatusList } from './components/RoomStatusList';
+import { getTaAvailabilityData } from './actions';
+import { notifications } from '@mantine/notifications';
+
+interface ClientProps {
+  initialRooms: any[];
+  initialReservations: any[];
+  roomTypes: any[];
+  hotelId: string;
 }
 
-export default function TaAvailabilityClient({ availability, hotelName }: Props) {
-  const router = useRouter();
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [search, setSearch] = useState('');
+export default function TaAvailabilityClient({ initialRooms, initialReservations, roomTypes, hotelId }: ClientProps) {
+  // --- STATE ---
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [dataReservations, setDataReservations] = useState(initialReservations);
+  const [loading, setLoading] = useState(false);
+  const [calendarOpened, setCalendarOpened] = useState(false);
 
-  const filtered = availability.filter((rt) =>
-    rt.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter UI State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
 
-  const handleBook = (roomTypeId: string, roomTypeName: string) => {
-    const params = new URLSearchParams();
-    params.set('roomTypeId', roomTypeId);
-    params.set('roomTypeName', roomTypeName);
-    if (checkIn) params.set('checkIn', checkIn);
-    if (checkOut) params.set('checkOut', checkOut);
-    router.push(`/ta/book-room?${params.toString()}`);
+  // --- FETCH NEW DATA ON DATE CHANGE ---
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const start = new Date(currentDate);
+        const end = new Date(currentDate);
+        end.setDate(end.getDate() + 30);
+
+        const res = await getTaAvailabilityData(
+          hotelId,
+          start.toISOString().split('T')[0],
+          end.toISOString().split('T')[0]
+        );
+        
+        setDataReservations(res.reservations);
+      } catch (error) {
+        notifications.show({ title: 'Error', message: 'Failed to load timeline data', color: 'red' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentDate, hotelId]);
+
+  // --- FILTER LOGIC ---
+  const filteredRooms = useMemo(() => {
+    let result = [...initialRooms];
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter((r) => r.room_number.toLowerCase().includes(lower));
+    }
+    if (filterType) {
+      result = result.filter((r) => r.room_type_id === filterType);
+    }
+    if (filterStatus.length > 0) {
+      result = result.filter((r) => {
+        if (filterStatus.includes('ready') && r.status === 'available' && r.cleaning_status === 'clean') return true;
+        if (filterStatus.includes('dirty') && r.status === 'available' && r.cleaning_status === 'dirty') return true;
+        if (filterStatus.includes('occupied') && r.status === 'occupied') return true;
+        if (filterStatus.includes('maintenance') && r.status === 'maintenance') return true;
+        return false;
+      });
+    }
+    return result;
+  }, [initialRooms, searchTerm, filterType, filterStatus]);
+
+  // Quick Stats
+  const stats = useMemo(() => ({
+    total: filteredRooms.length,
+    dirty: filteredRooms.filter(r => r.cleaning_status === 'dirty' && r.status === 'available').length,
+    ready: filteredRooms.filter(r => r.cleaning_status === 'clean' && r.status === 'available').length
+  }), [filteredRooms]);
+
+  // Date Navigation
+  const handleNext = (days: number) => {
+    const next = new Date(currentDate);
+    next.setDate(next.getDate() + days);
+    setCurrentDate(next);
+  };
+
+  const handleDateSelect = (val: Date) => {
+    setCurrentDate(val);
+    setCalendarOpened(false);
   };
 
   return (
-    <Box p="xl">
-      {/* Header */}
-      <Stack gap={2} mb="xl">
-        <Text size="xl" fw={800} style={{ color: '#1a1a1a' }}>
-          Availability
-        </Text>
-        <Text size="sm" c="dimmed">
-          {hotelName} — Room type availability
-        </Text>
-      </Stack>
-
-      {/* Filters */}
-      <Paper
-        p="md"
-        radius="md"
-        mb="md"
-        style={{
-          border: '1px solid #e5e5e5',
-          background: '#ffffff',
+    <Box style={{ height: 'calc(100vh - 60px)', display: 'flex', background: '#f8f9fa' }}>
+      
+      {/* --- LEFT PANEL: TIMELINE (60%) --- */}
+      <Box 
+        style={{ 
+          width: '60%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          borderRight: '1px solid #e9ecef',
+          backgroundColor: 'white'
         }}
       >
-        <Group gap="md" wrap="wrap">
-          <TextInput
-            type="date"
-            label="Check-in Date"
-            value={checkIn}
-            onChange={(e) => setCheckIn(e.currentTarget.value)}
-            size="sm"
-            radius="md"
-            styles={{
-              input: { background: '#fafafa', border: '1px solid #e0e0e0', color: '#1a1a1a' },
-              label: { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 },
-            }}
-            style={{ flex: '1 1 160px' }}
-          />
-          <TextInput
-            type="date"
-            label="Check-out Date"
-            value={checkOut}
-            onChange={(e) => setCheckOut(e.currentTarget.value)}
-            size="sm"
-            radius="md"
-            styles={{
-              input: { background: '#fafafa', border: '1px solid #e0e0e0', color: '#1a1a1a' },
-              label: { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 },
-            }}
-            style={{ flex: '1 1 160px' }}
-          />
-          <TextInput
-            placeholder="Search room type..."
-            leftSection={<IconSearch size={14} stroke={1.5} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="sm"
-            radius="md"
-            label="Search"
-            styles={{
-              input: { background: '#fafafa', border: '1px solid #e0e0e0', color: '#1a1a1a' },
-              label: { fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 },
-            }}
-            style={{ flex: '1 1 200px' }}
-          />
-        </Group>
-      </Paper>
+        {/* Timeline Toolbar */}
+        <Box p="md" style={{ borderBottom: '1px solid #e9ecef' }}>
+          <Group justify="space-between" mb="sm">
+             <Text fw={700} size="lg" c="dark.4">Room Availability</Text>
+             <Group gap="xs">
+               <Badge variant="dot" color="dark">Confirmed</Badge>
+               <Badge variant="dot" color="yellow">Pending</Badge>
+               <Badge variant="light" color="gray">{stats.total} Rooms</Badge>
+             </Group>
+          </Group>
 
-      {/* Data Table */}
-      <Paper
-        radius="md"
-        style={{
-          border: '1px solid #e5e5e5',
-          background: '#ffffff',
-          overflow: 'hidden',
-        }}
-      >
-        {filtered.length === 0 ? (
-          <Text size="sm" c="dimmed" ta="center" py="xl">
-            No room types found.
-          </Text>
-        ) : (
-          <Table.ScrollContainer minWidth={700}>
-            <Table verticalSpacing="sm" horizontalSpacing="lg">
-              <Table.Thead>
-                <Table.Tr style={{ borderBottom: '2px solid #e5e5e5', background: '#fafafa' }}>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Room Type</Table.Th>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Capacity</Table.Th>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bed Type</Table.Th>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>View</Table.Th>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Available</Table.Th>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Contract Rate</Table.Th>
-                  <Table.Th style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}></Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {filtered.map((rt) => (
-                  <Table.Tr key={rt.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                    <Table.Td>
-                      <Text size="sm" fw={600} style={{ color: '#1a1a1a' }}>{rt.name}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">{rt.capacity} pax</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">{rt.bed_type || '—'}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">{rt.view_type || '—'}</Text>
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: 'center' }}>
-                      <Badge
-                        variant={rt.availableRooms > 0 ? 'filled' : 'outline'}
-                        color="dark"
-                        size="md"
-                        radius="sm"
+          {/* Filter Row */}
+          <Grid gutter="xs" align="center">
+            <Grid.Col span={4}>
+              <TextInput
+                placeholder="Search room..."
+                leftSection={<IconSearch size={14} />}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                size="xs"
+              />
+            </Grid.Col>
+            
+            <Grid.Col span={4}>
+              <Select
+                placeholder="Room Type"
+                data={roomTypes.map(rt => ({ value: rt.id, label: rt.name }))}
+                value={filterType}
+                onChange={setFilterType}
+                clearable
+                size="xs"
+              />
+            </Grid.Col>
+            
+            <Grid.Col span={4}>
+               <Group gap={4} wrap="nowrap" justify="flex-end">
+                  <ActionIcon variant="default" size="sm" onClick={() => handleNext(-7)} aria-label="Previous Week">
+                    <IconChevronLeft size={14}/>
+                  </ActionIcon>
+
+                  {/* Calendar Popover */}
+                  <Popover 
+                    opened={calendarOpened} 
+                    onChange={setCalendarOpened} 
+                    position="bottom-end" 
+                    withArrow 
+                    shadow="md"
+                  >
+                    <Popover.Target>
+                      <ActionIcon 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => setCalendarOpened((o) => !o)}
+                        aria-label="Select Date"
                       >
-                        {rt.availableRooms} / {rt.totalRooms}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed" fs="italic">Contract Rate</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Button
-                        size="xs"
-                        variant="filled"
-                        color="dark"
-                        radius="md"
-                        leftSection={<IconFilePlus size={14} />}
-                        disabled={rt.availableRooms === 0}
-                        onClick={() => handleBook(rt.id, rt.name)}
-                        styles={{
-                          root: {
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
+                        <IconCalendar size={14}/>
+                      </ActionIcon>
+                    </Popover.Target>
+                    <Popover.Dropdown p={0}>
+                      <DatePicker 
+                        value={currentDate}
+                        onChange={(val: any) => {
+                          if (val instanceof Date) {
+                            handleDateSelect(val);
                           }
                         }}
-                      >
-                        Book
-                      </Button>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
-      </Paper>
+                        allowDeselect={false}
+                      />
+                    </Popover.Dropdown>
+                  </Popover>
+                  
+                  <ActionIcon variant="default" size="sm" onClick={() => handleNext(7)} aria-label="Next Week">
+                    <IconChevronRight size={14}/>
+                  </ActionIcon>
+               </Group>
+            </Grid.Col>
+          </Grid>
+        </Box>
+
+        {/* Timeline Content */}
+        <ScrollArea style={{ flex: 1 }} bg="gray.0">
+          {loading ? (
+             <Center h={400}><Loader size="sm" color="dark" /></Center>
+          ) : (
+             <Box p="md">
+               <AvailabilityTimeline 
+                  rooms={filteredRooms} 
+                  reservations={dataReservations} 
+                  currentDate={currentDate}
+               />
+             </Box>
+          )}
+        </ScrollArea>
+      </Box>
+
+      {/* --- RIGHT PANEL: STATUS LIST (40%) --- */}
+      <Box 
+        style={{ 
+          width: '40%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          backgroundColor: '#ffffff'
+        }}
+      >
+        {/* Status Toolbar */}
+        <Box p="md" style={{ borderBottom: '1px solid #e9ecef', height: 106 }}> 
+          <Group justify="space-between" mb="sm">
+            <Text fw={700} size="lg" c="dark.4">Housekeeping</Text>
+            <Group gap="xs">
+                <Badge color="red" variant="light" size="sm">{stats.dirty} Dirty</Badge>
+                <Badge color="teal" variant="light" size="sm">{stats.ready} Ready</Badge>
+            </Group>
+          </Group>
+          <MultiSelect
+            placeholder="Filter Status (Ready, Dirty...)"
+            data={[
+              { value: 'ready', label: 'Vacant Ready' },
+              { value: 'dirty', label: 'Vacant Dirty' },
+              { value: 'occupied', label: 'Occupied' },
+              { value: 'maintenance', label: 'Maintenance' },
+            ]}
+            value={filterStatus}
+            onChange={setFilterStatus}
+            leftSection={<IconFilter size={14} />}
+            clearable
+            size="xs"
+          />
+        </Box>
+
+        {/* Room Status List */}
+        <ScrollArea style={{ flex: 1 }} p="md" bg="gray.0">
+          <RoomStatusList rooms={filteredRooms} />
+        </ScrollArea>
+      </Box>
+
     </Box>
   );
 }

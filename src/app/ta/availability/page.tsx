@@ -3,16 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import TaAvailabilityClient from './client';
-
-export interface RoomTypeAvailability {
-  id: string;
-  name: string;
-  capacity: number;
-  bed_type: string | null;
-  view_type: string | null;
-  totalRooms: number;
-  availableRooms: number;
-}
+import { getTaAvailabilityData } from './actions';
 
 export default async function TaAvailabilityPage() {
   const cookieStore = await cookies();
@@ -39,41 +30,31 @@ export default async function TaAvailabilityPage() {
     );
   }
 
-  // Fetch room types with room counts
+  // Set date range (today -7 to +30 for timeline)
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - 7);
+  const end = new Date(today);
+  end.setDate(today.getDate() + 30);
+
+  const { rooms, reservations } = await getTaAvailabilityData(
+    hotelId,
+    start.toISOString().split('T')[0],
+    end.toISOString().split('T')[0]
+  );
+
+  // Get room types for filter
   const { data: roomTypes } = await supabase
     .from('room_types')
-    .select(`
-      id,
-      name,
-      capacity,
-      bed_type,
-      view_type,
-      rooms:rooms(id, status)
-    `)
-    .eq('hotel_id', hotelId)
-    .order('name');
-
-  const availability: RoomTypeAvailability[] = (roomTypes || []).map((rt: any) => ({
-    id: rt.id,
-    name: rt.name,
-    capacity: rt.capacity,
-    bed_type: rt.bed_type,
-    view_type: rt.view_type,
-    totalRooms: rt.rooms?.length || 0,
-    availableRooms: rt.rooms?.filter((r: any) => r.status === 'available').length || 0,
-  }));
-
-  // Get hotel name
-  const { data: hotel } = await supabase
-    .from('hotels')
-    .select('name')
-    .eq('id', hotelId)
-    .single();
+    .select('*')
+    .eq('hotel_id', hotelId);
 
   return (
     <TaAvailabilityClient
-      availability={availability}
-      hotelName={hotel?.name || 'Hotel'}
+      initialRooms={rooms || []}
+      initialReservations={reservations || []}
+      roomTypes={roomTypes || []}
+      hotelId={hotelId}
     />
   );
 }

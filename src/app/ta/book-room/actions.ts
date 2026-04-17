@@ -17,11 +17,11 @@ export interface TaBookingPayload {
   roomId: string;
   checkIn: string;   // ISO date string (YYYY-MM-DD)
   checkOut: string;   // ISO date string (YYYY-MM-DD)
+  title: string;
   firstName: string;
   lastName: string;
   email: string;
   phone?: string;
-  remarks?: string;
 }
 
 export async function createTaReservation(payload: TaBookingPayload) {
@@ -67,6 +67,7 @@ export async function createTaReservation(payload: TaBookingPayload) {
     .from('guests')
     .insert({
       hotel_id: payload.hotelId,
+      title: payload.title,
       full_name: fullName,
       email: payload.email.trim(),
       phone_number: payload.phone?.trim() || null,
@@ -92,7 +93,6 @@ export async function createTaReservation(payload: TaBookingPayload) {
       payment_method: 'city_ledger',
       booking_source: 'travel_agent',
       agent_id: payload.agentId,
-      special_requests: payload.remarks?.trim() || null,
     })
     .select('id')
     .single();
