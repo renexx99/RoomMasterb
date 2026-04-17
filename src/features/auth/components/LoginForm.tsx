@@ -18,7 +18,7 @@ interface LoginFormValues {
 
 // Define roles that require a hotel assignment to function
 // Anda bisa tambahkan 'Housekeeping' di sini jika mereka juga bisa login
-const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping']; 
+const ROLES_REQUIRING_HOTEL = ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping', 'Travel Agent']; 
 
 export function LoginForm() {
   const router = useRouter();
@@ -149,6 +149,9 @@ export function LoginForm() {
          // Route to housekeeping dashboard
          // Housekeeping role login
          router.push('/housekeeping/dashboard');
+      } else if (effectiveRoleName === 'Travel Agent' && assignedHotelId) {
+         // Route to Travel Agent portal
+         router.push('/ta/dashboard');
       } else {
          // Fallback jika role tidak terduga (seharusnya sudah ditangani di step 3)
          console.error("Login Error: User has an unhandled effective role:", effectiveRoleName);

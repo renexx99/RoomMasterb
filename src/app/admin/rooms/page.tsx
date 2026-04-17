@@ -6,7 +6,7 @@ import RoomsManagementClient from './client';
 import { Room, RoomType } from '@/core/types/database';
 
 export interface RoomWithDetails extends Room {
-  room_type?: RoomType | null;
+  room_type?: RoomType;
 }
 
 export default async function RoomsPage() {

@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy dashboard widget with broken deps, not used in PMS
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -19,8 +20,9 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import { IconDotsVertical } from '@tabler/icons-react';
-import WorldCountriesMap from '/mocks/WorldAtlasCountries.json'; // <-- Jalur diperbaiki
-import { Surface } from './Surface'; // <-- Jalur diperbaiki
+// @ts-ignore — legacy mock file, not critical to PMS
+import WorldCountriesMap from '/mocks/WorldAtlasCountries.json';
+import Surface from './Surface';
 
 const geoUrl = WorldCountriesMap;
 

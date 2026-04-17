@@ -194,7 +194,8 @@ export default function FoReservationsClient({
                     data={[
                       { value: 'pending', label: 'Pending' },
                       { value: 'paid', label: 'Paid' },
-                      { value: 'cancelled', label: 'Cancelled' }
+                      { value: 'cancelled', label: 'Cancelled' },
+                      { value: 'city_ledger', label: 'City Ledger' }
                     ]}
                     value={filterStatus}
                     onChange={setFilterStatus}
@@ -305,8 +306,17 @@ export default function FoReservationsClient({
                             </Text>
                           </Box>
                           
-                          <Badge color={res.payment_status === 'paid' ? 'teal' : 'yellow'}>
-                            {res.payment_status}
+                          {res.booking_source === 'travel_agent' && (
+                            <Badge variant="outline" color="dark" size="sm">
+                              B2B
+                            </Badge>
+                          )}
+                          <Badge color={
+                            res.payment_status === 'paid' ? 'teal' 
+                            : res.payment_status === 'city_ledger' ? 'dark'
+                            : 'yellow'
+                          }>
+                            {res.payment_status === 'city_ledger' ? 'City Ledger' : res.payment_status}
                           </Badge>
                           
                           <Menu>

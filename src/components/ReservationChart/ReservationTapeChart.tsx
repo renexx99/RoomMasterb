@@ -10,7 +10,7 @@ import { Room, RoomType, Reservation, Guest } from '@/core/types/database';
 
 // --- Interfaces Lokal ---
 export interface ChartRoom extends Room {
-  room_type?: RoomType | null;
+  room_type?: RoomType;
 }
 
 export interface ChartReservation extends Reservation {

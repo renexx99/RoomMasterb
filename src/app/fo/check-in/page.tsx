@@ -16,7 +16,7 @@ export interface ReservationDetails extends Reservation {
 export default async function CheckInPage({
   searchParams,
 }: {
-  searchParams: { date?: string };
+  searchParams: Promise<{ date?: string }>;
 }) {
   const cookieStore = await cookies();
   // @ts-ignore

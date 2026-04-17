@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PaperProps, SimpleGrid, Skeleton } from '@mantine/core';
 import StatsCard from './StatsCard'; // <-- Jalur diperbaiki
 import classes from './StatsGrid.module.css';

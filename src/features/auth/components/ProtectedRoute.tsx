@@ -16,7 +16,7 @@ interface ProtectedRouteProps {
 }
 
 // Define roles that access the '/admin' path
-const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping']; // Add roles as needed
+const ADMIN_PATH_ROLES = ['Hotel Admin', 'Hotel Manager', 'Front Office', 'Housekeeping', 'Travel Agent']; // Add roles as needed
 
 export function ProtectedRoute({ children, requiredRoleName }: ProtectedRouteProps) {
   const { user, profile, loading, error } = useAuth(); // Include error state
@@ -58,6 +58,8 @@ export function ProtectedRoute({ children, requiredRoleName }: ProtectedRoutePro
 
       if (isSuperAdmin) {
         router.push('/super-admin/dashboard');
+      } else if (profile.roles?.some(r => r.role_name === 'Travel Agent')) {
+        router.push('/ta/dashboard');
       } else if (hasAdminPathRole) {
          router.push('/admin/dashboard');
       } else {

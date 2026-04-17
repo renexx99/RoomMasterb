@@ -2,7 +2,7 @@
 
 // --- Existing Simple Types ---
 export type RoomStatus = 'available' | 'occupied' | 'maintenance';
-export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
+export type PaymentStatus = 'pending' | 'paid' | 'cancelled' | 'city_ledger';
 export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 export type LoyaltyLogType = 'earn' | 'redeem' | 'adjust';
 export type LoyaltyLogSource = 'stay' | 'spend' | 'bonus' | 'manual' | 'redeem';
@@ -21,7 +21,8 @@ export type BedType = 'Single' | 'Twin' | 'Double' | 'Queen' | 'King' | 'Super K
 export type ViewType = 'City View' | 'Sea View' | 'Garden View' | 'Pool View' | 'Mountain View' | 'No View';
 export type WingType = 'North Wing' | 'South Wing' | 'East Wing' | 'West Wing' | 'Central';
 export type FurnitureCondition = 'excellent' | 'good' | 'fair' | 'needs_replacement';
-export type PaymentMethod = 'cash' | 'transfer' | 'qris' | 'credit_card' | 'other';
+export type PaymentMethod = 'cash' | 'transfer' | 'qris' | 'credit_card' | 'other' | 'city_ledger';
+export type BookingSource = 'walk_in' | 'ota' | 'corporate' | 'travel_agent';
 
 // --- Interfaces ---
 
@@ -173,6 +174,11 @@ export interface Reservation {
   total_price: number;
   payment_status: PaymentStatus;
   payment_method?: PaymentMethod | null;
+  booking_source?: BookingSource | null;
+  agent_id?: string | null;
+  special_requests?: string | null;
+  checked_in_at?: string | null;
+  checked_out_at?: string | null;
   created_at: string;
 }
 

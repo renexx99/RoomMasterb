@@ -1,7 +1,7 @@
 'use client';
 
 import { Modal, Paper, Text, Group, Stack, Divider, Grid, Badge, Box, Button, ActionIcon } from '@mantine/core';
-import { IconPrinter, IconCheck, IconX } from '@tabler/icons-react';
+import { IconPrinter, IconCheck, IconX, IconBuildingBank } from '@tabler/icons-react';
 import { ReservationDetails } from '../page';
 
 interface Props {
@@ -17,18 +17,50 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
     (new Date(reservation.check_out_date).getTime() - new Date(reservation.check_in_date).getTime()) / (1000 * 3600 * 24)
   );
 
+  const isCityLedger = reservation.booking_source === 'travel_agent' || reservation.payment_status === 'city_ledger';
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'teal';
       case 'pending': return 'orange';
       case 'cancelled': return 'red';
+      case 'city_ledger': return 'dark';
       default: return 'gray';
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'city_ledger') return 'CITY LEDGER';
+    return status.toUpperCase();
   };
 
   // --- Konten Invoice yang Reusable (Untuk Layar & Cetak) ---
   const InvoiceContent = (
     <Box p="xl" bg="white" style={{ color: 'black' }}>
+       {/* City Ledger Banner */}
+       {isCityLedger && (
+         <Box
+           mb="lg"
+           p="sm"
+           style={{
+             background: '#f5f5f5',
+             border: '1px solid #d4d4d4',
+             borderRadius: 6,
+             textAlign: 'center',
+           }}
+         >
+           <Group gap={8} justify="center">
+             <IconBuildingBank size={16} color="#525252" />
+             <Text size="sm" fw={700} style={{ color: '#262626', letterSpacing: '0.03em' }}>
+               B2B Booking — City Ledger (Billed to OTA)
+             </Text>
+           </Group>
+           <Text size="xs" c="dimmed" mt={2}>
+             Room charges are invoiced to the travel agent. Do not collect payment from guest.
+           </Text>
+         </Box>
+       )}
+
        {/* Header Invoice */}
        <Group justify="space-between" mb="xl" align='flex-start'>
           <Stack gap={2}>
@@ -54,7 +86,7 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
                  color={getStatusColor(reservation.payment_status)}
                  style={{ textTransform: 'uppercase' }}
              >
-                 {reservation.payment_status}
+                 {getStatusLabel(reservation.payment_status)}
              </Badge>
              <Text size="sm" mt={4} fw={600}>Ref: #{reservation.id.substring(0, 8).toUpperCase()}</Text>
              <Text size="xs" c="dimmed">{new Date(reservation.created_at).toLocaleDateString('id-ID')}</Text>
@@ -66,10 +98,17 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
        <Grid gutter="lg">
          {/* Guest Info */}
          <Grid.Col span={6}>
-           <Text size="xs" fw={700} c="dimmed" mb={4} tt="uppercase">Bill To:</Text>
+           <Text size="xs" fw={700} c="dimmed" mb={4} tt="uppercase">
+             {isCityLedger ? 'Guest (Stay):' : 'Bill To:'}
+           </Text>
            <Text fw={700} size="md">{reservation.guest?.full_name}</Text>
            <Text size="sm">{reservation.guest?.email}</Text>
            <Text size="sm">{reservation.guest?.phone_number || '-'}</Text>
+           {isCityLedger && (
+             <Text size="xs" c="dimmed" mt={4} fs="italic">
+               Room charges billed to Travel Agent
+             </Text>
+           )}
          </Grid.Col>
 
          {/* Stay Info */}
@@ -94,7 +133,10 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
             <Grid mb="sm">
                <Grid.Col span={8}>
                  <Text size="sm">Room Charge ({nights} nights)</Text>
-                 <Text size="xs" c="dimmed">{reservation.room?.room_type?.name} Rate</Text>
+                 <Text size="xs" c="dimmed">
+                   {reservation.room?.room_type?.name} Rate
+                   {isCityLedger && ' — B2B Contract Rate'}
+                 </Text>
                </Grid.Col>
                <Grid.Col span={4} style={{ textAlign: 'right' }}>
                  <Text size="sm" fw={600}>Rp {reservation.total_price.toLocaleString('id-ID')}</Text>
@@ -102,20 +144,27 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
             </Grid>
          </Box>
          
-         {/* [UPDATED] Bagian Total dengan Warna Tema Ungu/Violet (Agar senada dengan Header Invoice) */}
-         <Box p="md" style={{ background: '#f5f3ff', borderTop: '1px solid #dee2e6' }}>
+         {/* [UPDATED] Bagian Total — monochrome for City Ledger, violet for standard */}
+         <Box p="md" style={{ background: isCityLedger ? '#f5f5f5' : '#f5f3ff', borderTop: '1px solid #dee2e6' }}>
             <Grid align="center">
                <Grid.Col span={8}>
-                  <Text fw={800} size="lg" c="violet.9">TOTAL</Text>
-                  {reservation.payment_method && reservation.payment_status === 'paid' && (
+                  <Text fw={800} size="lg" c={isCityLedger ? 'dark.7' : 'violet.9'}>TOTAL</Text>
+                  {isCityLedger ? (
+                    <Group gap={4}>
+                       <IconBuildingBank size={14} color="#525252" />
+                       <Text size="xs" c="dark.4" fw={600}>City Ledger — Billed to OTA</Text>
+                    </Group>
+                  ) : (
+                    reservation.payment_method && reservation.payment_status === 'paid' && (
                       <Group gap={4}>
                          <IconCheck size={14} color="teal" />
                          <Text size="xs" c="teal.7" fw={600}>Paid via {reservation.payment_method}</Text>
                       </Group>
+                    )
                   )}
                </Grid.Col>
                <Grid.Col span={4} style={{ textAlign: 'right' }}>
-                  <Text fw={800} size="xl" c="violet.9">Rp {reservation.total_price.toLocaleString('id-ID')}</Text>
+                  <Text fw={800} size="xl" c={isCityLedger ? 'dark.7' : 'violet.9'}>Rp {reservation.total_price.toLocaleString('id-ID')}</Text>
                </Grid.Col>
             </Grid>
          </Box>
@@ -146,7 +195,9 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
         {/* CUSTOM HEADER */}
         <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid #e9ecef', background: '#f8f9fa' }}>
             <Box style={{ width: 28 }} /> 
-            <Text fw={700} size="lg" c="dark.7">Reservation Successful</Text>
+            <Text fw={700} size="lg" c="dark.7">
+              {isCityLedger ? 'Reservation — City Ledger' : 'Reservation Successful'}
+            </Text>
             <ActionIcon onClick={onClose} variant="subtle" color="gray" aria-label="Close modal">
                 <IconX size={20} />
             </ActionIcon>
@@ -160,14 +211,26 @@ export function ReservationInvoiceModal({ opened, onClose, reservation }: Props)
         {/* Footer Tombol */}
         <Group justify="flex-end" p="md" bg="gray.0" style={{ borderTop: '1px solid #e9ecef' }}>
           <Button variant="default" onClick={onClose}>Close</Button>
-          {/* Tombol Print tetap Biru (Default Manager Theme) */}
-          <Button 
-            leftSection={<IconPrinter size={16} />} 
-            color="blue"
-            onClick={handlePrint}
-          >
-            Print Invoice
-          </Button>
+          {/* Hide payment collection for City Ledger bookings */}
+          {!isCityLedger && (
+            <Button 
+              leftSection={<IconPrinter size={16} />} 
+              color="blue"
+              onClick={handlePrint}
+            >
+              Print Invoice
+            </Button>
+          )}
+          {isCityLedger && (
+            <Button 
+              leftSection={<IconPrinter size={16} />}
+              variant="filled"
+              color="dark"
+              onClick={handlePrint}
+            >
+              Print Folio
+            </Button>
+          )}
         </Group>
       </Modal>
 

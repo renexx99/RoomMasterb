@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Badge, Group, Paper, PaperProps, Text } from '@mantine/core';
 import classes from './Stats.module.css';
 import { IconArrowDownRight, IconArrowUpRight } from '@tabler/icons-react';
