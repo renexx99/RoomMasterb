@@ -35,6 +35,9 @@ function getStatusBadge(paymentStatus: string, checkedInAt: string | null, check
   if (paymentStatus === 'paid') {
     return <Badge variant="dot" color="dark" size="sm" radius="sm">Confirmed</Badge>;
   }
+  if (paymentStatus === 'city_ledger') {
+    return <Badge variant="dot" color="dark" size="sm" radius="sm">City Ledger</Badge>;
+  }
   return <Badge variant="default" size="sm" radius="sm">Pending</Badge>;
 }
 

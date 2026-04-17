@@ -91,12 +91,13 @@ export function RecentReservations({ data }: Props) {
                   variant="light"
                   color={
                     res.status === 'paid' ? 'teal' :
+                    res.status === 'city_ledger' ? 'dark' :
                     res.status === 'confirmed' ? 'blue' :
                     res.status === 'cancelled' ? 'red' :
                     'yellow'
                   }
                 >
-                  {res.status}
+                  {res.status === 'city_ledger' ? 'City Ledger' : res.status}
                 </Badge>
               </Group>
             </Group>

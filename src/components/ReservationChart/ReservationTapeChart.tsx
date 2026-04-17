@@ -54,7 +54,7 @@ const ReservationTapeChart = ({ rooms, reservations, onEventClick, onDateSelect 
         end: res.check_out_date,
         backgroundColor: color,
         extendedProps: {
-          status: res.payment_status,
+          status: res.payment_status === 'city_ledger' ? 'City Ledger' : res.payment_status,
           email: res.guest?.email
         }
       };

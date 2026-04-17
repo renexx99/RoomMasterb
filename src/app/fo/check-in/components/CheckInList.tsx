@@ -52,11 +52,11 @@ export function CheckInList({ data, type, onAction, loading }: CheckInListProps)
               </Group>
               
               <Badge 
-                color={res.payment_status === 'paid' ? 'teal' : 'orange'} 
+                color={res.payment_status === 'paid' ? 'teal' : res.payment_status === 'city_ledger' ? 'dark' : 'orange'} 
                 variant="dot" 
                 size="sm"
               >
-                {res.payment_status.toUpperCase()}
+                {res.payment_status === 'city_ledger' ? 'CITY LEDGER' : res.payment_status.toUpperCase()}
               </Badge>
             </Group>
 

@@ -230,11 +230,11 @@ export function RoomDetailPanel({ room, onEdit }: Props) {
                                 </Text>
                                 <Badge 
                                   size="xs" 
-                                  color={h.payment_status === 'paid' ? 'teal' : 'yellow'} 
+                                  color={h.payment_status === 'paid' ? 'teal' : h.payment_status === 'city_ledger' ? 'dark' : 'yellow'} 
                                   variant="light" 
                                   mt={4}
                                 >
-                                    {h.payment_status}
+                                    {h.payment_status === 'city_ledger' ? 'City Ledger' : h.payment_status}
                                 </Badge>
                             </Timeline.Item>
                         ))}

@@ -17,6 +17,7 @@ export function RecentActivityTable({ data, onViewInvoice }: Props) {
       case 'paid': return 'green';
       case 'pending': return 'orange';
       case 'cancelled': return 'red';
+      case 'city_ledger': return 'dark';
       default: return 'gray';
     }
   };
@@ -75,7 +76,7 @@ export function RecentActivityTable({ data, onViewInvoice }: Props) {
               </Table.Td>
               <Table.Td>
                 <Badge color={getStatusColor(item.payment_status)} variant="light" size="sm" tt="capitalize">
-                  {item.payment_status}
+                  {item.payment_status === 'city_ledger' ? 'City Ledger' : item.payment_status}
                 </Badge>
               </Table.Td>
               <Table.Td>
