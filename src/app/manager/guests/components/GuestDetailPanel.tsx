@@ -5,19 +5,25 @@ import { useEffect, useState } from 'react';
 import {
   Paper, Group, Avatar, Text, Badge, SimpleGrid, 
   Stack, ThemeIcon, Button, ScrollArea, Timeline, Grid, Box,
-  Card, Progress
+  Card, Progress, Skeleton, rem
 } from '@mantine/core';
 import { 
   IconMail, IconPhone, IconDiamond, IconSparkles, 
-  IconHistory, IconTag, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar,
-  IconStar, IconTrophy, IconArrowUp, IconGift, IconTrash
+  IconHistory, IconBolt, IconPencil, IconBed, IconChartBar, IconCalendar,
+  IconStar, IconTrophy, IconArrowUp, IconGift, IconTrash, IconAlertTriangle, IconCoin
 } from '@tabler/icons-react';
 import { Guest } from '@/core/types/database';
-import { getGuestHistory } from '../actions';
+import { getGuestHistory, generateGuestInsights } from '../actions';
 import {
   getTierColor, formatPoints, getTierProgress, getTierBenefits, getTierLabel,
   DEFAULT_LOYALTY_CONFIG
 } from '@/core/utils/loyalty';
+
+interface AiInsight {
+  text: string;
+  color: string;
+  iconType: string;
+}
 
 interface Props {
   guest: Guest;
@@ -25,17 +31,48 @@ interface Props {
   onDelete: () => void;
 }
 
+// Helper: map iconType string from AI response to actual Tabler icon component
+function getInsightIcon(iconType: string, size = 16) {
+  switch (iconType) {
+    case 'sparkles': return <IconSparkles size={size} />;
+    case 'bolt':     return <IconBolt size={size} />;
+    case 'star':     return <IconStar size={size} />;
+    case 'bed':      return <IconBed size={size} />;
+    case 'coin':     return <IconCoin size={size} />;
+    default:         return <IconSparkles size={size} />;
+  }
+}
+
 export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [aiInsights, setAiInsights] = useState<AiInsight[]>([]);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
 
   useEffect(() => {
     if (guest.id) {
         setHistory([]); 
         setHistoryLoaded(false);
-        getGuestHistory(guest.id).then((data) => {
+        setAiInsights([]);
+        setIsLoadingAI(false);
+
+        getGuestHistory(guest.id).then(async (data) => {
           setHistory(data);
           setHistoryLoaded(true);
+
+          // Auto-trigger AI insights after history is loaded
+          if (data.length > 0) {
+            setIsLoadingAI(true);
+            try {
+              const insights = await generateGuestInsights(guest, data);
+              setAiInsights(insights);
+            } catch (err) {
+              console.error('Failed to generate AI insights:', err);
+              setAiInsights([]);
+            } finally {
+              setIsLoadingAI(false);
+            }
+          }
         });
     }
   }, [guest.id]);
@@ -48,15 +85,10 @@ export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
   const preferences: string[] = (guest.preferences as any)?.tags || [];
   const progress = getTierProgress(guest.loyalty_points || 0, DEFAULT_LOYALTY_CONFIG);
 
-  const aiSuggestions = [
-    { text: 'Propose Suite upgrade (78% probability)', color: 'violet', icon: IconSparkles },
-    { text: 'History of AC noise complaints - assign quiet room', color: 'red', icon: IconBolt },
-  ];
-
   return (
-    <Paper radius="md" withBorder h="100%" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <Paper radius="md" withBorder style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
         
-        <ScrollArea style={{ flex: 1 }} type="auto">
+        <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto" offsetScrollbars>
             
             {/* Header Profile - Manager Blue Gradient */}
             <Box p="md" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white' }}>
@@ -187,36 +219,71 @@ export function GuestDetailPanel({ guest, onEdit, onDelete }: Props) {
                                 </Box>
                             </Card>
 
-                            {/* AI Recommendations */}
+                            {/* AI Recommendations - Dynamic */}
                             <Card padding="md" radius="md" withBorder bg="violet.0" style={{ borderColor: 'var(--mantine-color-violet-2)' }}>
                                 <Group mb="sm">
                                     <ThemeIcon color="violet" variant="light"><IconSparkles size={18}/></ThemeIcon>
                                     <Text fw={700} size="sm" c="violet.9">AI Recommendation</Text>
                                 </Group>
                                 <Stack gap="xs">
-                                    {aiSuggestions.map((s, idx) => (
-                                        <Paper key={idx} p="xs" radius="sm" bg="white" withBorder>
-                                            <Group gap="xs" align="flex-start" wrap="nowrap">
-                                                <ThemeIcon color={s.color} size="sm" variant="transparent" mt={2}><s.icon size={16}/></ThemeIcon>
-                                                <Text size="sm" c="dark.7" style={{ lineHeight: 1.4 }}>{s.text}</Text>
+                                    {isLoadingAI ? (
+                                        <>
+                                            <Paper p="xs" radius="sm" bg="white" withBorder>
+                                                <Group gap="xs" align="center" wrap="nowrap">
+                                                    <Skeleton height={16} width={16} radius="xl" />
+                                                    <Skeleton height={14} width="85%" radius="sm" />
+                                                </Group>
+                                            </Paper>
+                                            <Paper p="xs" radius="sm" bg="white" withBorder>
+                                                <Group gap="xs" align="center" wrap="nowrap">
+                                                    <Skeleton height={16} width={16} radius="xl" />
+                                                    <Skeleton height={14} width="70%" radius="sm" />
+                                                </Group>
+                                            </Paper>
+                                            <Text size="xs" c="dimmed" ta="center" fs="italic" mt={4}>
+                                                Analyzing guest history...
+                                            </Text>
+                                        </>
+                                    ) : aiInsights.length > 0 ? (
+                                        aiInsights.map((s, idx) => (
+                                            <Paper key={idx} p="xs" radius="sm" bg="white" withBorder>
+                                                <Group gap="xs" align="flex-start" wrap="nowrap">
+                                                    <ThemeIcon color={s.color} size="sm" variant="transparent" mt={2}>
+                                                        {getInsightIcon(s.iconType)}
+                                                    </ThemeIcon>
+                                                    <Text size="sm" c="dark.7" style={{ lineHeight: 1.4 }}>{s.text}</Text>
+                                                </Group>
+                                            </Paper>
+                                        ))
+                                    ) : historyLoaded && history.length === 0 ? (
+                                        <Paper p="xs" radius="sm" bg="white" withBorder>
+                                            <Group gap="xs" align="center" wrap="nowrap">
+                                                <ThemeIcon color="gray" size="sm" variant="transparent">
+                                                    <IconAlertTriangle size={16} />
+                                                </ThemeIcon>
+                                                <Text size="sm" c="dimmed" fs="italic">No stay history to analyze.</Text>
                                             </Group>
                                         </Paper>
-                                    ))}
+                                    ) : historyLoaded ? (
+                                        <Paper p="xs" radius="sm" bg="white" withBorder>
+                                            <Group gap="xs" align="center" wrap="nowrap">
+                                                <ThemeIcon color="gray" size="sm" variant="transparent">
+                                                    <IconAlertTriangle size={16} />
+                                                </ThemeIcon>
+                                                <Text size="sm" c="dimmed" fs="italic">Could not generate insights.</Text>
+                                            </Group>
+                                        </Paper>
+                                    ) : (
+                                        <Paper p="xs" radius="sm" bg="white" withBorder>
+                                            <Group gap="xs" align="center" wrap="nowrap">
+                                                <Skeleton height={16} width={16} radius="xl" />
+                                                <Skeleton height={14} width="60%" radius="sm" />
+                                            </Group>
+                                        </Paper>
+                                    )}
                                 </Stack>
                             </Card>
 
-                            {/* Preferences */}
-                            <Card padding="md" radius="md" withBorder>
-                                <Group mb="sm">
-                                    <ThemeIcon color="grape" variant="light"><IconTag size={18}/></ThemeIcon>
-                                    <Text fw={700} size="sm">Preferences</Text>
-                                </Group>
-                                <Group gap="xs">
-                                    {preferences.length > 0 ? preferences.map((tag, i) => (
-                                        <Badge key={i} size="md" variant="light" color="grape" radius="sm">{tag}</Badge>
-                                    )) : <Text c="dimmed" size="sm" fs="italic">No preferences recorded.</Text>}
-                                </Group>
-                            </Card>
                         </Stack>
                     </Grid.Col>
 

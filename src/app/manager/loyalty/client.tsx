@@ -150,11 +150,7 @@ export default function LoyaltyDashboardClient({ guests, config: initialConfig, 
         <Box maw={MAX_WIDTH} mx="auto">
 
           {/* Page Header */}
-          <Group justify="space-between" mb="lg">
-            <div>
-              <Text fz={24} fw={700} c="dark.8">Loyalty Program</Text>
-              <Text size="sm" c="dimmed">Manage guest loyalty points, tiers, and rewards configuration</Text>
-            </div>
+          <Group justify="flex-end" mb="lg">
             <Button
               leftSection={<IconSettings size={16} />}
               variant="light"
