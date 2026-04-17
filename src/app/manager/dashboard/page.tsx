@@ -7,6 +7,7 @@ import ManagerDashboardClient from './client';
 export interface ManagerDashboardData {
   stats: {
     availableRooms: number;
+    totalRooms: number;
     todayCheckIns: number;
     todayCheckOuts: number;
     guestsInHouse: number;
@@ -66,6 +67,7 @@ export default async function ManagerDashboardPage() {
 
   const [
     hotelRes,
+    totalRoomsRes,
     availableRoomsRes,
     todayCheckInsRes,
     todayCheckOutsRes,
@@ -74,28 +76,33 @@ export default async function ManagerDashboardPage() {
   ] = await Promise.all([
     // A. Nama Hotel
     supabase.from('hotels').select('name').eq('id', hotelId).single(),
+
+    // B. Total Kamar (untuk kalkulasi okupansi)
+    supabase.from('rooms')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId),
     
-    // B. Kamar Tersedia
+    // C. Kamar Tersedia
     supabase.from('rooms')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
       .eq('status', 'available'),
       
-    // C. Check-in Hari Ini (Belum Cancel)
+    // D. Check-in Hari Ini (Belum Cancel)
     supabase.from('reservations')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
       .eq('check_in_date', today)
       .neq('payment_status', 'cancelled'),
 
-    // D. Check-out Hari Ini (Belum Cancel)
+    // E. Check-out Hari Ini (Belum Cancel)
     supabase.from('reservations')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
       .eq('check_out_date', today)
       .neq('payment_status', 'cancelled'),
 
-    // E. Tamu In-House (Aktif hari ini)
+    // F. Tamu In-House (Aktif hari ini)
     supabase.from('reservations')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
@@ -103,7 +110,7 @@ export default async function ManagerDashboardPage() {
       .gt('check_out_date', today) // Menggunakan GT agar yang checkout hari ini tidak dihitung (sudah akan keluar)
       .neq('payment_status', 'cancelled'),
 
-    // F. 5 Reservasi Terbaru
+    // G. 5 Reservasi Terbaru
     supabase.from('reservations')
       .select(`
         id,
@@ -128,14 +135,19 @@ export default async function ManagerDashboardPage() {
     total_price: res.total_price || 0,
   }));
 
+  const totalRooms = totalRoomsRes.count || 1;
+  const availableRooms = availableRoomsRes.count || 0;
+  const guestsInHouse = activeReservationsRes.count || 0;
+
   const dashboardData: ManagerDashboardData = {
     hotelId,
     stats: {
       hotelName: hotelRes.data?.name || 'Unknown Hotel',
-      availableRooms: availableRoomsRes.count || 0,
+      availableRooms,
+      totalRooms,
       todayCheckIns: todayCheckInsRes.count || 0,
       todayCheckOuts: todayCheckOutsRes.count || 0,
-      guestsInHouse: activeReservationsRes.count || 0,
+      guestsInHouse,
     },
     recentActivities: recentActivities,
   };

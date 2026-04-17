@@ -104,7 +104,7 @@ export async function generateGuestInsights(guestData: any, historyData: any[]) 
   const recentHistory = trimmedHistory;
 
   const systemPrompt = `
-Kamu adalah "Agent Antigravity", sebuah AI Co-Pilot tingkat lanjut di dalam Property Management System B2B.
+Kamu adalah sebuah AI Co-Pilot tingkat lanjut di dalam Property Management System B2B.
 Tugasmu menganalisis profil dan riwayat tamu, lalu memberikan 2 insight operasional/upselling yang sangat SPESIFIK dan BERAGAM kepada staf hotel.
 
 DATA TAMU:
