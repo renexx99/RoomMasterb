@@ -6,15 +6,6 @@ import FoDashboardClient from './client';
 import { ReservationDetails } from '../reservations/page';
 
 // Interface untuk Data yang akan dikirim ke Client
-export interface ArrivalGuest {
-  guestName: string;
-  title: string;
-  loyaltyTier: string;
-  preferences: string[];
-  roomType: string;
-  roomNumber: string;
-}
-
 export interface DashboardData {
   stats: {
     todayCheckIns: number;
@@ -24,7 +15,6 @@ export interface DashboardData {
     hotelName: string;
   };
   recentReservations: ReservationDetails[];
-  todayArrivals: ArrivalGuest[];
 }
 
 export default async function FoDashboardPage() {
@@ -51,8 +41,8 @@ export default async function FoDashboardPage() {
     hotelId = cookieStore.get('impersonated_hotel_id')?.value || null;
     if (!hotelId) redirect('/super-admin/dashboard');
   } else {
-    const operationalRole = userRoles?.find((ur: any) => 
-      ur.hotel_id && 
+    const operationalRole = userRoles?.find((ur: any) =>
+      ur.hotel_id &&
       ['Front Office', 'Hotel Manager', 'Hotel Admin'].includes(ur.role?.name || '')
     );
     hotelId = operationalRole?.hotel_id || null;
@@ -71,12 +61,11 @@ export default async function FoDashboardPage() {
     dirtyRes,
     checkInsRes,
     checkOutsRes,
-    recentRes,
-    arrivalsRes
+    recentRes
   ] = await Promise.all([
     // a. Nama Hotel
     supabase.from('hotels').select('name').eq('id', hotelId).single(),
-    
+
     // b. Kamar Tersedia
     supabase.from('rooms')
       .select('*', { count: 'exact', head: true })
@@ -114,30 +103,8 @@ export default async function FoDashboardPage() {
       `)
       .eq('hotel_id', hotelId)
       .order('created_at', { ascending: false })
-      .limit(10),
-
-    // g. Today's Arrivals with Guest Details (untuk AI Insights)
-    supabase.from('reservations')
-      .select(`
-        id,
-        guest:guests(full_name, title, loyalty_tier, preferences),
-        room:rooms(room_number, room_type:room_types(name))
-      `)
-      .eq('hotel_id', hotelId)
-      .eq('check_in_date', today)
-      .neq('payment_status', 'cancelled')
       .limit(10)
   ]);
-
-  // Format today's arrivals for AI insights
-  const todayArrivals: ArrivalGuest[] = (arrivalsRes.data || []).map((res: any) => ({
-    guestName: res.guest?.full_name || 'Unknown',
-    title: res.guest?.title || '',
-    loyaltyTier: res.guest?.loyalty_tier || 'Bronze',
-    preferences: (res.guest?.preferences as any)?.tags || [],
-    roomType: res.room?.room_type?.name || 'Standard',
-    roomNumber: res.room?.room_number || 'TBA',
-  }));
 
   const dashboardData: DashboardData = {
     stats: {
@@ -148,7 +115,6 @@ export default async function FoDashboardPage() {
       todayCheckOuts: checkOutsRes.count || 0,
     },
     recentReservations: (recentRes.data as ReservationDetails[]) || [],
-    todayArrivals,
   };
 
   return <FoDashboardClient data={dashboardData} />;
