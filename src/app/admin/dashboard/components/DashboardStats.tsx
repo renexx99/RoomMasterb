@@ -17,46 +17,50 @@ interface StatsProps {
     todayCheckIns: number;
     activeReservations: number;
     totalGuests: number;
+    totalRooms: number;
   };
 }
 
 export function DashboardStats({ stats }: StatsProps) {
+  const availableProgress = stats.totalRooms > 0 ? (stats.availableRooms / stats.totalRooms) * 100 : 0;
+  const occupancyProgress = stats.totalRooms > 0 ? ((stats.totalRooms - stats.availableRooms) / stats.totalRooms) * 100 : 0;
+
   const statData = [
     {
       title: 'Available Rooms',
       value: stats.availableRooms.toString(),
-      change: '-2 Rooms', // Dummy trend
-      trend: 'down',
+      change: `of ${stats.totalRooms} total`,
+      trend: 'neutral',
       icon: IconBed,
       color: 'teal',
-      progress: 45, // Dummy progress visual
+      progress: availableProgress,
     },
     {
       title: "Today's Arrivals",
       value: stats.todayCheckIns.toString(),
-      change: 'On Track',
+      change: 'Today',
       trend: 'neutral',
       icon: IconCalendarCheck,
       color: 'blue',
-      progress: 75,
+      progress: Math.min((stats.todayCheckIns / Math.max(stats.totalRooms * 0.3, 1)) * 100, 100),
     },
     {
       title: 'In-House Guests',
       value: stats.activeReservations.toString(),
-      change: '+12%',
-      trend: 'up',
+      change: `${Math.round(occupancyProgress)}% occupancy`,
+      trend: 'neutral',
       icon: IconClock,
       color: 'indigo',
-      progress: 62,
+      progress: occupancyProgress,
     },
     {
       title: 'Total Guest Database',
       value: stats.totalGuests.toString(),
-      change: '+5 New',
-      trend: 'up',
+      change: 'All-time',
+      trend: 'neutral',
       icon: IconUsers,
       color: 'violet',
-      progress: 88,
+      progress: Math.min((stats.totalGuests / 100) * 100, 100), // relative to 100 guests
     },
   ];
 
@@ -75,12 +79,7 @@ export function DashboardStats({ stats }: StatsProps) {
               <Badge
                 size="sm"
                 variant="light"
-                color={item.trend === 'up' ? 'teal' : item.trend === 'down' ? 'red' : 'gray'}
-                leftSection={
-                  item.trend === 'up' ? <IconTrendingUp size={12} /> : 
-                  item.trend === 'down' ? <IconTrendingDown size={12} /> : 
-                  <IconMinus size={12} />
-                }
+                color="gray"
                 style={{ marginTop: 4 }}
               >
                 {item.change}
@@ -95,4 +94,4 @@ export function DashboardStats({ stats }: StatsProps) {
       ))}
     </SimpleGrid>
   );
-}
+}

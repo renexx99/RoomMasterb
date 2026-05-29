@@ -15,31 +15,34 @@ interface ClientProps {
 }
 
 export default function ManagerDashboardClient({ data }: ClientProps) {
-  const { stats, recentActivities } = data;
+  const { stats, recentActivities, occupancyTrend, revenueBreakdown, totalRevenueToday } = data;
 
   return (
     <Box style={{ minHeight: '100vh', background: '#f8f9fa' }}>
       <Container fluid px="md" py="lg">
         <Stack gap="sm">
 
-          {/* 1. KPI Stats Cards */}
+          {/* 1. KPI Stats Cards - All Real Data */}
           <DashboardStats
-            availableRooms={stats.availableRooms}
+            occupancyRate={stats.occupancyRate}
+            adr={stats.adr}
             todayCheckIns={stats.todayCheckIns}
+            availableRooms={stats.availableRooms}
+            totalRooms={stats.totalRooms}
+            occupiedRooms={stats.occupiedRooms}
           />
 
-          {/* 2. Charts Row */}
+          {/* 2. Charts Row - Real Data */}
           <Grid gutter="sm">
             <Grid.Col span={{ base: 12, md: 6 }}>
-              <OccupancyChart />
+              <OccupancyChart data={occupancyTrend} />
             </Grid.Col>
             <Grid.Col span={{ base: 12, md: 6 }}>
-              {/* Revenue tetap dummy sesuai permintaan */}
-              <RevenueChart />
+              <RevenueChart data={revenueBreakdown} totalRevenue={totalRevenueToday} />
             </Grid.Col>
           </Grid>
 
-          {/* 3. Recent Reservations List - Menggunakan Data Real */}
+          {/* 3. Recent Reservations List - Real Data */}
           <RecentReservations data={recentActivities} />
 
         </Stack>

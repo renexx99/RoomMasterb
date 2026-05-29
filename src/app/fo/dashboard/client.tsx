@@ -16,7 +16,7 @@ interface ClientProps {
 }
 
 export default function FoDashboardClient({ data }: ClientProps) {
-  const { stats, recentReservations } = data;
+  const { stats, recentReservations, waitingList } = data;
 
   const [invoiceModalOpened, setInvoiceModalOpened] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<ReservationDetails | null>(null);
@@ -37,6 +37,7 @@ export default function FoDashboardClient({ data }: ClientProps) {
             todayCheckOuts={stats.todayCheckOuts}
             availableRooms={stats.availableRooms}
             dirtyRooms={stats.dirtyRooms}
+            totalRooms={stats.totalRooms}
           />
 
           {/* 2. Main Content Grid */}
@@ -49,9 +50,9 @@ export default function FoDashboardClient({ data }: ClientProps) {
               />
             </Grid.Col>
 
-            {/* Right Col: Waiting List (Static for now as requested) */}
+            {/* Right Col: Waiting List - Real Data */}
             <Grid.Col span={{ base: 12, md: 4, lg: 3 }}>
-              <WaitingListWidget />
+              <WaitingListWidget data={waitingList} />
             </Grid.Col>
           </Grid>
 

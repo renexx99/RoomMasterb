@@ -97,6 +97,25 @@ export default async function TaDashboardPage() {
       .limit(5),
   ]);
 
+  // Fetch allotment data: total available rooms at hotel and how many booked by this agent
+  const [totalRoomsRes, agentActiveBookingsRes] = await Promise.all([
+    // Total rooms at the hotel
+    supabase.from('rooms')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .eq('status', 'available'),
+    // Active bookings by this agent (overlapping today)
+    supabase.from('reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('agent_id', session.user.id)
+      .lte('check_in_date', today)
+      .gte('check_out_date', today)
+      .neq('payment_status', 'cancelled'),
+  ]);
+
+  const totalAvailableRooms = totalRoomsRes.count || 0;
+  const agentActiveBookings = agentActiveBookingsRes.count || 0;
+
   const dashboardData: TaDashboardData = {
     stats: {
       hotelName: hotelRes.data?.name || 'Unknown Hotel',
@@ -107,12 +126,12 @@ export default async function TaDashboardPage() {
     },
     recentReservations: recentRes.data || [],
     allotment: {
-      // Mock allotment data for now
-      totalAllotted: 10,
-      used: 7,
-      remaining: 3,
+      totalAllotted: totalAvailableRooms,
+      used: agentActiveBookings,
+      remaining: Math.max(totalAvailableRooms - agentActiveBookings, 0),
     },
   };
 
   return <TaDashboardClient data={dashboardData} />;
 }
+

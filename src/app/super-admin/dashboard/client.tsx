@@ -3,47 +3,43 @@
 import React from 'react';
 import { Box, Container, Grid, Stack } from '@mantine/core';
 import { SuperAdminStats } from './components/SuperAdminStats';
-import { GlobalRevenueChart } from './components/GlobalRevenueChart'; // Komponen Baru
+import { GlobalRevenueChart } from './components/GlobalRevenueChart';
 import { HotelDistributionChart } from './components/HotelDistributionChart';
 import { RecentActivities } from './components/RecentActivities';
+import { SuperAdminDashboardData } from './page';
 
 interface DashboardProps {
-  stats: {
-    totalHotels: number;
-    totalUsers: number;
-    totalRevenue: string;
-    growthRate: string;
-  };
+  data: SuperAdminDashboardData;
 }
 
-export default function SuperAdminDashboardClient({ stats }: DashboardProps) {
+export default function SuperAdminDashboardClient({ data }: DashboardProps) {
+  const { stats, monthlyRevenue, hotelDistribution, recentActivities } = data;
+
   return (
     <Box style={{ minHeight: '100vh', background: '#f8f9fa' }}>
       <Container fluid px="md" py="lg">
-        <Stack gap="sm"> {/* Menggunakan gap="sm" agar lebih compact seperti Manager */}
+        <Stack gap="sm">
           
-          {/* 1. KPI Stats Cards */}
+          {/* 1. KPI Stats Cards - All Real Data */}
           <SuperAdminStats 
             totalHotels={stats.totalHotels}
             totalUsers={stats.totalUsers}
             totalRevenue={stats.totalRevenue}
-            growthRate={stats.growthRate}
+            totalReservations={stats.totalReservations}
           />
 
-          {/* 2. Charts Row */}
+          {/* 2. Charts Row - Real Data */}
           <Grid gutter="sm">
             <Grid.Col span={{ base: 12, md: 6 }}>
-              {/* Grafik Revenue Baru */}
-              <GlobalRevenueChart />
+              <GlobalRevenueChart data={monthlyRevenue} />
             </Grid.Col>
             <Grid.Col span={{ base: 12, md: 6 }}>
-              {/* Distribusi Hotel */}
-              <HotelDistributionChart totalHotels={stats.totalHotels} />
+              <HotelDistributionChart data={hotelDistribution} totalHotels={stats.totalHotels} />
             </Grid.Col>
           </Grid>
 
-          {/* 3. Recent Activities List */}
-          <RecentActivities />
+          {/* 3. Recent Activities List - Real Data */}
+          <RecentActivities data={recentActivities} />
 
         </Stack>
       </Container>

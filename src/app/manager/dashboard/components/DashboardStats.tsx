@@ -4,49 +4,62 @@ import { SimpleGrid, Paper, Group, Text, Title, Badge, ThemeIcon, Progress } fro
 import { IconBed, IconCash, IconBrandBooking, IconPercentage, IconTrendingUp, IconTrendingDown } from '@tabler/icons-react';
 
 interface Props {
-  // Kita bisa map data dari server ke sini nanti
-  availableRooms: number;
+  occupancyRate: number;
+  adr: number;
   todayCheckIns: number;
+  availableRooms: number;
+  totalRooms: number;
+  occupiedRooms: number;
 }
 
-export function DashboardStats({ availableRooms, todayCheckIns }: Props) {
-  // Data dummy yang diperkaya dengan data real dari props
+export function DashboardStats({ occupancyRate, adr, todayCheckIns, availableRooms, totalRooms, occupiedRooms }: Props) {
+  // Format ADR ke format Rupiah yang readable
+  const formatAdr = (value: number) => {
+    if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `Rp ${(value / 1_000).toFixed(0)}K`;
+    if (value === 0) return 'N/A';
+    return `Rp ${value.toLocaleString('id-ID')}`;
+  };
+
+  const occupancyProgress = Math.min(occupancyRate, 100);
+  const availableProgress = totalRooms > 0 ? (availableRooms / totalRooms) * 100 : 0;
+
   const kpiData = [
     {
       title: 'Occupancy Rate',
-      value: '78.5%', // Nanti bisa dihitung dari (Total - Available) / Total
-      change: '+5.2%',
-      trend: 'up',
+      value: `${occupancyRate}%`,
+      change: `${occupiedRooms}/${totalRooms} rooms`,
+      trend: 'neutral' as const,
       icon: IconBed,
       color: 'indigo',
-      progress: 78.5,
+      progress: occupancyProgress,
     },
     {
       title: 'ADR',
-      value: 'Rp 850K',
-      change: '+12.3%',
-      trend: 'up',
+      value: formatAdr(adr),
+      change: 'Avg. Daily Rate',
+      trend: 'neutral' as const,
       icon: IconCash,
       color: 'teal',
-      progress: 68,
+      progress: Math.min((adr / 1_000_000) * 100, 100), // relative to 1M
     },
     {
       title: 'Realtime Check-in',
-      value: todayCheckIns.toString(), // Data Real
+      value: todayCheckIns.toString(),
       change: 'Today',
-      trend: 'neutral',
+      trend: 'neutral' as const,
       icon: IconBrandBooking,
       color: 'violet',
-      progress: (todayCheckIns / 50) * 100, // Asumsi target 50
+      progress: Math.min((todayCheckIns / Math.max(totalRooms * 0.3, 1)) * 100, 100),
     },
     {
       title: 'Rooms Available',
-      value: availableRooms.toString(), // Data Real
-      change: '-2.1%',
-      trend: 'down',
+      value: availableRooms.toString(),
+      change: `of ${totalRooms} total`,
+      trend: 'neutral' as const,
       icon: IconPercentage,
       color: 'blue',
-      progress: 45,
+      progress: availableProgress,
     },
   ];
 
@@ -65,8 +78,7 @@ export function DashboardStats({ availableRooms, todayCheckIns }: Props) {
               <Badge
                 size="sm"
                 variant="light"
-                color={kpi.trend === 'up' ? 'teal' : kpi.trend === 'down' ? 'red' : 'gray'}
-                leftSection={kpi.trend === 'up' ? <IconTrendingUp size={12} /> : kpi.trend === 'down' ? <IconTrendingDown size={12} /> : null}
+                color="gray"
                 style={{ marginTop: 4 }}
               >
                 {kpi.change}

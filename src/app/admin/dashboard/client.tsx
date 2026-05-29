@@ -15,14 +15,14 @@ import {
 import { DashboardData } from './page';
 import { DashboardStats } from './components/DashboardStats';
 import { RecentReservationsTable } from './components/RecentReservationsTable';
-import { AdminRevenueTrend, AdminOccupancyRing } from './components/AdminCharts'; // Import komponen baru
+import { AdminRevenueTrend, AdminOccupancyRing } from './components/AdminCharts';
 
 interface ClientProps {
   data: DashboardData;
 }
 
 export default function AdminDashboardClient({ data }: ClientProps) {
-  const { stats, recentReservations, hotelId } = data;
+  const { stats, recentReservations, hotelId, occupancyData, revenueTrend, avgDailyRevenue } = data;
 
   if (!hotelId) {
     return (
@@ -40,19 +40,17 @@ export default function AdminDashboardClient({ data }: ClientProps) {
       <Container fluid px="md" py="lg">
         <Stack gap="sm">
           
-          {/* 1. KPI Stats Cards (Tampilan Baru - Identik Manager) */}
+          {/* 1. KPI Stats Cards */}
           <DashboardStats stats={stats} />
 
-          {/* 2. Charts Row (Tampilan Baru - Identik Manager) */}
+          {/* 2. Charts Row - Real Data */}
           <Grid gutter="sm">
             <Grid.Col span={{ base: 12, md: 8 }}>
-              {/* Grafik Bar Chart (Pengganti Revenue Area Chart) */}
-              <AdminRevenueTrend />
+              <AdminRevenueTrend data={revenueTrend} avgRevenue={avgDailyRevenue} />
             </Grid.Col>
 
             <Grid.Col span={{ base: 12, md: 4 }}>
-              {/* Grafik Ring Chart (Pengganti Sales Donut Chart) */}
-              <AdminOccupancyRing />
+              <AdminOccupancyRing data={occupancyData} totalRooms={stats.totalRooms} />
             </Grid.Col>
           </Grid>
 
@@ -74,4 +72,4 @@ export default function AdminDashboardClient({ data }: ClientProps) {
       </Container>
     </Box>
   );
-}
+}

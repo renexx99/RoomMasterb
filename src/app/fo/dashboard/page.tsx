@@ -6,15 +6,27 @@ import FoDashboardClient from './client';
 import { ReservationDetails } from '../reservations/page';
 
 // Interface untuk Data yang akan dikirim ke Client
+export interface WaitingGuest {
+  id: string;
+  guestName: string;
+  roomType: string;
+  roomNumber: string;
+  pax: number;
+  checkInDate: string;
+  loyaltyTier: string;
+}
+
 export interface DashboardData {
   stats: {
     todayCheckIns: number;
     todayCheckOuts: number;
     availableRooms: number;
     dirtyRooms: number;
+    totalRooms: number;
     hotelName: string;
   };
   recentReservations: ReservationDetails[];
+  waitingList: WaitingGuest[];
 }
 
 export default async function FoDashboardPage() {
@@ -106,6 +118,38 @@ export default async function FoDashboardPage() {
       .limit(10)
   ]);
 
+  // Fetch waiting list: reservations with check_in_date = today that haven't checked in yet
+  const { data: waitingRes } = await supabase
+    .from('reservations')
+    .select(`
+      id,
+      check_in_date,
+      guest:guests(full_name, loyalty_tier),
+      room:rooms(room_number, room_type:room_types(name, capacity))
+    `)
+    .eq('hotel_id', hotelId)
+    .eq('check_in_date', today)
+    .is('checked_in_at', null)
+    .neq('payment_status', 'cancelled')
+    .order('created_at', { ascending: true })
+    .limit(10);
+
+  const waitingList: WaitingGuest[] = (waitingRes || []).map((res: any) => ({
+    id: res.id,
+    guestName: res.guest?.full_name || 'Unknown',
+    roomType: res.room?.room_type?.name || 'Standard',
+    roomNumber: res.room?.room_number || 'TBA',
+    pax: res.room?.room_type?.capacity || 1,
+    checkInDate: res.check_in_date,
+    loyaltyTier: res.guest?.loyalty_tier || 'bronze',
+  }));
+
+  // Fetch total rooms count
+  const { count: totalRoomsCount } = await supabase
+    .from('rooms')
+    .select('*', { count: 'exact', head: true })
+    .eq('hotel_id', hotelId);
+
   const dashboardData: DashboardData = {
     stats: {
       hotelName: hotelRes.data?.name || 'Unknown Hotel',
@@ -113,8 +157,10 @@ export default async function FoDashboardPage() {
       dirtyRooms: dirtyRes.count || 0,
       todayCheckIns: checkInsRes.count || 0,
       todayCheckOuts: checkOutsRes.count || 0,
+      totalRooms: totalRoomsCount || 0,
     },
     recentReservations: (recentRes.data as ReservationDetails[]) || [],
+    waitingList,
   };
 
   return <FoDashboardClient data={dashboardData} />;

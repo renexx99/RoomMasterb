@@ -1,8 +1,9 @@
 // Tipe untuk pesan chat OpenAI
 export interface OpenAIMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   name?: string;
+  tool_call_id?: string;
 }
 
 // Tipe standar untuk hasil kembalian (return) dari setiap AI Tool
@@ -17,6 +18,11 @@ export interface ToolExecutionResult {
     | 'analytics' 
     | 'guest_profile' 
     | 'room_inspection' 
+    | 'room_status'
+    | 'room_types_list'
+    | 'checkin_success'
+    | 'checkout_success'
+    | 'reservation_list'
     | 'text';
   message?: string;
   data?: any;

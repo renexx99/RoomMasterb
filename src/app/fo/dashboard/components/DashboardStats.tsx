@@ -8,45 +8,49 @@ interface Props {
   todayCheckOuts: number;
   availableRooms: number;
   dirtyRooms: number;
+  totalRooms: number;
 }
 
-export function DashboardStats({ todayCheckIns, todayCheckOuts, availableRooms, dirtyRooms }: Props) {
+export function DashboardStats({ todayCheckIns, todayCheckOuts, availableRooms, dirtyRooms, totalRooms }: Props) {
+  const availableProgress = totalRooms > 0 ? (availableRooms / totalRooms) * 100 : 0;
+  const dirtyProgress = totalRooms > 0 ? (dirtyRooms / totalRooms) * 100 : 0;
+
   const stats = [
     {
-      title: 'Expected Arrival', // Check-in
+      title: 'Expected Arrival',
       value: todayCheckIns.toString(),
-      change: '+2', // Mock
-      trend: 'up',
+      change: 'Today',
+      trend: 'neutral',
       icon: IconLogin,
       color: 'teal',
-      progress: 65,
+      progress: Math.min((todayCheckIns / Math.max(totalRooms * 0.3, 1)) * 100, 100),
     },
     {
-      title: 'Expected Departure', // Check-out
+      title: 'Expected Departure',
       value: todayCheckOuts.toString(),
-      change: 'On Time',
+      change: 'Today',
       trend: 'neutral',
       icon: IconLogout,
       color: 'orange',
-      progress: 80,
+      progress: Math.min((todayCheckOuts / Math.max(totalRooms * 0.3, 1)) * 100, 100),
     },
     {
-      title: 'Vacant Ready', // Available
+      title: 'Vacant Ready',
       value: availableRooms.toString(),
-      change: '-5%',
-      trend: 'down',
+      change: `of ${totalRooms} rooms`,
+      trend: 'neutral',
       icon: IconBed,
       color: 'blue',
-      progress: 45,
+      progress: availableProgress,
     },
     {
-      title: 'Vacant Dirty', // Dirty
+      title: 'Vacant Dirty',
       value: dirtyRooms.toString(),
-      change: '+3',
-      trend: 'up',
+      change: dirtyRooms > 0 ? 'Needs cleaning' : 'All clean',
+      trend: 'neutral',
       icon: IconSpray,
-      color: 'red',
-      progress: 30,
+      color: dirtyRooms > 0 ? 'red' : 'teal',
+      progress: dirtyProgress,
     },
   ];
 
@@ -65,8 +69,7 @@ export function DashboardStats({ todayCheckIns, todayCheckOuts, availableRooms, 
               <Badge
                 size="sm"
                 variant="light"
-                color={stat.trend === 'up' ? 'red' : stat.trend === 'down' ? 'teal' : 'gray'}
-                leftSection={stat.trend !== 'neutral' ? (stat.trend === 'up' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />) : null}
+                color="gray"
                 style={{ marginTop: 4 }}
               >
                 {stat.change}
@@ -81,4 +84,4 @@ export function DashboardStats({ todayCheckIns, todayCheckOuts, availableRooms, 
       ))}
     </SimpleGrid>
   );
-}
+}

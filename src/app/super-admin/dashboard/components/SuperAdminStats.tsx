@@ -1,52 +1,56 @@
 'use client';
 
 import { SimpleGrid, Paper, Group, Text, Title, Badge, ThemeIcon, Progress } from '@mantine/core';
-import { IconBuildingSkyscraper, IconUsers, IconCash, IconTrendingUp, IconChartBar } from '@tabler/icons-react';
+import { IconBuildingSkyscraper, IconUsers, IconCash, IconCalendarStats, IconTrendingUp } from '@tabler/icons-react';
 
 interface Props {
   totalHotels: number;
   totalUsers: number;
-  totalRevenue: string;
-  growthRate: string;
+  totalRevenue: number;
+  totalReservations: number;
 }
 
-export function SuperAdminStats({ totalHotels, totalUsers, totalRevenue, growthRate }: Props) {
+export function SuperAdminStats({ totalHotels, totalUsers, totalRevenue, totalReservations }: Props) {
+  const formatRevenue = (value: number) => {
+    if (value >= 1_000_000_000) return `Rp ${(value / 1_000_000_000).toFixed(1)}B`;
+    if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `Rp ${(value / 1_000).toFixed(0)}K`;
+    if (value === 0) return 'Rp 0';
+    return `Rp ${value.toLocaleString('id-ID')}`;
+  };
+
   const kpiData = [
     {
       title: 'Properties',
       value: totalHotels.toString(),
-      change: '+3.2%',
-      trend: 'up',
+      change: 'Active Hotels',
       icon: IconBuildingSkyscraper,
-      color: 'violet', // Tema Super Admin
-      progress: 85,
+      color: 'violet',
+      progress: Math.min((totalHotels / 20) * 100, 100),
     },
     {
       title: 'Users',
       value: totalUsers.toString(),
-      change: '+12%',
-      trend: 'up',
+      change: 'Total Accounts',
       icon: IconUsers,
       color: 'indigo',
-      progress: 72,
+      progress: Math.min((totalUsers / 100) * 100, 100),
     },
     {
       title: 'Total Revenue',
-      value: totalRevenue,
-      change: '+24%',
-      trend: 'up',
+      value: formatRevenue(totalRevenue),
+      change: 'All-time',
       icon: IconCash,
       color: 'grape',
-      progress: 92,
+      progress: Math.min((totalRevenue / 1_000_000_000) * 100, 100),
     },
     {
-      title: 'Growth Rate',
-      value: growthRate,
-      change: 'MoM',
-      trend: 'up',
-      icon: IconChartBar,
+      title: 'Reservations',
+      value: totalReservations.toString(),
+      change: 'All-time',
+      icon: IconCalendarStats,
       color: 'blue',
-      progress: 68,
+      progress: Math.min((totalReservations / 500) * 100, 100),
     },
   ];
 
@@ -65,8 +69,7 @@ export function SuperAdminStats({ totalHotels, totalUsers, totalRevenue, growthR
               <Badge
                 size="sm"
                 variant="light"
-                color={kpi.color}
-                leftSection={<IconTrendingUp size={12} />}
+                color="gray"
                 style={{ marginTop: 4 }}
               >
                 {kpi.change}
