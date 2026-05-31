@@ -324,6 +324,124 @@ function RoomInspectionCard({ data }: { data: any }) {
   );
 }
 
+// Komponen untuk Room Status Summary (compact table)
+function RoomStatusCard({ data }: { data: any }) {
+  const getStatusIcon = (status: string) => {
+    if (status === 'available') return '✅';
+    if (status === 'occupied') return '🔴';
+    if (status === 'maintenance') return '🔧';
+    return '⬜';
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === 'available') return 'teal';
+    if (status === 'occupied') return 'red';
+    return 'orange';
+  };
+
+  const getCleaningBadge = (status: string) => {
+    if (status === 'clean' || status === 'inspected') return { color: 'teal', label: 'Bersih' };
+    if (status === 'dirty') return { color: 'red', label: 'Kotor' };
+    return { color: 'orange', label: status };
+  };
+
+  return (
+    <Card shadow="sm" padding="md" radius="md" withBorder>
+      <Group justify="space-between" mb="sm">
+        <Group gap="xs">
+          <ThemeIcon color="indigo" variant="light" size="lg" radius="md">
+            <IconBed size={20} />
+          </ThemeIcon>
+          <div>
+            <Text fw={700} size="sm">Status Kamar</Text>
+            <Text size="xs" c="dimmed">
+              Filter: {data.filter_applied || 'Semua Tipe'}
+            </Text>
+          </div>
+        </Group>
+        <Badge color="indigo" variant="light">{data.summary.total_rooms} Kamar</Badge>
+      </Group>
+
+      {/* Summary Stats Row */}
+      <SimpleGrid cols={4} spacing={6} mb="sm">
+        <Box ta="center" p={4} bg="teal.0" style={{ borderRadius: 6 }}>
+          <Text size="lg" fw={700} c="teal">{data.summary.available}</Text>
+          <Text size="9px" c="dimmed" tt="uppercase" fw={600}>Tersedia</Text>
+        </Box>
+        <Box ta="center" p={4} bg="red.0" style={{ borderRadius: 6 }}>
+          <Text size="lg" fw={700} c="red">{data.summary.occupied}</Text>
+          <Text size="9px" c="dimmed" tt="uppercase" fw={600}>Terisi</Text>
+        </Box>
+        <Box ta="center" p={4} bg="orange.0" style={{ borderRadius: 6 }}>
+          <Text size="lg" fw={700} c="orange">{data.summary.maintenance}</Text>
+          <Text size="9px" c="dimmed" tt="uppercase" fw={600}>Maintenance</Text>
+        </Box>
+        <Box ta="center" p={4} bg="blue.0" style={{ borderRadius: 6 }}>
+          <Text size="lg" fw={700} c="blue">{data.summary.vacant_clean}</Text>
+          <Text size="9px" c="dimmed" tt="uppercase" fw={600}>Siap Huni</Text>
+        </Box>
+      </SimpleGrid>
+
+      {/* Compact Table */}
+      <ScrollArea.Autosize mah={250}>
+        <Table striped highlightOnHover withTableBorder withColumnBorders styles={{ table: { fontSize: '11px' } }}>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th style={{ fontSize: '10px', padding: '4px 6px' }}>No</Table.Th>
+              <Table.Th style={{ fontSize: '10px', padding: '4px 6px' }}>Tipe</Table.Th>
+              <Table.Th style={{ fontSize: '10px', padding: '4px 6px' }}>Status</Table.Th>
+              <Table.Th style={{ fontSize: '10px', padding: '4px 6px' }}>Kebersihan</Table.Th>
+              <Table.Th style={{ fontSize: '10px', padding: '4px 6px' }}>Tamu</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {data.rooms.map((room: any, idx: number) => {
+              const cleaning = getCleaningBadge(room.cleaning_status);
+              return (
+                <Table.Tr key={idx}>
+                  <Table.Td style={{ padding: '3px 6px', fontWeight: 600, fontFamily: 'monospace' }}>
+                    {room.room_number}
+                  </Table.Td>
+                  <Table.Td style={{ padding: '3px 6px' }}>
+                    <Text size="xs" truncate>{room.room_type}</Text>
+                  </Table.Td>
+                  <Table.Td style={{ padding: '3px 6px' }}>
+                    <Badge 
+                      size="xs" 
+                      variant="light" 
+                      color={getStatusColor(room.status)} 
+                      leftSection={<Text size="10px">{getStatusIcon(room.status)}</Text>}
+                    >
+                      {room.status === 'available' ? 'Kosong' : room.status === 'occupied' ? 'Terisi' : 'MTC'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td style={{ padding: '3px 6px' }}>
+                    <Badge size="xs" variant="dot" color={cleaning.color}>
+                      {cleaning.label}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td style={{ padding: '3px 6px' }}>
+                    {room.current_guest ? (
+                      <Text size="xs" truncate maw={100}>
+                        {room.current_guest}
+                        {room.checkout_date && (
+                          <Text span size="9px" c="dimmed"> (s/d {new Date(room.checkout_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</Text>
+                        )}
+                      </Text>
+                    ) : (
+                      <Text size="xs" c="dimmed">-</Text>
+                    )}
+                  </Table.Td>
+                </Table.Tr>
+              );
+            })}
+          </Table.Tbody>
+        </Table>
+      </ScrollArea.Autosize>
+    </Card>
+  );
+}
+
 // --- Main CoPilot Chat Panel ---
 export function AICoPilotPanel() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -437,6 +555,7 @@ export function AICoPilotPanel() {
     if (msg.responseType === 'analytics' && msg.data) return <AnalyticsCard data={msg.data} />;
     if (msg.responseType === 'guest_profile' && msg.data) return <GuestProfileCard data={msg.data} />;
     if (msg.responseType === 'room_inspection' && msg.data) return <RoomInspectionCard data={msg.data} />;
+    if (msg.responseType === 'room_status' && msg.data) return <RoomStatusCard data={msg.data} />;
 
     return (
       <Paper p="xs" radius="md" shadow="xs" withBorder={msg.type !== 'user'}

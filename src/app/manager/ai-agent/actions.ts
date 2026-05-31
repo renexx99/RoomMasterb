@@ -3,94 +3,314 @@
 
 import OpenAI from 'openai';
 import { AI_TOOLS_DEFINITION } from '@/app/fo/ai-agent/definitions';
-import { analyticsReporterTool } from '@/app/fo/ai-agent/tools/analytics';
-import { checkAvailabilityTool, roomInspectorTool } from '@/app/fo/ai-agent/tools/availability';
-import { guestProfilerTool } from '@/app/fo/ai-agent/tools/guests';
-// PERBAIKAN: Import tools booking yang benar (berasal dari FO atau Manager sama saja)
 import { confirmBookingDetailsTool, createReservationTool } from '@/app/fo/ai-agent/tools/booking';
+import { checkAvailabilityTool, roomInspectorTool } from '@/app/fo/ai-agent/tools/availability';
+import { analyticsReporterTool } from '@/app/fo/ai-agent/tools/analytics';
+import { guestProfilerTool } from '@/app/fo/ai-agent/tools/guests';
+import { roomStatusSummaryTool, listRoomTypesTool } from '@/app/fo/ai-agent/tools/room_status';
+import { checkinGuestTool, checkoutGuestTool, forceCheckoutTool } from '@/app/fo/ai-agent/tools/checkin_checkout';
+import { searchReservationsTool } from '@/app/fo/ai-agent/tools/reservations';
 import { OpenAIMessage, ToolExecutionResult } from '@/app/fo/ai-agent/types';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+/**
+ * Map function name → handler
+ */
+const TOOL_HANDLERS: Record<string, (args: any) => Promise<ToolExecutionResult>> = {
+  confirm_booking_details: confirmBookingDetailsTool,
+  create_reservation: createReservationTool,
+  check_availability: checkAvailabilityTool,
+  analytics_reporter: analyticsReporterTool,
+  guest_profiler: guestProfilerTool,
+  room_inspector: roomInspectorTool,
+  room_status_summary: roomStatusSummaryTool,
+  list_room_types: listRoomTypesTool,
+  checkin_guest: checkinGuestTool,
+  checkout_guest: checkoutGuestTool,
+  force_checkout: forceCheckoutTool,
+  search_reservations: searchReservationsTool,
+};
+
+function buildManagerSystemPrompt(): string {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const dayOfWeek = now.toLocaleDateString('id-ID', { weekday: 'long' });
+  
+  // Pre-compute common relative dates for the model
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  const dayAfterTomorrow = new Date(now); dayAfterTomorrow.setDate(now.getDate() + 2);
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  
+  // Next week (Monday to Sunday)
+  const dayNum = now.getDay(); // 0=Sun, 1=Mon...
+  const nextMonday = new Date(now); nextMonday.setDate(now.getDate() + (8 - dayNum) % 7 || 7);
+  const nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6);
+  
+  // This week (Monday to Sunday)
+  const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - ((dayNum + 6) % 7));
+  const thisSunday = new Date(thisMonday); thisSunday.setDate(thisMonday.getDate() + 6);
+  
+  // Last week
+  const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+  const lastSunday = new Date(thisMonday); lastSunday.setDate(thisMonday.getDate() - 1);
+  
+  // This month
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  // Next month
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  
+  // Last month
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  
+  // Weekend (Sabtu-Minggu terdekat)
+  const nextSaturday = new Date(now); nextSaturday.setDate(now.getDate() + ((6 - dayNum + 7) % 7 || 7));
+  const weekendSunday = new Date(nextSaturday); weekendSunday.setDate(nextSaturday.getDate() + 1);
+  
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+  const fmtLabel = (d: Date) => d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  return `Kamu adalah 'RoomMaster AI', asisten cerdas untuk General Manager Hotel.
+Hari ini: ${dayOfWeek}, ${fmtLabel(now)} (${today}).
+
+Kamu memiliki akses PENUH ke:
+1. **Manajerial & Reporting:** Menganalisa laporan revenue dan okupansi hotel (analytics_reporter), serta memantau profil lengkap tamu VIP (guest_profiler).
+2. **Operasional (seperti Front Office):** Membuat draft booking (confirm_booking_details), mengeksekusi reservasi (create_reservation), mengecek ketersediaan (check_availability), inspeksi kamar (room_inspector), status semua kamar (room_status_summary), daftar tipe kamar (list_room_types), cari reservasi (search_reservations), dan fitur check-in/out tamu.
+
+Berikan respon yang profesional, efisien, dan strategis layaknya melayani seorang GM. Jangan ragu memanggil tools yang sesuai dengan permintaan Manager, baik itu untuk sekadar memesankan kamar untuk relasi Manager, maupun menarik laporan bulanan.
+
+═══ REFERENSI TANGGAL (WAJIB DIPAKAI) ═══
+Kamu HARUS menggunakan referensi tanggal di bawah ini ketika user menggunakan kata waktu relatif.
+JANGAN menebak atau menghitung sendiri — gunakan nilai yang sudah dihitung berikut:
+
+📅 Hari:
+  - "hari ini" / "sekarang" = ${fmt(now)}
+  - "besok" = ${fmt(tomorrow)}
+  - "besok lusa" / "lusa" = ${fmt(dayAfterTomorrow)}
+  - "kemarin" = ${fmt(yesterday)}
+
+📅 Minggu:
+  - "minggu ini" = ${fmt(thisMonday)} s/d ${fmt(thisSunday)}
+  - "minggu depan" / "minggu berikutnya" = ${fmt(nextMonday)} s/d ${fmt(nextSunday)}
+  - "minggu lalu" / "minggu kemarin" = ${fmt(lastMonday)} s/d ${fmt(lastSunday)}
+  - "weekend" / "akhir pekan" = ${fmt(nextSaturday)} s/d ${fmt(weekendSunday)}
+
+📅 Bulan:
+  - "bulan ini" = ${fmt(thisMonthStart)} s/d ${fmt(thisMonthEnd)}
+  - "bulan depan" / "bulan berikutnya" = ${fmt(nextMonthStart)} s/d ${fmt(nextMonthEnd)}
+  - "bulan lalu" / "bulan kemarin" = ${fmt(lastMonthStart)} s/d ${fmt(lastMonthEnd)}
+
+═══ PANDUAN PEMILIHAN TOOL ═══
+
+🔹 LAPORAN & ANALYTICS:
+   → Gunakan "analytics_reporter"
+   Contoh: "Laporan bulan ini" (start: ${fmt(thisMonthStart)}, end: ${fmt(thisMonthEnd)}), "Revenue minggu lalu"
+
+🔹 INFO/RIWAYAT TAMU VIP:
+   → Gunakan "guest_profiler"
+   Contoh: "Cek profil tamu Budi", "Riwayat transaksi Pak Ahmad"
+
+🔹 STATUS KAMAR KESELURUHAN (TANPA TANGGAL):
+   → Gunakan "room_status_summary"
+   Contoh: "Bagaimana status semua kamar hari ini?", "Berapa kamar kosong?"
+
+🔹 DAFTAR TIPE KAMAR & HARGA:
+   → Gunakan "list_room_types"
+
+🔹 DETAIL SATU KAMAR (BERDASARKAN NOMOR):
+   → Gunakan "room_inspector"
+   Contoh: "Kondisi kamar 205"
+
+🔹 CEK KETERSEDIAAN DI TANGGAL TERTENTU:
+   → Gunakan "check_availability" — WAJIB ada check_in DAN check_out
+
+🔹 CARI RESERVASI:
+   → Gunakan "search_reservations"
+
+🔹 DRAFT BOOKING & RESERVASI BARU:
+   → FASE DRAFT: Gunakan "confirm_booking_details"
+   → FASE EKSEKUSI: Jika user berkata "Konfirmasi", "Lanjut", "Buat", LANGSUNG panggil "create_reservation" (JANGAN confirm_booking_details lagi).
+
+═══ FORMAT RESPONS STATUS KAMAR (PENTING!) ═══
+Jika tool "room_status_summary" mengembalikan DATA BANYAK KAMAR, jangan jabarkan satu per satu secara naratif.
+Sajikan sebagai RINGKASAN SINGKAT + TABEL/LIST yang efisien. Contoh format:
+
+Ringkasan: 10 kamar total — 5 tersedia, 4 terisi, 1 maintenance.
+
+| No | Tipe | Status | Kebersihan | Tamu |
+|---|---|---|---|---|
+| 101 | Deluxe | ✅ Tersedia | Bersih | - |
+| 102 | Deluxe | 🔴 Terisi | - | Budi (s/d 5 Jun) |
+| 201 | Suite | 🔧 Maintenance | - | - |
+
+Gunakan emoji status: ✅ Tersedia, 🔴 Terisi, 🔧 Maintenance, 🧹 Perlu Dibersihkan.
+
+═══ ATURAN PENTING ═══
+- DILARANG mengarang data. Jika tool mengembalikan error, sampaikan apa adanya.
+- Jangan paksa tanya email/no HP jika user meminta booking — isi '-' jika tidak disebutkan.
+- Format angka mata uang dengan "Rp" dan pemisah ribuan.
+- Sampaikan analisis ringkas untuk data laporan/analytics agar mudah dibaca Manager.`;
+}
+
 export async function chatWithManagerAI(userMessage: string, history: OpenAIMessage[]) {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // PERBAIKAN: System Prompt digabung dengan SOP Reservasi agar agent tidak looping
-    const systemMessage: OpenAIMessage = { 
-        role: "system", 
-        content: `Kamu adalah 'RoomMaster AI', asisten General Manager Hotel. Hari ini: ${today}.
-        
-        Kamu memiliki akses PENUH ke:
-        1. **Operasional (seperti Front Office):** Membuat draft booking (confirm_booking_details), mengeksekusi reservasi (create_reservation), mengecek ketersediaan (check_availability), dan inspeksi kamar (room_inspector).
-        2. **Manajerial & Reporting:** Menganalisa laporan revenue dan okupansi hotel (analytics_reporter), serta memantau profil lengkap tamu VIP (guest_profiler).
-
-        SOP RESERVASI (PENTING):
-        1. FASE DRAFT: Jika user baru meminta booking atau bertanya ketersediaan, panggil 'confirm_booking_details'.
-        2. FASE EKSEKUSI: Jika user berkata "Konfirmasi", "Lanjut", "Buat", atau "Benar" DAN data (Nama, Kamar, Tanggal) sudah ada di chat sebelumnya, JANGAN panggil 'confirm_booking_details' lagi. LANGSUNG panggil 'create_reservation'.
-        3. DATA: Jika user tidak memberi Email/HP, isi parameter dengan '-'.
-
-        Berikan respon yang profesional, efisien, dan strategis. Jangan ragu memanggil tools yang sesuai dengan permintaan Manager, baik itu untuk sekadar memesankan kamar untuk relasi Manager, maupun menarik laporan bulanan.`
+    const systemMessage: OpenAIMessage = {
+      role: "system",
+      content: buildManagerSystemPrompt(),
     };
 
-    const messages = [
-        systemMessage,
-        ...history,
-        { role: 'user', content: userMessage } as OpenAIMessage
+    const messages: OpenAIMessage[] = [
+      systemMessage,
+      ...history,
+      { role: 'user', content: userMessage }
     ];
 
+    // First LLM call
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages as any,
       tools: AI_TOOLS_DEFINITION,
-      tool_choice: "auto", 
+      tool_choice: "auto",
     });
 
     const responseMessage = response.choices[0].message;
 
-    if (responseMessage.tool_calls) {
-      const toolCall = responseMessage.tool_calls[0];
-      const args = JSON.parse((toolCall as any).function.arguments);
-      const functionName = (toolCall as any).function.name;
-
-      let actionResult: ToolExecutionResult | undefined;
-
-      // PERBAIKAN: Sesuaikan pemanggilan switch case dengan nama tool yang benar
-      switch (functionName) {
-        case "confirm_booking_details":
-          actionResult = await confirmBookingDetailsTool(args);
-          break;
-        case "create_reservation":
-          actionResult = await createReservationTool(args);
-          break;
-        case "analytics_reporter":
-          actionResult = await analyticsReporterTool(args);
-          break;
-        case "check_availability":
-          actionResult = await checkAvailabilityTool(args);
-          break;
-        case "guest_profiler":
-          actionResult = await guestProfilerTool(args);
-          break;
-        case "room_inspector":
-          actionResult = await roomInspectorTool(args);
-          break;
-        default:
-          actionResult = { type: 'error', message: "Fungsi tidak dikenali oleh sistem." };
-      }
-
-      if (actionResult?.error || (actionResult && actionResult.type === 'error')) {
-           return { role: 'assistant', content: actionResult.message || actionResult.error || "Terjadi kesalahan", data: null, type: 'error' };
-      }
-      
-      return { role: 'assistant', content: actionResult?.message || "Tugas berhasil dijalankan.", data: actionResult?.data || null, type: actionResult?.type || 'text' };
+    // If no tool calls, return the text response directly
+    if (!responseMessage.tool_calls || responseMessage.tool_calls.length === 0) {
+      return {
+        role: 'assistant',
+        content: responseMessage.content || "Maaf, saya tidak mengerti. Bisa jelaskan lebih detail?",
+        data: null,
+        type: 'text'
+      };
     }
 
-    return { role: 'assistant', content: responseMessage.content || "Maaf, saya tidak mengerti.", data: null, type: 'text' };
+    // Handle tool calls (support multiple)
+    const toolResults: { toolCallId: string; result: ToolExecutionResult }[] = [];
+
+    for (const toolCall of responseMessage.tool_calls) {
+      const tc = toolCall as any;
+      const functionName = tc.function.name;
+      let args: any = {};
+      
+      try {
+        args = JSON.parse(tc.function.arguments);
+      } catch (e) {
+        console.error(`Failed to parse args for ${functionName}:`, tc.function.arguments);
+        toolResults.push({
+          toolCallId: toolCall.id,
+          result: { type: 'error', message: 'Gagal memproses parameter tool.' }
+        });
+        continue;
+      }
+
+      console.log(`🤖 Manager AI calling: ${functionName}`, args);
+
+      const handler = TOOL_HANDLERS[functionName];
+      if (!handler) {
+        toolResults.push({
+          toolCallId: toolCall.id,
+          result: { type: 'error', message: `Tool "${functionName}" tidak dikenal.` }
+        });
+        continue;
+      }
+
+      try {
+        const result = await handler(args);
+        toolResults.push({ toolCallId: toolCall.id, result });
+      } catch (e: any) {
+        console.error(`❌ Manager Tool ${functionName} error:`, e);
+        toolResults.push({
+          toolCallId: toolCall.id,
+          result: { type: 'error', message: `Gagal menjalankan ${functionName}: ${e.message}` }
+        });
+      }
+    }
+
+    // If only 1 tool was called, return its result directly (backward compatible)
+    if (toolResults.length === 1) {
+      const { result } = toolResults[0];
+      if (result.error || result.type === 'error') {
+        return {
+          role: 'assistant',
+          content: result.message || result.error || "Terjadi kesalahan",
+          data: null,
+          type: 'error'
+        };
+      }
+      return {
+        role: 'assistant',
+        content: result.message || "Permintaan diproses.",
+        data: result.data || null,
+        type: result.type || 'text'
+      };
+    }
+
+    // Multiple tool calls — build tool response messages and do a second LLM pass
+    const followUpMessages: any[] = [
+      ...messages,
+      responseMessage, // Include the assistant's tool_calls message
+      ...toolResults.map(tr => ({
+        role: 'tool' as const,
+        tool_call_id: tr.toolCallId,
+        content: JSON.stringify(tr.result),
+      })),
+    ];
+
+    try {
+      const followUp = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: followUpMessages,
+      });
+
+      const finalContent = followUp.choices[0].message.content || "Permintaan diproses.";
+      
+      // Combine data from all results
+      const combinedData = toolResults.reduce((acc, tr) => {
+        if (tr.result.data) {
+          Object.assign(acc, tr.result.data);
+        }
+        return acc;
+      }, {} as any);
+
+      return {
+        role: 'assistant',
+        content: finalContent,
+        data: Object.keys(combinedData).length > 0 ? combinedData : null,
+        type: 'text'
+      };
+    } catch (e) {
+      // Fallback: just return first successful result
+      const firstSuccess = toolResults.find(tr => tr.result.type !== 'error');
+      if (firstSuccess) {
+        return {
+          role: 'assistant',
+          content: firstSuccess.result.message || "Permintaan diproses.",
+          data: firstSuccess.result.data || null,
+          type: firstSuccess.result.type || 'text'
+        };
+      }
+      return {
+        role: 'assistant',
+        content: toolResults[0].result.message || "Terjadi kesalahan",
+        data: null,
+        type: 'error'
+      };
+    }
+
   } catch (error) {
-    console.error("AI Error:", error);
-    return { role: 'assistant', content: "Maaf, sistem AI sedang gangguan. Coba lagi nanti.", data: null, type: 'error' };
+    console.error("Manager AI Error:", error);
+    return {
+      role: 'assistant',
+      content: "Maaf, sistem AI sedang gangguan. Coba lagi nanti.",
+      data: null,
+      type: 'error'
+    };
   }
 }
