@@ -31,23 +31,6 @@ CREATE TABLE public.ai_prescriptive_insights (
   CONSTRAINT ai_prescriptive_insights_pkey PRIMARY KEY (id),
   CONSTRAINT ai_prescriptive_insights_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id)
 );
-CREATE TABLE public.approval_requests (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  hotel_id uuid NOT NULL,
-  reservation_id uuid,
-  requested_by_user_id uuid NOT NULL,
-  request_type USER-DEFINED NOT NULL,
-  details text,
-  status USER-DEFINED NOT NULL DEFAULT 'pending'::approval_status,
-  created_at timestamp with time zone DEFAULT now(),
-  resolved_at timestamp with time zone,
-  resolved_by_user_id uuid,
-  CONSTRAINT approval_requests_pkey PRIMARY KEY (id),
-  CONSTRAINT approval_requests_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
-  CONSTRAINT approval_requests_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id),
-  CONSTRAINT approval_requests_requested_by_user_id_fkey FOREIGN KEY (requested_by_user_id) REFERENCES public.profiles(id),
-  CONSTRAINT approval_requests_resolved_by_user_id_fkey FOREIGN KEY (resolved_by_user_id) REFERENCES public.profiles(id)
-);
 CREATE TABLE public.guests (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   hotel_id uuid NOT NULL,
@@ -173,18 +156,20 @@ CREATE TABLE public.reservations (
   check_in_date date NOT NULL,
   check_out_date date NOT NULL,
   total_price numeric NOT NULL CHECK (total_price >= 0::numeric),
-  payment_status text NOT NULL DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'cancelled'::text])),
+  payment_status text NOT NULL DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'cancelled'::text, 'city_ledger'::text])),
   created_at timestamp with time zone DEFAULT now(),
   ai_notes text,
   special_requests text,
   booking_source USER-DEFINED DEFAULT 'walk_in'::booking_source,
   checked_in_at timestamp with time zone,
   checked_out_at timestamp with time zone,
-  payment_method text CHECK (payment_method = ANY (ARRAY['cash'::text, 'transfer'::text, 'qris'::text, 'credit_card'::text, 'other'::text])),
+  payment_method text CHECK (payment_method = ANY (ARRAY['cash'::text, 'transfer'::text, 'qris'::text, 'credit_card'::text, 'other'::text, 'city_ledger'::text])),
+  agent_id uuid,
   CONSTRAINT reservations_pkey PRIMARY KEY (id),
   CONSTRAINT reservations_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
   CONSTRAINT reservations_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.rooms(id),
-  CONSTRAINT reservations_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id)
+  CONSTRAINT reservations_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id),
+  CONSTRAINT reservations_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.role_permissions (
   role_id uuid NOT NULL,
@@ -238,18 +223,6 @@ CREATE TABLE public.rooms (
   CONSTRAINT rooms_pkey PRIMARY KEY (id),
   CONSTRAINT rooms_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
   CONSTRAINT rooms_room_type_id_fkey FOREIGN KEY (room_type_id) REFERENCES public.room_types(id)
-);
-CREATE TABLE public.staff_shifts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  hotel_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  start_time timestamp with time zone NOT NULL,
-  end_time timestamp with time zone NOT NULL,
-  shift_date date NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT staff_shifts_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_shifts_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
-  CONSTRAINT staff_shifts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

@@ -1,6 +1,6 @@
-# 🏨 RoomMaster — Hotel Property Management System
+# 🏨 RoomMaster - Hotel Property Management System
 
-RoomMaster adalah aplikasi web **Property Management System (PMS)** modern yang dirancang untuk mengelola operasional hotel secara terpusat maupun per-properti. Dibangun dengan arsitektur **multi-hotel** dan sistem **Role-Based Access Control (RBAC)** yang granular, RoomMaster memungkinkan berbagai peran staf hotel — mulai dari Super Admin hingga Housekeeping — untuk bekerja dalam satu platform yang terintegrasi.
+RoomMaster adalah aplikasi web **Property Management System (PMS)** modern yang dirancang untuk mengelola operasional hotel secara terpusat maupun per-properti. Dibangun dengan arsitektur **multi-hotel** dan sistem **Role-Based Access Control (RBAC)** yang granular, RoomMaster memungkinkan berbagai peran staf hotel, mulai dari Super Admin hingga Housekeeping, untuk bekerja dalam satu platform yang terintegrasi.
 
 ---
 
@@ -100,8 +100,7 @@ Portal khusus untuk tim kebersihan dan pemeliharaan kamar.
 ```
 Super Admin
 └── mengelola seluruh jaringan hotel & user
-
-Hotel Admin          ← ditugaskan ke 1 hotel
+├── Hotel Admin      ← ditugaskan ke 1 hotel
 ├── Hotel Manager    ← laporan, reservasi, loyalty
 ├── Front Office     ← check-in/out, billing, tamu
 └── Housekeeping     ← tugas kebersihan, laporan kamar
@@ -171,64 +170,3 @@ supabase/
 ```
 
 ---
-
-## 🛠️ Cara Menjalankan Secara Lokal
-
-### Prasyarat
-
-- Node.js >= 18
-- npm
-- Akun [Supabase](https://supabase.com/) (project aktif)
-
-### Langkah Instalasi
-
-```bash
-# 1. Clone repositori
-git clone <repo-url>
-cd roommaster
-
-# 2. Install dependencies
-npm install
-
-# 3. Setup environment variables
-cp .env.local.example .env.local
-# Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-# 4. Jalankan development server
-npm run dev
-```
-
-Buka [http://localhost:3000](http://localhost:3000) di browser.
-
-### Scripts
-
-| Command | Deskripsi |
-|---|---|
-| `npm run dev` | Jalankan dev server (Turbopack) |
-| `npm run build` | Build production (Turbopack) |
-| `npm run start` | Jalankan production server |
-| `npm run lint` | Lint kode dengan ESLint |
-
----
-
-## 🔐 Environment Variables
-
-Buat file `.env.local` di root project dengan variabel berikut:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-OPENAI_API_KEY=your-openai-key   # Opsional, untuk fitur AI Agent
-```
-
----
-
-## 📌 Status Proyek
-
-> ⚠️ Proyek ini sedang dalam **pengembangan aktif**.
-
-Beberapa area yang masih dikembangkan:
-- Implementasi penuh kebijakan **RLS** untuk semua peran
-- Penambahan fitur **AI Agent** di panel Manager & FO
-- Pengembangan **Loyalty Program** lebih lanjut
-- Analitik agregat untuk **Super Admin**
