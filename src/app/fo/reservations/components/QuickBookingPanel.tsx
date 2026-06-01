@@ -10,6 +10,7 @@ import { notifications } from '@mantine/notifications';
 import { GuestOption, RoomWithDetails, ReservationDetails } from '../page';
 import { createReservation, createGuestForReservation } from '../actions';
 import { PaymentMethod } from '@/core/types/database';
+import dayjs from 'dayjs';
 
 interface QuickBookingPanelProps {
   hotelId: string;
@@ -104,8 +105,8 @@ export function QuickBookingPanel({ hotelId, guests, rooms, prefilledData, onSuc
         hotel_id: hotelId,
         guest_id: finalGuestId!,
         room_id: selectedRoom,
-        check_in_date: checkInDate,
-        check_out_date: checkOutDate,
+        check_in_date: dayjs(checkInDate).format('YYYY-MM-DD'),
+        check_out_date: dayjs(checkOutDate).format('YYYY-MM-DD'),
         total_price: calculatedPrice || 0,
         payment_status: 'pending', 
         payment_method: (paymentMethod as PaymentMethod) || null, 

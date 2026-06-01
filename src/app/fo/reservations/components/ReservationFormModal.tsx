@@ -16,6 +16,7 @@ import { notifications } from '@mantine/notifications';
 import { PaymentStatus, PaymentMethod } from '@/core/types/database';
 import { ReservationDetails, GuestOption, RoomWithDetails } from '../page';
 import { createReservation, updateReservation, createGuestForReservation } from '../actions';
+import dayjs from 'dayjs';
 
 interface Props {
   opened: boolean;
@@ -161,8 +162,8 @@ export function ReservationFormModal({
         hotel_id: hotelId,
         guest_id: finalGuestId,
         room_id: values.room_id,
-        check_in_date: values.check_in_date!,
-        check_out_date: values.check_out_date!,
+        check_in_date: dayjs(values.check_in_date).format('YYYY-MM-DD'),
+        check_out_date: dayjs(values.check_out_date).format('YYYY-MM-DD'),
         total_price: calculatedPrice || 0,
         payment_status: values.payment_status,
         payment_method: (values.payment_method as PaymentMethod) || null, // [BARU] Kirim payment method

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Container,
@@ -46,6 +47,7 @@ interface ClientProps {
 }
 
 export default function HousekeepingDashboardClient({ data }: ClientProps) {
+  const router = useRouter();
   const { stats, rooms } = data;
   const [filter, setFilter] = useState<string>('all');
   const [updating, setUpdating] = useState(false);
@@ -79,7 +81,7 @@ export default function HousekeepingDashboardClient({ data }: ClientProps) {
         message: `Room status successfully updated to ${newCleaningStatus.toUpperCase()}`,
         color: 'green',
       });
-      window.location.reload();
+      router.refresh();
     } catch (err: any) {
       notifications.show({
         title: 'Error',

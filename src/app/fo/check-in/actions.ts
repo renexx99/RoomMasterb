@@ -17,11 +17,11 @@ export async function checkInGuest(reservationId: string, roomId: string) {
   // 1. Update Reservation: Set timestamp & status
   const { error: resError } = await supabase
     .from('reservations')
-    .update({ 
+    .update({
       checked_in_at: now,
       // Optional: Force status to 'paid' or keep existing logic
       // payment_status: 'paid' 
-    }) 
+    })
     .eq('id', reservationId);
 
   if (resError) return { error: `Failed to update reservation: ${resError.message}` };
@@ -29,7 +29,7 @@ export async function checkInGuest(reservationId: string, roomId: string) {
   // 2. Update Room: Set status to 'occupied'
   const { error: roomError } = await supabase
     .from('rooms')
-    .update({ status: 'occupied' })
+    .update({ status: 'occupied', updated_at: now })
     .eq('id', roomId);
 
   if (roomError) return { error: `Failed to update room status: ${roomError.message}` };
@@ -37,6 +37,8 @@ export async function checkInGuest(reservationId: string, roomId: string) {
   revalidatePath('/fo/check-in');
   revalidatePath('/fo/dashboard');
   revalidatePath('/fo/availability');
+  revalidatePath('/housekeeping/dashboard');
+  revalidatePath('/housekeeping/tasks');
   return { success: true };
 }
 
@@ -47,7 +49,7 @@ export async function checkOutGuest(reservationId: string, roomId: string) {
   // 1. Update Room: Guest leaves -> Room becomes Vacant Dirty
   const { error: roomError } = await supabase
     .from('rooms')
-    .update({ 
+    .update({
       status: 'available',
       cleaning_status: 'dirty',
       updated_at: now,

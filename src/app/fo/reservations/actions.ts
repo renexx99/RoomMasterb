@@ -17,8 +17,8 @@ export interface ReservationData {
   hotel_id: string;
   guest_id: string;
   room_id: string;
-  check_in_date: Date;
-  check_out_date: Date;
+  check_in_date: Date | string;
+  check_out_date: Date | string;
   total_price: number;
   payment_status: PaymentStatus;
   payment_method?: PaymentMethod | null;
