@@ -16,12 +16,16 @@ JANGAN gunakan check_availability untuk pertanyaan seperti ini. Tool ini tidak b
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           room_type_name: {
             type: "string",
             description: "Opsional. Filter berdasarkan nama tipe kamar (contoh: 'Deluxe', 'Suite', 'Standard'). Kosongkan untuk melihat semua tipe."
           }
         },
-        required: [],
+        required: ["thought_process"],
       },
     },
   },
@@ -38,8 +42,13 @@ Gunakan untuk:
 Tidak memerlukan parameter apapun.`,
       parameters: {
         type: "object",
-        properties: {},
-        required: [],
+        properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
+        },
+        required: ["thought_process"],
       },
     },
   },
@@ -53,9 +62,13 @@ BUKAN untuk cek ketersediaan atau status umum — gunakan room_status_summary un
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           room_number: { type: "string", description: "Nomor kamar yang ingin dicek (contoh: '101', '205')" }
         },
-        required: ["room_number"]
+        required: ["thought_process", "room_number"]
       }
     }
   },
@@ -68,9 +81,13 @@ Gunakan untuk: "Info tamu Budi", "Riwayat menginap Sari", "Tamu bernama Ahmad pe
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           guest_identifier: { type: "string", description: "Nama tamu atau email untuk dicari" }
         },
-        required: ["guest_identifier"]
+        required: ["thought_process", "guest_identifier"]
       }
     }
   },
@@ -92,12 +109,16 @@ Gunakan untuk:
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           guest_name: { type: "string", description: "Opsional. Nama tamu untuk dicari." },
           date: { type: "string", format: "date", description: "Opsional. Tanggal spesifik (YYYY-MM-DD) untuk melihat reservasi yang aktif pada tanggal itu." },
           status_filter: { type: "string", enum: ["pending", "paid", "cancelled", "city_ledger"], description: "Opsional. Filter berdasarkan status pembayaran." },
           upcoming_only: { type: "boolean", description: "Opsional. Jika true, hanya tampilkan reservasi yang belum dimulai (check_in >= hari ini)." },
         },
-        required: [],
+        required: ["thought_process"],
       },
     },
   },
@@ -117,11 +138,15 @@ JANGAN gunakan ini untuk pertanyaan status saat ini — gunakan room_status_summ
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           check_in: { type: "string", format: "date", description: "Tanggal check-in (YYYY-MM-DD)" },
           check_out: { type: "string", format: "date", description: "Tanggal check-out (YYYY-MM-DD)" },
           room_type_name: { type: "string", description: "Opsional. Filter tipe kamar (contoh: 'Deluxe')" },
         },
-        required: ["check_in", "check_out"],
+        required: ["thought_process", "check_in", "check_out"],
       },
     },
   },
@@ -140,6 +165,10 @@ Contoh: "Booking kamar deluxe untuk Budi tanggal 1-3 Juni"`,
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           guest_name: { type: "string", description: "Nama lengkap tamu" },
           user_email: { type: "string", description: "Email tamu. Isi '-' jika tidak disebutkan." },
           phone_number: { type: "string", description: "No HP tamu. Isi '-' jika tidak disebutkan." },
@@ -147,7 +176,7 @@ Contoh: "Booking kamar deluxe untuk Budi tanggal 1-3 Juni"`,
           check_in: { type: "string", format: "date", description: "Tanggal check-in (YYYY-MM-DD)" },
           check_out: { type: "string", format: "date", description: "Tanggal check-out (YYYY-MM-DD)" },
         },
-        required: ["guest_name", "room_type_name", "check_in", "check_out"],
+        required: ["thought_process", "guest_name", "room_type_name", "check_in", "check_out"],
       },
     },
   },
@@ -160,6 +189,10 @@ JANGAN panggil ini tanpa konfirmasi user terlebih dahulu.`,
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           guest_name: { type: "string" },
           user_email: { type: "string" },
           phone_number: { type: "string" },
@@ -168,7 +201,7 @@ JANGAN panggil ini tanpa konfirmasi user terlebih dahulu.`,
           check_out: { type: "string", format: "date" },
           payment_method: { type: "string", enum: ["cash", "transfer", "qris", "credit_card"] },
         },
-        required: ["guest_name", "room_type_name", "check_in", "check_out"],
+        required: ["thought_process", "guest_name", "room_type_name", "check_in", "check_out"],
       },
     },
   },
@@ -186,10 +219,14 @@ Minimal satu dari guest_identifier atau reservation_id harus diisi.`,
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           guest_identifier: { type: "string", description: "Nama tamu yang akan check-in" },
           reservation_id: { type: "string", description: "ID reservasi atau nomor folio (opsional, jika diketahui)" },
         },
-        required: [],
+        required: ["thought_process"],
       },
     },
   },
@@ -203,10 +240,14 @@ Kamar akan otomatis direset ke 'available + dirty' dan housekeeping task dibuat.
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           room_number: { type: "string", description: "Nomor kamar yang akan checkout (contoh: '205')" },
           guest_identifier: { type: "string", description: "Nama tamu yang akan checkout (alternatif jika nomor kamar tidak diketahui)" },
         },
-        required: [],
+        required: ["thought_process"],
       },
     },
   },
@@ -219,9 +260,13 @@ Gunakan saat user bilang "Ya, checkout" atau "Tetap checkout" setelah peringatan
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           reservation_id: { type: "string", description: "ID reservasi yang akan di-force checkout" },
         },
-        required: ["reservation_id"],
+        required: ["thought_process", "reservation_id"],
       },
     },
   },
@@ -239,10 +284,14 @@ WAJIB ada start_date dan end_date. Hitung dari konteks percakapan jika user bila
       parameters: {
         type: "object",
         properties: {
+          thought_process: {
+            type: "string",
+            description: "Chain-of-Thought: Tuliskan langkah-langkah pemikiran dan alasan kamu sebelum mengeksekusi tool ini. Jelaskan mengapa tool ini dipilih dan bagaimana parameter ditentukan."
+          },
           start_date: { type: "string", format: "date", description: "Tanggal mulai periode (YYYY-MM-DD)" },
           end_date: { type: "string", format: "date", description: "Tanggal akhir periode (YYYY-MM-DD)" },
         },
-        required: ["start_date", "end_date"]
+        required: ["thought_process", "start_date", "end_date"]
       }
     }
   },

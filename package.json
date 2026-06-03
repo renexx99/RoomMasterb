@@ -17,6 +17,7 @@
     "@fullcalendar/resource": "^6.1.19",
     "@fullcalendar/resource-timeline": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
+    "@langchain/core": "^1.1.48",
     "@mantine/core": "8.3.5",
     "@mantine/dates": "8.3.5",
     "@mantine/form": "8.3.5",

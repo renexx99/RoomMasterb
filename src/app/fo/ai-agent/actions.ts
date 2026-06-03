@@ -1,6 +1,7 @@
 'use server';
 
 import OpenAI from 'openai';
+import { PromptTemplate } from '@langchain/core/prompts';
 import { AI_TOOLS_DEFINITION } from './definitions';
 import { confirmBookingDetailsTool, createReservationTool } from './tools/booking';
 import { checkAvailabilityTool, roomInspectorTool } from './tools/availability';
@@ -33,50 +34,14 @@ const TOOL_HANDLERS: Record<string, (args: any) => Promise<ToolExecutionResult>>
   search_reservations: searchReservationsTool,
 };
 
-function buildSystemPrompt(): string {
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  const dayOfWeek = now.toLocaleDateString('id-ID', { weekday: 'long' });
-  
-  // Pre-compute common relative dates for the model
-  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
-  const dayAfterTomorrow = new Date(now); dayAfterTomorrow.setDate(now.getDate() + 2);
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-  
-  // Next week (Monday to Sunday)
-  const dayNum = now.getDay(); // 0=Sun, 1=Mon...
-  const nextMonday = new Date(now); nextMonday.setDate(now.getDate() + (8 - dayNum) % 7 || 7);
-  const nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6);
-  
-  // This week (Monday to Sunday)
-  const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - ((dayNum + 6) % 7));
-  const thisSunday = new Date(thisMonday); thisSunday.setDate(thisMonday.getDate() + 6);
-  
-  // Last week
-  const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
-  const lastSunday = new Date(thisMonday); lastSunday.setDate(thisMonday.getDate() - 1);
-  
-  // This month
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
-  // Next month
-  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-  
-  // Last month
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-  
-  // Weekend (Sabtu-Minggu terdekat)
-  const nextSaturday = new Date(now); nextSaturday.setDate(now.getDate() + ((6 - dayNum + 7) % 7 || 7));
-  const weekendSunday = new Date(nextSaturday); weekendSunday.setDate(nextSaturday.getDate() + 1);
-  
-  const fmt = (d: Date) => d.toISOString().split('T')[0];
-  const fmtLabel = (d: Date) => d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-  return `Kamu adalah 'RoomMaster AI', asisten cerdas untuk Front Office Hotel. 
-Hari ini: ${dayOfWeek}, ${fmtLabel(now)} (${today}).
+/**
+ * LangChain PromptTemplate for the system prompt.
+ * Uses LangChain's prompt templating engine to assemble the system instruction
+ * with dynamic date variables injected at runtime.
+ */
+const SYSTEM_PROMPT_TEMPLATE = PromptTemplate.fromTemplate(
+`Kamu adalah 'RoomMaster AI', asisten cerdas untuk Front Office Hotel. 
+Hari ini: {day_of_week}, {today_label} ({today}).
 
 ═══ PANDUAN UMUM ═══
 1. Jawab dalam bahasa Indonesia yang sopan dan profesional.
@@ -85,29 +50,36 @@ Hari ini: ${dayOfWeek}, ${fmtLabel(now)} (${today}).
 4. Jangan meminta informasi yang tidak diperlukan oleh tool.
 5. Jika ada data yang dikembalikan oleh tool, rangkum hasilnya dengan jelas dan rapi.
 
+═══ CHAIN-OF-THOUGHT (CoT) WAJIB ═══
+Setiap kali kamu memilih dan memanggil sebuah tool, kamu HARUS mengisi parameter "thought_process" dengan langkah-langkah pemikiranmu secara transparan. Isi thought_process harus mencakup:
+1. Apa yang diminta user?
+2. Tool mana yang paling tepat dan mengapa?
+3. Bagaimana kamu menentukan parameter yang akan dikirim?
+Ini penting untuk transparansi dan auditabilitas keputusan AI.
+
 ═══ REFERENSI TANGGAL (WAJIB DIPAKAI) ═══
 Kamu HARUS menggunakan referensi tanggal di bawah ini ketika user menggunakan kata waktu relatif.
 JANGAN menebak atau menghitung sendiri — gunakan nilai yang sudah dihitung berikut:
 
 📅 Hari:
-  - "hari ini" / "sekarang" = ${fmt(now)}
-  - "besok" = ${fmt(tomorrow)}
-  - "besok lusa" / "lusa" = ${fmt(dayAfterTomorrow)}
-  - "kemarin" = ${fmt(yesterday)}
+  - "hari ini" / "sekarang" = {today}
+  - "besok" = {tomorrow}
+  - "besok lusa" / "lusa" = {day_after_tomorrow}
+  - "kemarin" = {yesterday}
 
 📅 Minggu:
-  - "minggu ini" = ${fmt(thisMonday)} s/d ${fmt(thisSunday)}
-  - "minggu depan" / "minggu berikutnya" = ${fmt(nextMonday)} s/d ${fmt(nextSunday)}
-  - "minggu lalu" / "minggu kemarin" = ${fmt(lastMonday)} s/d ${fmt(lastSunday)}
-  - "weekend" / "akhir pekan" = ${fmt(nextSaturday)} s/d ${fmt(weekendSunday)}
+  - "minggu ini" = {this_monday} s/d {this_sunday}
+  - "minggu depan" / "minggu berikutnya" = {next_monday} s/d {next_sunday}
+  - "minggu lalu" / "minggu kemarin" = {last_monday} s/d {last_sunday}
+  - "weekend" / "akhir pekan" = {next_saturday} s/d {weekend_sunday}
 
 📅 Bulan:
-  - "bulan ini" = ${fmt(thisMonthStart)} s/d ${fmt(thisMonthEnd)}
-  - "bulan depan" / "bulan berikutnya" = ${fmt(nextMonthStart)} s/d ${fmt(nextMonthEnd)}
-  - "bulan lalu" / "bulan kemarin" = ${fmt(lastMonthStart)} s/d ${fmt(lastMonthEnd)}
+  - "bulan ini" = {this_month_start} s/d {this_month_end}
+  - "bulan depan" / "bulan berikutnya" = {next_month_start} s/d {next_month_end}
+  - "bulan lalu" / "bulan kemarin" = {last_month_start} s/d {last_month_end}
 
-⚠️ PENTING: Jika user bilang "minggu depan" untuk booking, gunakan ${fmt(nextMonday)} sebagai check_in.
-Jika user bilang "3 malam" tanpa tanggal, tanya tanggal check-in atau asumsikan mulai "besok" (${fmt(tomorrow)}).
+⚠️ PENTING: Jika user bilang "minggu depan" untuk booking, gunakan {next_monday} sebagai check_in.
+Jika user bilang "3 malam" tanpa tanggal, tanya tanggal check-in atau asumsikan mulai "besok" ({tomorrow}).
 
 ═══ PANDUAN PEMILIHAN TOOL ═══
 
@@ -152,9 +124,9 @@ Jika user bilang "3 malam" tanpa tanggal, tanya tanggal check-in atau asumsikan 
 3. Jangan paksa tanya email/no HP — isi '-' jika tidak disebutkan. Sistem cari otomatis di database.
 
 ═══ LAPORAN & ANALYTICS ═══
-- "Laporan bulan ini" → analytics_reporter (start: ${fmt(thisMonthStart)}, end: ${fmt(thisMonthEnd)})
-- "Revenue minggu lalu" → analytics_reporter (start: ${fmt(lastMonday)}, end: ${fmt(lastSunday)})
-- "Laporan bulan lalu" → analytics_reporter (start: ${fmt(lastMonthStart)}, end: ${fmt(lastMonthEnd)})
+- "Laporan bulan ini" → analytics_reporter (start: {this_month_start}, end: {this_month_end})
+- "Revenue minggu lalu" → analytics_reporter (start: {last_monday}, end: {last_sunday})
+- "Laporan bulan lalu" → analytics_reporter (start: {last_month_start}, end: {last_month_end})
 
 ═══ FORMAT RESPONS STATUS KAMAR (PENTING!) ═══
 Jika tool "room_status_summary" mengembalikan DATA BANYAK KAMAR, jangan jabarkan satu per satu secara naratif.
@@ -175,14 +147,87 @@ Jika user bertanya status kamar spesifik (1 kamar), boleh jawab naratif biasa.
 - DILARANG mengarang data. Jika tool mengembalikan error, sampaikan apa adanya.
 - Jika user bertanya hal di luar kapabilitas, jelaskan apa yang bisa kamu bantu.
 - Gunakan emoji secukupnya untuk membuat respons lebih hidup.
-- Format angka mata uang dengan "Rp" dan pemisah ribuan.`;
+- Format angka mata uang dengan "Rp" dan pemisah ribuan.`
+);
+
+/**
+ * Build the system prompt using LangChain PromptTemplate.
+ * Computes all dynamic date variables and formats them into the template.
+ */
+async function buildSystemPrompt(): Promise<string> {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const dayOfWeek = now.toLocaleDateString('id-ID', { weekday: 'long' });
+  
+  // Pre-compute common relative dates for the model
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  const dayAfterTomorrow = new Date(now); dayAfterTomorrow.setDate(now.getDate() + 2);
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  
+  // Next week (Monday to Sunday)
+  const dayNum = now.getDay(); // 0=Sun, 1=Mon...
+  const nextMonday = new Date(now); nextMonday.setDate(now.getDate() + (8 - dayNum) % 7 || 7);
+  const nextSunday = new Date(nextMonday); nextSunday.setDate(nextMonday.getDate() + 6);
+  
+  // This week (Monday to Sunday)
+  const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - ((dayNum + 6) % 7));
+  const thisSunday = new Date(thisMonday); thisSunday.setDate(thisMonday.getDate() + 6);
+  
+  // Last week
+  const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+  const lastSunday = new Date(thisMonday); lastSunday.setDate(thisMonday.getDate() - 1);
+  
+  // This month
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  // Next month
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  
+  // Last month
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  
+  // Weekend (Sabtu-Minggu terdekat)
+  const nextSaturday = new Date(now); nextSaturday.setDate(now.getDate() + ((6 - dayNum + 7) % 7 || 7));
+  const weekendSunday = new Date(nextSaturday); weekendSunday.setDate(nextSaturday.getDate() + 1);
+  
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+  const fmtLabel = (d: Date) => d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  // Use LangChain PromptTemplate to format the system prompt with date variables
+  const formattedPrompt = await SYSTEM_PROMPT_TEMPLATE.format({
+    day_of_week: dayOfWeek,
+    today_label: fmtLabel(now),
+    today: fmt(now),
+    tomorrow: fmt(tomorrow),
+    day_after_tomorrow: fmt(dayAfterTomorrow),
+    yesterday: fmt(yesterday),
+    this_monday: fmt(thisMonday),
+    this_sunday: fmt(thisSunday),
+    next_monday: fmt(nextMonday),
+    next_sunday: fmt(nextSunday),
+    last_monday: fmt(lastMonday),
+    last_sunday: fmt(lastSunday),
+    next_saturday: fmt(nextSaturday),
+    weekend_sunday: fmt(weekendSunday),
+    this_month_start: fmt(thisMonthStart),
+    this_month_end: fmt(thisMonthEnd),
+    next_month_start: fmt(nextMonthStart),
+    next_month_end: fmt(nextMonthEnd),
+    last_month_start: fmt(lastMonthStart),
+    last_month_end: fmt(lastMonthEnd),
+  });
+
+  return formattedPrompt;
 }
 
 export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) {
   try {
     const systemMessage: OpenAIMessage = {
       role: "system",
-      content: buildSystemPrompt(),
+      content: await buildSystemPrompt(),
     };
 
     const messages: OpenAIMessage[] = [
@@ -231,6 +276,15 @@ export async function chatWithAI(userMessage: string, history: OpenAIMessage[]) 
       }
 
       console.log(`🤖 AI calling: ${functionName}`, args);
+
+      // Log Chain-of-Thought reasoning (CoT) for transparency and auditability
+      if (args.thought_process) {
+        console.log(`💭 CoT [${functionName}]: ${args.thought_process}`);
+        // Remove thought_process from args before passing to tool handler
+        // so existing handlers don't need modification
+        const { thought_process, ...toolArgs } = args;
+        args = toolArgs;
+      }
 
       const handler = TOOL_HANDLERS[functionName];
       if (!handler) {
